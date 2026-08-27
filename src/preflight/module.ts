@@ -341,7 +341,34 @@ function resolveNeed(
       meaning:
         "An authenticated EPFO service route is the appropriate first place to check your own claim status. No account details are needed here.",
       evidenceStatus: "Official service route",
-      evidence: [],
+      evidence: [
+        {
+          id: "epfo-claim-status-route",
+          sourceTitle: "EPFO Know Your Claim Status",
+          publisher: "Employees' Provident Fund Organisation",
+          sourceType: "official_service_route",
+          url: "https://passbook.epfindia.gov.in/MemberPassBook/login",
+          applicablePeriod: "Current own-record claim status",
+          extract:
+            "The official EPFO service provides a route for a member to check the status of their own claim. This prototype does not enter or transmit account details.",
+          translationStatus: "original",
+          grounding: [
+            {
+              sourceBlobHash: "official-epfo-route",
+              representationHash: "official-epfo-route-2026-08",
+              locator: {
+                kind: "jsonPointer",
+                pointer: "/services/claim-status",
+              },
+              locatedContent: "EPFO Know Your Claim Status",
+              locatedContentHash: "official-epfo-route",
+              extractionMethod: "official-route-record",
+              extractionVersion: "route-v1",
+              confidence: "exact",
+            },
+          ],
+        },
+      ],
       rows: [],
       gaps: [],
       searchScope:
@@ -351,6 +378,10 @@ function resolveNeed(
     };
   if (need.scenario === "previous-rti")
     return syntheticFixtureResolution(need, traceId);
+  const grievance =
+    /\b(why|failed|delay|delayed|complaint|grievance|problem)\b/i.test(
+      `${need.originalText} ${need.canonicalNeed}`,
+    );
   return {
     outcome: classifyOutcome({ need, execution: "OUT_OF_SNAPSHOT" }),
     headline: "This request is outside the prototype Evidence Snapshot.",
@@ -364,8 +395,9 @@ function resolveNeed(
     ],
     searchScope:
       "The prototype checked its Capability Manifest and found no registered source for this need.",
-    recommendedAction:
-      "Review Search Scope, edit the Information Need, or prepare a Filing Draft.",
+    recommendedAction: grievance
+      ? "Prepare a records-focused Filing Draft asking for orders, notes, reports, or correspondence rather than an explanation of why."
+      : "Review Search Scope, edit the Information Need, or prepare a Filing Draft.",
     coverageManifest: {
       capabilityManifestHash: source.capabilityManifest.hash,
       checkedAuthority: need.informationHolder,
