@@ -5,8 +5,8 @@
 .next/
 node_modules/
 coverage/
+*.tsbuildinfo
 playwright-report/
 test-results/
 .playwright-cli/
 .impeccable/questions/
-
