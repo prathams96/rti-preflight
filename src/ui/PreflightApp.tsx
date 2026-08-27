@@ -80,13 +80,34 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 const isNeed = (value: unknown): value is InformationNeed =>
   isObject(value) &&
-  ["id", "originalText", "canonicalNeed", "measure", "geography", "period", "breakdown", "informationHolder"].every((key) => typeof value[key] === "string") &&
+  [
+    "id",
+    "originalText",
+    "canonicalNeed",
+    "measure",
+    "geography",
+    "period",
+    "breakdown",
+    "informationHolder",
+  ].every((key) => typeof value[key] === "string") &&
   Array.isArray(value.unresolvedClarifications);
 const validSavedState = (value: unknown): value is SavedState => {
-  if (!isObject(value) || !["start", "select", "confirm", "search", "result"].includes(value.phase as string)) return false;
-  if (typeof value.text !== "string" || (value.language !== "en" && value.language !== "hi")) return false;
-  if (value.phase === "confirm" || value.phase === "search") return isNeed(value.need);
-  if (value.phase === "result") return isNeed(value.need) && isObject(value.result);
+  if (
+    !isObject(value) ||
+    !["start", "select", "confirm", "search", "result"].includes(
+      value.phase as string,
+    )
+  )
+    return false;
+  if (
+    typeof value.text !== "string" ||
+    (value.language !== "en" && value.language !== "hi")
+  )
+    return false;
+  if (value.phase === "confirm" || value.phase === "search")
+    return isNeed(value.need);
+  if (value.phase === "result")
+    return isNeed(value.need) && isObject(value.result);
   return true;
 };
 const validFilingState = (value: unknown): value is SessionFilingState =>
@@ -94,7 +115,9 @@ const validFilingState = (value: unknown): value is SessionFilingState =>
   ["draft", "file", "acknowledgement"].includes(value.phase as string) &&
   typeof value.draftText === "string" &&
   isObject(value.package) &&
-  ["otp", "identity", "review", "payment", "confirmation"].includes(value.step as string);
+  ["otp", "identity", "review", "payment", "confirmation"].includes(
+    value.step as string,
+  );
 
 const COPY = {
   en: {
@@ -444,7 +467,10 @@ function persist(state: SavedState) {
   try {
     window.localStorage.setItem(
       RESEARCH_KEY,
-      JSON.stringify({ version: 2, state } satisfies PersistedEnvelope<SavedState>),
+      JSON.stringify({
+        version: 2,
+        state,
+      } satisfies PersistedEnvelope<SavedState>),
     );
   } catch {
     /* optional enhancement */
@@ -454,8 +480,15 @@ function persist(state: SavedState) {
 function readPersistedState(): SavedState | undefined {
   if (typeof window === "undefined") return undefined;
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(RESEARCH_KEY) ?? "null") as unknown;
-    if (!isObject(parsed) || parsed.version !== 2 || !validSavedState(parsed.state)) throw new Error("invalid");
+    const parsed = JSON.parse(
+      window.localStorage.getItem(RESEARCH_KEY) ?? "null",
+    ) as unknown;
+    if (
+      !isObject(parsed) ||
+      parsed.version !== 2 ||
+      !validSavedState(parsed.state)
+    )
+      throw new Error("invalid");
     return parsed.state;
   } catch {
     clearPrototypeStorage();
@@ -466,8 +499,15 @@ function readPersistedState(): SavedState | undefined {
 function readSessionFilingState(): SessionFilingState | undefined {
   if (typeof window === "undefined") return undefined;
   try {
-    const parsed = JSON.parse(window.sessionStorage.getItem(FILING_KEY) ?? "null") as unknown;
-    if (!isObject(parsed) || parsed.version !== 2 || !validFilingState(parsed.state)) throw new Error("invalid");
+    const parsed = JSON.parse(
+      window.sessionStorage.getItem(FILING_KEY) ?? "null",
+    ) as unknown;
+    if (
+      !isObject(parsed) ||
+      parsed.version !== 2 ||
+      !validFilingState(parsed.state)
+    )
+      throw new Error("invalid");
     return parsed.state;
   } catch {
     clearPrototypeStorage();
@@ -477,11 +517,15 @@ function readSessionFilingState(): SessionFilingState | undefined {
 
 function clearPrototypeStorage() {
   try {
-    [RESEARCH_KEY, FILING_KEY, LEGACY_RESEARCH_KEY, LEGACY_FILING_KEY].forEach((key) => {
-      window.localStorage.removeItem(key);
-      window.sessionStorage.removeItem(key);
-    });
-  } catch { /* optional storage */ }
+    [RESEARCH_KEY, FILING_KEY, LEGACY_RESEARCH_KEY, LEGACY_FILING_KEY].forEach(
+      (key) => {
+        window.localStorage.removeItem(key);
+        window.sessionStorage.removeItem(key);
+      },
+    );
+  } catch {
+    /* optional storage */
+  }
 }
 
 function readSavedPreflights(): SavedPreflight[] {
@@ -740,8 +784,15 @@ export default function PreflightApp() {
         JSON.stringify({
           version: 2,
           state: {
-            phase, draftText, package: filingPackage, step: filingStep, otp,
-            profile, reviewed, paymentConfirmed, acknowledgement,
+            phase,
+            draftText,
+            package: filingPackage,
+            step: filingStep,
+            otp,
+            profile,
+            reviewed,
+            paymentConfirmed,
+            acknowledgement,
           } satisfies SessionFilingState,
         } satisfies PersistedEnvelope<SessionFilingState>),
       );
@@ -763,12 +814,20 @@ export default function PreflightApp() {
   const updateNeed = (field: keyof InformationNeed, value: string) => {
     if (!need) return;
     const next = { ...need, [field]: value } as InformationNeed;
-    if (next.scenario === "unsupported" && next.informationHolder !== "To be confirmed" && next.informationHolder !== "Unknown" && next.geography !== "Not yet specified" && next.period !== "Not yet specified")
+    if (
+      next.scenario === "unsupported" &&
+      next.informationHolder !== "To be confirmed" &&
+      next.informationHolder !== "Unknown" &&
+      next.geography !== "Not yet specified" &&
+      next.period !== "Not yet specified"
+    )
       next.unresolvedClarifications = [];
     setNeed(next);
   };
   const unresolvedClarifications =
-    need?.unresolvedClarifications.filter((item) => !item.startsWith("Unknown:")) ?? [];
+    need?.unresolvedClarifications.filter(
+      (item) => !item.startsWith("Unknown:"),
+    ) ?? [];
   function resumePrevious() {
     if (!resumeState) return;
     setLanguage(resumeState.language);
@@ -1249,12 +1308,15 @@ export default function PreflightApp() {
           </div>
           {recoveryNotice && (
             <p className="error-message" role="status">
-              Your previous prototype session could not be restored. Start a
-              new Preflight.
+              Your previous prototype session could not be restored. Start a new
+              Preflight.
             </p>
           )}
           {resumeState && (
-            <aside className="resume-panel" aria-label="Resume previous Preflight">
+            <aside
+              className="resume-panel"
+              aria-label="Resume previous Preflight"
+            >
               <strong>Resume previous Preflight</strong>
               <p>Your saved prototype journey is ready to continue.</p>
               <div className="button-row">
@@ -1421,16 +1483,23 @@ export default function PreflightApp() {
               <div className="clarification status-partial" key={clarification}>
                 <strong>{copy.clarification}</strong>
                 <p>{clarification}</p>
-                <p className="supporting-copy">Answer using the fields above, or retain this one detail as unknown.</p>
+                <p className="supporting-copy">
+                  Answer using the fields above, or retain this one detail as
+                  unknown.
+                </p>
                 <button
                   className="quiet-button"
                   onClick={() =>
                     setNeed({
                       ...need,
-                      informationHolder: need.informationHolder === "To be confirmed" ? "Unknown" : need.informationHolder,
-                      unresolvedClarifications: need.unresolvedClarifications.map((item) =>
-                        item === clarification ? `Unknown: ${item}` : item,
-                      ),
+                      informationHolder:
+                        need.informationHolder === "To be confirmed"
+                          ? "Unknown"
+                          : need.informationHolder,
+                      unresolvedClarifications:
+                        need.unresolvedClarifications.map((item) =>
+                          item === clarification ? `Unknown: ${item}` : item,
+                        ),
                     })
                   }
                 >
@@ -1445,7 +1514,11 @@ export default function PreflightApp() {
               </p>
             )}
             <div className="button-row">
-              <button className="action-button" disabled={unresolvedClarifications.length > 0} onClick={resolve}>
+              <button
+                className="action-button"
+                disabled={unresolvedClarifications.length > 0}
+                onClick={resolve}
+              >
                 {copy.search}
               </button>
               <button className="secondary-button" onClick={reset}>

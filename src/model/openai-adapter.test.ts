@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SCENARIO_PROMPTS } from "../content/scenarios";
 import {
   modelNeedsToInterpretation,
   OpenAIInterpretationAdapter,
@@ -68,7 +69,7 @@ describe("structured interpretation mapping", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await new OpenAIInterpretationAdapter().interpret({
-      text: "Check my EPF claim UAN 123456789012 and email me@example.com",
+      text: "Check my claim UAN 123456789012 and email me@example.com",
       traceId: "tr-0123456789abcdef",
     });
 
@@ -83,5 +84,26 @@ describe("structured interpretation mapping", () => {
     expect(body.input[1].content).not.toContain("123456789012");
     expect(body.input[1].content).not.toContain("me@example.com");
     expect(request.headers).toMatchObject({ authorization: "Bearer test-key" });
+  });
+
+  it("keeps registered scenario routing provider-independent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        throw new Error("seeded scenarios must not call the provider");
+      }),
+    );
+
+    const result = await new OpenAIInterpretationAdapter().interpret({
+      text: SCENARIO_PROMPTS[0].prompt,
+      traceId: "trace-seeded",
+    });
+
+    expect(result.needs[0]).toMatchObject({
+      scenario: "ncrb-property",
+      informationHolder: "National Crime Records Bureau",
+      geography: "All States/UTs",
+    });
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
