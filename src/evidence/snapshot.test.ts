@@ -84,4 +84,19 @@ describe("Evidence Snapshot", () => {
       "SNAPSHOT_CAPABILITY_SCOPE_INVALID",
     );
   });
+
+  it("rejects a representation whose cells were changed without a new hash", () => {
+    const changed = {
+      ...snapshot,
+      table: {
+        ...snapshot.table,
+        rows: snapshot.table.rows.map((row, index) =>
+          index === 0 ? { ...row, stolen2021: "999.9" } : row,
+        ),
+      },
+    };
+    expect(() => validateSnapshot(changed)).toThrow(
+      "SNAPSHOT_REPRESENTATION_HASH_MISMATCH",
+    );
+  });
 });

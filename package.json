@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "npm run validate:snapshot && next build",
+    "build": "npm run validate:snapshot && npm run validate:disclosure && next build",
     "dev": "next dev",
     "format": "prettier --write CONTRIBUTING.md .github/pull_request_template.md .github/workflows/ci.yml eslint.config.mjs next-env.d.ts next.config.ts package.json src",
     "format:check": "prettier --check CONTRIBUTING.md .github/pull_request_template.md .github/workflows/ci.yml eslint.config.mjs next-env.d.ts next.config.ts package.json src",
@@ -11,6 +11,7 @@
     "start": "next start",
     "test": "vitest run",
     "validate:snapshot": "vitest run src/evidence/snapshot.test.ts --reporter=dot",
+    "validate:disclosure": "vitest run src/disclosure/ledger.test.ts --reporter=dot",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

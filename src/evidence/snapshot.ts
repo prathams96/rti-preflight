@@ -149,7 +149,15 @@ const capabilityManifestHash = sha256(
     authorities: ["National Crime Records Bureau"],
     resourceIds: ["ncrb-property-table-20a"],
     periods: ["2021", "2022", "2023"],
-    operations: ["filter", "compare", "delta"],
+    operations: [
+      "filter",
+      "compare",
+      "delta",
+      "excludeAggregates",
+      "derive",
+      "sort",
+      "project",
+    ],
   }),
 );
 
@@ -272,6 +280,11 @@ export function validateSnapshot(candidate: Snapshot = snapshot): void {
   if (candidate.table.rows.some((row) => !row.rowKey || !row.raw))
     throw new Error("SNAPSHOT_ROW_INVALID");
   if (
+    sha256(JSON.stringify({ headers, rows: candidate.table.rows })) !==
+    candidate.representation.hash
+  )
+    throw new Error("SNAPSHOT_REPRESENTATION_HASH_MISMATCH");
+  if (
     candidate.syntheticFixtures.some(
       (fixture) =>
         fixture.sourceType !== "synthetic" ||
@@ -292,8 +305,9 @@ export function validateSnapshot(candidate: Snapshot = snapshot): void {
 export function groundingForCell(
   rowKey: string,
   colKey: string,
+  candidate: Snapshot = snapshot,
 ): GroundingReference {
-  const row = snapshot.table.rows.find((item) => item.rowKey === rowKey);
+  const row = candidate.table.rows.find((item) => item.rowKey === rowKey);
   if (!row) throw new Error("GROUNDING_ROW_NOT_FOUND");
   const columns: Record<string, string> = {
     state: row.state,
@@ -306,13 +320,13 @@ export function groundingForCell(
   if (locatedContent === undefined)
     throw new Error("GROUNDING_COLUMN_NOT_FOUND");
   return {
-    sourceBlobHash: snapshot.source.sourceBlobHash,
-    representationHash: snapshot.representation.hash,
+    sourceBlobHash: candidate.source.sourceBlobHash,
+    representationHash: candidate.representation.hash,
     locator: { kind: "cell", rowKey, colKey },
     locatedContent,
     locatedContentHash: sha256(locatedContent),
     extractionMethod: "declared-csv-cell",
-    extractionVersion: snapshot.representation.extractorVersion,
+    extractionVersion: candidate.representation.extractorVersion,
     confidence: "exact",
   };
 }

@@ -44,6 +44,7 @@ export type Outcome =
   | "SOURCE_RESOLVED"
   | "DERIVED_FINDING"
   | "PARTIALLY_RESOLVED"
+  | "EVIDENCE_CONFLICT"
   | "FORMAL_RESPONSE_REQUIRED"
   | "NO_RELIABLE_FINDING"
   | "OUTSIDE_SNAPSHOT_COVERAGE"
@@ -69,6 +70,7 @@ export type EvidenceItem = {
   sourceType:
     "official_dataset" | "rti_response_fixture" | "official_service_route";
   url: string;
+  alternateUrl?: string;
   applicablePeriod: string;
   extract: string;
   translationStatus: "original" | "machine_translated";
@@ -85,6 +87,16 @@ export type DerivedRow = {
   recoveryDelta: string;
   unit: "INR crore";
   lineage: GroundingReference[];
+  calculationMetadata?: CalculationMetadata;
+};
+
+export type CalculationMetadata = {
+  representationHash: string;
+  planHash: string;
+  engineVersion: string;
+  engineHash: string;
+  policyVersion: string;
+  policyHash: string;
 };
 
 export type ExecutionReceipt = {
@@ -94,7 +106,13 @@ export type ExecutionReceipt = {
   checkedResourceIds: string[];
   gapManifest: string[];
   executedAt: string;
+  engineVersion?: string;
+  engineHash?: string;
+  policyVersion?: string;
+  policyHash?: string;
 };
+
+export type NarrationState = "deterministic" | "verified_model";
 
 export type RenderableResolution = {
   outcome: Outcome;
@@ -113,5 +131,22 @@ export type RenderableResolution = {
     planHash: string;
   };
   executionReceipt?: ExecutionReceipt;
+  calculationMetadata?: CalculationMetadata;
+  narration?: NarrationState;
+  narrationRejectionCode?: string;
+  coverageManifest?: {
+    capabilityManifestHash: string;
+    checkedAuthority: string;
+    checkedResourceIds: string[];
+    limitation: string;
+  };
+  researchFinding?: {
+    outcome: Outcome;
+    headline: string;
+    evidenceStatus: string;
+    evidence: EvidenceItem[];
+    rows: DerivedRow[];
+  };
+  formalResponseReason?: string;
   traceId: string;
 };

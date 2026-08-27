@@ -414,6 +414,10 @@ textarea::placeholder {
   color: var(--inspection-teal);
   font-weight: 750;
 }
+.source-link-secondary {
+  display: inline-block;
+  margin-left: 1rem;
+}
 .calculation-strip {
   display: grid;
   gap: 0.35rem;
@@ -455,6 +459,41 @@ th {
   padding: 0.75rem 0.9rem;
   color: var(--evidence-teal);
   line-height: 1.55;
+}
+.row-inspection-list,
+.calculation-details {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--evidence-teal);
+  padding-top: 0.8rem;
+}
+.row-inspection {
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--evidence-teal) 35%, transparent);
+  padding: 0.65rem 0;
+}
+.row-inspection summary,
+.calculation-details summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+.row-inspection p,
+.calculation-details p,
+.row-inspection ul,
+.calculation-details ul {
+  color: var(--evidence-teal);
+  line-height: 1.55;
+}
+.row-inspection ul,
+.calculation-details ul {
+  margin-bottom: 0;
+  padding-left: 1.25rem;
+}
+.row-inspection code {
+  overflow-wrap: anywhere;
+}
+.audit-hashes {
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 .gap-block strong {
   color: var(--inspection-teal);

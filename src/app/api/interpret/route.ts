@@ -25,13 +25,27 @@ export async function POST(request: Request) {
       );
     }
     const traceId = traceIdFor(body.text);
-    const adapter = process.env.OPENAI_API_KEY
-      ? new OpenAIInterpretationAdapter()
-      : new DeterministicInterpretationAdapter();
-    const interpretation = await new RTIPreflightModule(adapter).interpret({
-      text: body.text,
-      traceId,
-    });
+    const deterministic = new DeterministicInterpretationAdapter();
+    let interpretation;
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        interpretation = await new RTIPreflightModule(
+          new OpenAIInterpretationAdapter(),
+        ).interpret({ text: body.text, traceId });
+      } catch {
+        // Provider degradation is recoverable: retain the citizen wording and
+        // use the same redacting, deterministic adapter used offline.
+        interpretation = await new RTIPreflightModule(deterministic).interpret({
+          text: body.text,
+          traceId,
+        });
+      }
+    } else {
+      interpretation = await new RTIPreflightModule(deterministic).interpret({
+        text: body.text,
+        traceId,
+      });
+    }
     return NextResponse.json(interpretation);
   } catch {
     return NextResponse.json(
