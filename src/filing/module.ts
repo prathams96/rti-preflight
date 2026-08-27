@@ -1,5 +1,6 @@
 import { DemoAdapter, type FilingAdapter } from "./adapter";
 import { NORTHERN_RAILWAY_ROUTE } from "./profile";
+import { normaliseNeedPhrase } from "./phrase";
 import {
   detectDraftDivergence,
   validateFilingPackage,
@@ -222,7 +223,11 @@ export function createFilingModule(
       const text =
         route.id === NORTHERN_RAILWAY_ROUTE.id
           ? RAILWAY_DRAFT
-          : `Please provide records concerning ${need.canonicalNeed ?? need.originalText ?? "the confirmed Information Need"}.`;
+          : `Please provide records showing ${normaliseNeedPhrase(
+              need.canonicalNeed ??
+                need.originalText ??
+                "the confirmed information need",
+            )}.`;
       const validation = validateDraft(text, route.profile);
       if (!validation.valid) throw new Error(validation.errors.join(" "));
       return {

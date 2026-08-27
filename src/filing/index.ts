@@ -3,3 +3,4 @@ export * from "./profile";
 export * from "./validation";
 export * from "./adapter";
 export * from "./module";
+export * from "./phrase";

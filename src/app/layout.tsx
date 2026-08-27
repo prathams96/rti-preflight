@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RTI Preflight",
+  title: "RTI Preflight — find out before you file",
   description:
-    "An independent research and drafting assistant for RTI applicants in India.",
+    "Check published government sources before filing an RTI. Independent prototype.",
 };
 
 export default function RootLayout({
