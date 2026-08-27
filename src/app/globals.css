@@ -206,6 +206,16 @@ textarea::placeholder {
 .privacy-note {
   margin: 0.8rem 0 1.25rem;
 }
+.resume-panel {
+  border: 1px solid var(--partial-slate);
+  background: var(--white);
+  padding: 1rem;
+  margin: 0 0 1rem;
+}
+.resume-panel p {
+  color: var(--evidence-teal);
+  line-height: 1.5;
+}
 .action-button,
 .secondary-button {
   min-height: 2.85rem;
