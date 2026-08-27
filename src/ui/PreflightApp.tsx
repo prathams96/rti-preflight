@@ -8,7 +8,7 @@ import type {
   RenderableResolution,
   ResolutionPreference,
 } from "../domain/types";
-import { SCENARIO_PROMPTS } from "../content/scenarios";
+import { CPCB_CONFLICT_DECISION, SCENARIO_PROMPTS } from "../content/scenarios";
 import { DISCLOSURE_LEDGER } from "../disclosure/ledger";
 import {
   createFilingModule,
@@ -22,6 +22,7 @@ import {
   type FictionalFilingProfile,
   type ValidatedFilingPackage,
 } from "../filing";
+import { EPFO_CLAIM_STATUS_ROUTE } from "../service/epfo-route";
 
 type Phase =
   | "start"
@@ -207,6 +208,8 @@ const COPY = {
     resume: "Resume",
     originalNeed: "Original confirmed Information Need",
     separatedDraft: "Separated draft to interpret",
+    cpcbCut:
+      "CPCB conflict scenario: cut until two compatible official sources are verified. CPCB/air-quality requests use a conservative coverage limitation.",
   },
   hi: {
     independent:
@@ -345,6 +348,8 @@ const COPY = {
     resume: "फिर शुरू करें",
     originalNeed: "मूल पुष्टि की गई Information Need",
     separatedDraft: "अलग किया गया draft समझें",
+    cpcbCut:
+      "CPCB conflict scenario: दो संगत आधिकारिक स्रोत सत्यापित होने तक हटाया गया है। CPCB/वायु-गुणवत्ता अनुरोधों में दायरे की सावधान सीमा दिखाई जाएगी।",
   },
 } as const;
 
@@ -510,6 +515,27 @@ function Details({ onClose }: { onClose: () => void }) {
               ),
             )}
           </ul>
+        </div>
+        <div className="route-provenance">
+          <h3>EPFO Official Service Route</h3>
+          <p>
+            {EPFO_CLAIM_STATUS_ROUTE.purpose}; verified{" "}
+            {EPFO_CLAIM_STATUS_ROUTE.verificationDate}. This is route metadata,
+            not a retrieved personal record.
+          </p>
+          {EPFO_CLAIM_STATUS_ROUTE.primarySourceUrls.map((url) => (
+            <a href={url} target="_blank" rel="noreferrer" key={url}>
+              Official EPFO source ↗
+            </a>
+          ))}
+        </div>
+        <div className="route-provenance">
+          <h3>CPCB conflict scenario</h3>
+          <p>{CPCB_CONFLICT_DECISION.reason}</p>
+          <p>
+            Decision recorded {CPCB_CONFLICT_DECISION.decidedAt}; no conflict
+            evidence is registered.
+          </p>
         </div>
       </section>
     </div>
@@ -837,34 +863,13 @@ export default function PreflightApp() {
 
   function downloadPackage() {
     if (!filingPackage || !acknowledgement || !need) return;
-    const artifact = {
-      disclosure:
-        "Independent research assistant—not an official RTI response.",
-      informationNeed: {
-        canonicalNeed: need.canonicalNeed,
-        measure: need.measure,
-        geography: need.geography,
-        period: need.period,
-        informationHolder: need.informationHolder,
-        resolutionPreference: need.resolutionPreference,
-      },
-      filingPackage: {
-        draft: filingPackage.draft,
-        holder: filingPackage.holder,
-        route: filingPackage.route,
-        fictionalProfile: profile,
-        fee: { amountInr: 10, method: "demo_upi" },
-      },
+    const serialized = filingModule.serializeArtifact({
+      package: filingPackage,
+      profile,
+      fee: { amountInr: 10, method: "demo_upi" },
       acknowledgement,
-      components: {
-        filing: "simulated",
-        payment: "simulated",
-        governmentIntegration: "absent",
-      },
-    };
-    const url = `data:application/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(artifact, null, 2),
-    )}`;
+    });
+    const url = `data:application/json;charset=utf-8,${encodeURIComponent(serialized)}`;
     const link = document.createElement("a");
     link.href = url;
     link.download = "rti-preflight-filing-package.json";
@@ -1273,6 +1278,11 @@ export default function PreflightApp() {
                           : "Synthetic fixture"}
                     </p>
                     <h3>{item.sourceTitle}</h3>
+                    {item.syntheticDisclosure && (
+                      <p className="synthetic-watermark" role="note">
+                        {item.syntheticDisclosure}
+                      </p>
+                    )}
                     <p>{item.extract}</p>
                     <dl>
                       <div>
@@ -1286,22 +1296,57 @@ export default function PreflightApp() {
                       <div>
                         <dt>{copy.locatedValues}</dt>
                         <dd>
-                          {item.grounding.length} cell references with immutable
-                          hashes
+                          {item.grounding.length > 0
+                            ? `${item.grounding.length} immutable references with content hashes`
+                            : "Route metadata; no personal record was retrieved"}
                         </dd>
                       </div>
                     </dl>
-                    <a href={item.url} target="_blank" rel="noreferrer">
-                      {copy.openSource}
-                    </a>
-                    {!challengedEvidenceId && (
-                      <button
-                        className="quiet-button challenge-button"
-                        onClick={() => challengeEvidence(item.id)}
-                      >
-                        {copy.challenge}
-                      </button>
+                    {item.url ? (
+                      <a href={item.url} target="_blank" rel="noreferrer">
+                        {item.sourceType === "official_service_route"
+                          ? copy.openRoute
+                          : copy.openSource}
+                      </a>
+                    ) : (
+                      <p className="supporting-copy">
+                        {item.syntheticDisclosure}
+                      </p>
                     )}
+                    {item.sourceType === "official_service_route" &&
+                      result.serviceRoute && (
+                        <div className="route-metadata">
+                          <p>
+                            {result.serviceRoute.purpose} · verified{" "}
+                            {result.serviceRoute.verifiedAt}
+                          </p>
+                          <ul>
+                            {result.serviceRoute.primarySourceUrls.map(
+                              (url) => (
+                                <li key={url}>
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    Official source ↗
+                                  </a>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                    {!challengedEvidenceId &&
+                      item.sourceType !== "official_service_route" &&
+                      item.sourceType !== "rti_response_fixture" && (
+                        <button
+                          className="quiet-button challenge-button"
+                          onClick={() => challengeEvidence(item.id)}
+                        >
+                          {copy.challenge}
+                        </button>
+                      )}
                     {item.alternateUrl && (
                       <a
                         className="source-link-secondary"

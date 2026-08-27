@@ -72,6 +72,61 @@ export type NcrbRow = {
   raw: string;
 };
 
+export type SyntheticFixtureValue = {
+  pointer: string;
+  locatedContent: string;
+  locatedContentHash: string;
+};
+
+export type SyntheticFixture = {
+  id: string;
+  title: string;
+  publisher: string;
+  disclosure: string;
+  content: string;
+  applicablePeriod: string;
+  sourceType: "synthetic";
+  sourceBlobHash: string;
+  representationHash: string;
+  values: ReadonlyArray<SyntheticFixtureValue>;
+};
+
+const PINNED_FIXTURE_HASHES: Record<
+  string,
+  {
+    sourceBlobHash: string;
+    representationHash: string;
+    values: Record<string, string>;
+  }
+> = {
+  "previous-rti-response-fixture": {
+    sourceBlobHash:
+      "9f4d986f71d4f6ec74b239df8ea49a0e97092afe72c91a3aa30319a2bf209bc5",
+    representationHash:
+      "7e4640ef594571c7bb25b42a9e19563ef0aec3ceb924005df8eaa44a4407f6df",
+    values: {
+      "/title":
+        "963b638c70e1e5894fc54896080c7328d6c77b1578991a3b4b63f9a8402d7047",
+      "/disclosure":
+        "fed3057f409c93f1247249f0ebda8c9deedede8eec57e807c3d9ed7ef75cb478",
+      "/content":
+        "1fb55cecad18912b04fcc817c88323e646336245f197d6f3a89703f9807ae566",
+    },
+  },
+  "northern-railway-filing-fixture": {
+    sourceBlobHash:
+      "c50a518b4e910ace415669c138f8d1197b03b7798cbbdd0d3480835b6c274f27",
+    representationHash:
+      "ac5b733d19b431834eda6a23448bbdee7451a663e6915bb12bd5dd676a68fcc0",
+    values: {
+      "/disclosure":
+        "8220d7ea00ee153d703d940cec26f09710983b70b5bd2a2eecc48861b8857ada",
+      "/content":
+        "9e0fabce5b4da2a896edc8299aeb9f9233d01fa447726830e123c4364ef106b9",
+    },
+  },
+};
+
 export type Snapshot = {
   version: string;
   source: {
@@ -105,11 +160,7 @@ export type Snapshot = {
     rowKeysHash: string;
     qualityFlags: ReadonlyArray<string>;
   };
-  syntheticFixtures: ReadonlyArray<{
-    id: string;
-    disclosure: string;
-    sourceType: "synthetic";
-  }>;
+  syntheticFixtures: ReadonlyArray<SyntheticFixture>;
   capabilityManifest: {
     hash: string;
     authorities: ReadonlyArray<string>;
@@ -146,9 +197,21 @@ const rows = parseRows();
 const representationHash = sha256(JSON.stringify({ headers, rows }));
 const capabilityManifestHash = sha256(
   JSON.stringify({
-    authorities: ["National Crime Records Bureau"],
-    resourceIds: ["ncrb-property-table-20a"],
-    periods: ["2021", "2022", "2023"],
+    authorities: [
+      "National Crime Records Bureau",
+      "Northern Railway",
+      "Synthetic demonstration authority",
+    ],
+    resourceIds: [
+      "ncrb-property-table-20a",
+      "previous-rti-response-fixture",
+      "northern-railway-filing-fixture",
+    ],
+    measures: [
+      "value of property stolen",
+      "percentage recovery of stolen property",
+    ],
+    periods: ["2021", "2022", "2023", "Not specified", "2024–25"],
     operations: [
       "filter",
       "compare",
@@ -158,8 +221,90 @@ const capabilityManifestHash = sha256(
       "sort",
       "project",
     ],
+    sourceTypes: ["official_dataset", "synthetic_fixture"],
   }),
 );
+
+function fixture(
+  input: Omit<
+    SyntheticFixture,
+    "sourceBlobHash" | "representationHash" | "values"
+  > & {
+    values: ReadonlyArray<{ pointer: string; locatedContent: string }>;
+  },
+): SyntheticFixture {
+  const sourceBlobHash = sha256(
+    JSON.stringify({
+      id: input.id,
+      title: input.title,
+      publisher: input.publisher,
+      disclosure: input.disclosure,
+      content: input.content,
+      applicablePeriod: input.applicablePeriod,
+      sourceType: input.sourceType,
+    }),
+  );
+  const values = input.values.map((value) => ({
+    ...value,
+    locatedContentHash: sha256(value.locatedContent),
+  }));
+  return {
+    ...input,
+    sourceBlobHash,
+    representationHash: sha256(
+      JSON.stringify({ ...input, sourceBlobHash, values }),
+    ),
+    values,
+  };
+}
+
+const previousRtiFixture = fixture({
+  id: "previous-rti-response-fixture",
+  title: "Fictional RTI Response Fixture",
+  publisher: "Synthetic demonstration authority",
+  disclosure: "Fictional RTI Response Fixture—not an official response.",
+  content:
+    "A wholly fictional, identity-free demonstration response about a generic public programme. It is not a real response and does not reconstruct any government record.",
+  applicablePeriod: "Not specified",
+  sourceType: "synthetic",
+  values: [
+    { pointer: "/title", locatedContent: "Fictional RTI Response Fixture" },
+    {
+      pointer: "/disclosure",
+      locatedContent:
+        "Fictional RTI Response Fixture—not an official response.",
+    },
+    {
+      pointer: "/content",
+      locatedContent:
+        "A wholly fictional, identity-free demonstration response about a generic public programme. It is not a real response and does not reconstruct any government record.",
+    },
+  ],
+});
+
+const northernRailwayFixture = fixture({
+  id: "northern-railway-filing-fixture",
+  title: "Northern Railway in-scope no-finding fixture",
+  publisher: "Synthetic demonstration fixture",
+  disclosure:
+    "Fictional curated no-finding fixture—not a statement that records are unavailable or unpublished.",
+  content:
+    "This fixture records that the prototype has no supporting expenditure statement, ledger extract, work order, or contractor record for the confirmed need.",
+  applicablePeriod: "2024–25",
+  sourceType: "synthetic",
+  values: [
+    {
+      pointer: "/disclosure",
+      locatedContent:
+        "Fictional curated no-finding fixture—not a statement that records are unavailable or unpublished.",
+    },
+    {
+      pointer: "/content",
+      locatedContent:
+        "This fixture records that the prototype has no supporting expenditure statement, ledger extract, work order, or contractor record for the confirmed need.",
+    },
+  ],
+});
 
 export const snapshot: Snapshot = {
   version: SNAPSHOT_VERSION,
@@ -218,24 +363,34 @@ export const snapshot: Snapshot = {
       "Monetary values are in crore.",
     ],
   },
-  syntheticFixtures: [
-    {
-      id: "previous-rti-response-fixture",
-      disclosure: "Fictional RTI Response Fixture—not an official response.",
-      sourceType: "synthetic",
-    },
-  ],
+  syntheticFixtures: [previousRtiFixture, northernRailwayFixture],
   capabilityManifest: {
     hash: capabilityManifestHash,
-    authorities: ["National Crime Records Bureau"],
+    authorities: [
+      "National Crime Records Bureau",
+      "Northern Railway",
+      "Synthetic demonstration authority",
+    ],
     measures: [
       "value of property stolen",
       "percentage recovery of stolen property",
     ],
-    sourceTypes: ["official_dataset"],
-    resourceIds: ["ncrb-property-table-20a"],
-    periods: ["2021", "2022", "2023"],
-    operations: ["filter", "compare", "delta"],
+    sourceTypes: ["official_dataset", "synthetic_fixture"],
+    resourceIds: [
+      "ncrb-property-table-20a",
+      "previous-rti-response-fixture",
+      "northern-railway-filing-fixture",
+    ],
+    periods: ["2021", "2022", "2023", "Not specified", "2024–25"],
+    operations: [
+      "filter",
+      "compare",
+      "delta",
+      "excludeAggregates",
+      "derive",
+      "sort",
+      "project",
+    ],
   },
 };
 
@@ -288,7 +443,46 @@ export function validateSnapshot(candidate: Snapshot = snapshot): void {
     candidate.syntheticFixtures.some(
       (fixture) =>
         fixture.sourceType !== "synthetic" ||
-        !fixture.disclosure.includes("Fictional"),
+        !fixture.disclosure.includes("Fictional") ||
+        !fixture.title ||
+        !fixture.content ||
+        !/^[a-f0-9]{64}$/.test(fixture.sourceBlobHash) ||
+        fixture.sourceBlobHash !==
+          sha256(
+            JSON.stringify({
+              id: fixture.id,
+              title: fixture.title,
+              publisher: fixture.publisher,
+              disclosure: fixture.disclosure,
+              content: fixture.content,
+              applicablePeriod: fixture.applicablePeriod,
+              sourceType: fixture.sourceType,
+            }),
+          ) ||
+        fixture.sourceBlobHash !==
+          PINNED_FIXTURE_HASHES[
+            fixture.id as keyof typeof PINNED_FIXTURE_HASHES
+          ]?.sourceBlobHash ||
+        fixture.representationHash !==
+          PINNED_FIXTURE_HASHES[
+            fixture.id as keyof typeof PINNED_FIXTURE_HASHES
+          ]?.representationHash ||
+        !fixture.values.some(
+          (value) =>
+            value.pointer === "/content" &&
+            value.locatedContent === fixture.content,
+        ) ||
+        fixture.values.some((value) => {
+          const expected =
+            PINNED_FIXTURE_HASHES[fixture.id]?.values[value.pointer];
+          return value.locatedContentHash !== expected;
+        }) ||
+        fixture.values.some(
+          (value) =>
+            !value.pointer.startsWith("/") ||
+            !value.locatedContent ||
+            value.locatedContentHash !== sha256(value.locatedContent),
+        ),
     )
   )
     throw new Error("SNAPSHOT_FIXTURE_DISCLOSURE_INVALID");
@@ -297,9 +491,24 @@ export function validateSnapshot(candidate: Snapshot = snapshot): void {
   if (
     candidate.capabilityManifest.measures.join("|") !==
       "value of property stolen|percentage recovery of stolen property" ||
-    candidate.capabilityManifest.sourceTypes.join("|") !== "official_dataset"
+    candidate.capabilityManifest.sourceTypes.join("|") !==
+      "official_dataset|synthetic_fixture" ||
+    candidate.capabilityManifest.resourceIds.join("|") !==
+      "ncrb-property-table-20a|previous-rti-response-fixture|northern-railway-filing-fixture"
   )
     throw new Error("SNAPSHOT_CAPABILITY_SCOPE_INVALID");
+  const capabilityHash = sha256(
+    JSON.stringify({
+      authorities: candidate.capabilityManifest.authorities,
+      resourceIds: candidate.capabilityManifest.resourceIds,
+      measures: candidate.capabilityManifest.measures,
+      periods: candidate.capabilityManifest.periods,
+      operations: candidate.capabilityManifest.operations,
+      sourceTypes: candidate.capabilityManifest.sourceTypes,
+    }),
+  );
+  if (capabilityHash !== candidate.capabilityManifest.hash)
+    throw new Error("SNAPSHOT_CAPABILITY_HASH_MISMATCH");
 }
 
 export function groundingForCell(
@@ -327,6 +536,29 @@ export function groundingForCell(
     locatedContentHash: sha256(locatedContent),
     extractionMethod: "declared-csv-cell",
     extractionVersion: candidate.representation.extractorVersion,
+    confidence: "exact",
+  };
+}
+
+export function groundingForFixtureValue(
+  fixtureId: string,
+  pointer: string,
+  candidate: Snapshot = snapshot,
+): GroundingReference {
+  const selected = candidate.syntheticFixtures.find(
+    (fixture) => fixture.id === fixtureId,
+  );
+  if (!selected) throw new Error("GROUNDING_FIXTURE_NOT_FOUND");
+  const value = selected.values.find((item) => item.pointer === pointer);
+  if (!value) throw new Error("GROUNDING_FIXTURE_POINTER_NOT_FOUND");
+  return {
+    sourceBlobHash: selected.sourceBlobHash,
+    representationHash: selected.representationHash,
+    locator: { kind: "jsonPointer", pointer },
+    locatedContent: value.locatedContent,
+    locatedContentHash: value.locatedContentHash,
+    extractionMethod: "fixture-json",
+    extractionVersion: "fixture-v1",
     confidence: "exact",
   };
 }
