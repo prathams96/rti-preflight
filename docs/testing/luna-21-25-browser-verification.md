@@ -18,6 +18,7 @@ Screenshot artifact captured during this verification: `.playwright-cli/page-202
 
 ## Still required before public certification
 
+- The PR Vercel Preview deployment completed, but its public URL redirected to Vercel login; configure a reviewer-accessible deployment before treating #25 as certified.
 - Repeat the NCRB and Northern Railway flows against the production URL.
 - Run a real screen reader check, keyboard-only pass through all seven screens, reduced-motion inspection, and Hindi clipping review.
 - Capture cold-3G FCP and cached Ask-to-Result p50/p95 against the deployed build.
