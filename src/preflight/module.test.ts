@@ -165,4 +165,78 @@ describe("PreflightModule public seam", () => {
     expect(result.researchFinding?.evidence).toEqual([]);
     expect(result.formalResponseReason).toContain("written response");
   });
+
+  it("routes an own EPF claim to the versioned official service route", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "What is the status of my EPF claim?",
+        traceId: "trace-epfo-own",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({ need, snapshot });
+    expect(need.recordSubject).toBe("own");
+    expect(result.outcome).toBe("OFFICIAL_SERVICE_ROUTE");
+    expect(result.serviceRoute).toMatchObject({
+      id: "epfo-claim-status",
+      officialUrl: "https://passbook.epfindia.gov.in/MemClaimStatusUAN/",
+      verifiedAt: "2026-08-27",
+    });
+    expect(result.meaning).toMatch(/does not .*promise/i);
+  });
+
+  it("does not route another person's EPF identifier to an own-record service", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "Check someone else's EPF claim UAN 123456789012.",
+        traceId: "trace-epfo-other",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({ need, snapshot });
+    expect(need.recordSubject).toBe("another");
+    expect(result.outcome).toBe("FORMAL_RESPONSE_REQUIRED");
+    expect(result.evidence).toEqual([]);
+    expect(result.meaning).toContain("not permission");
+    expect(result.meaning).not.toContain("123456789012");
+  });
+
+  it("grounds every value of the fictional previous-response fixture", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "Find an earlier RTI response relevant to a selected Central information need.",
+        traceId: "trace-fixture",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({ need, snapshot });
+    expect(result.outcome).toBe("SOURCE_RESOLVED");
+    expect(result.evidence[0]).toMatchObject({
+      sourceType: "rti_response_fixture",
+      syntheticDisclosure: expect.stringContaining("not an official response"),
+    });
+    expect(result.evidence[0].url).toBeUndefined();
+    expect(result.evidence[0].grounding.length).toBeGreaterThanOrEqual(3);
+    for (const grounding of result.evidence[0].grounding) {
+      expect(grounding.locator.kind).toBe("jsonPointer");
+      expect(grounding.locatedContentHash).toMatch(/^[a-f0-9]{64}$/);
+    }
+    expect(result.evidenceStatus).toContain("Fictional");
+  });
+
+  it("keeps the CPCB conflict cut outside the snapshot and never emits a conflict", async () => {
+    const preflight = new RTIPreflightModule();
+    const interpretation = await preflight.interpret({
+      text: "Compare the air-quality metric represented differently in two CPCB publications.",
+      traceId: "trace-cpcb-cut",
+    });
+    expect(interpretation.needs[0].scenario).toBe("unsupported");
+    const result = await preflight.resolve({
+      need: interpretation.needs[0],
+      snapshot,
+    });
+    expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
+    expect(result.outcome).not.toBe("EVIDENCE_CONFLICT");
+    expect(result.meaning).toContain("cannot claim");
+  });
 });

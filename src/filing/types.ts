@@ -68,13 +68,37 @@ export type DraftValidation = {
   errors: string[];
 };
 
+export type ConfirmedFilingNeed = {
+  id: string;
+  canonicalNeed?: string;
+  originalText?: string;
+  measure?: string;
+  geography?: string;
+  period?: string;
+  breakdown?: string;
+  informationHolder?: string;
+  informationHolderStatus?: "verified" | "unverified";
+  resolutionPreference?: string;
+  unresolvedClarifications?: string[];
+  scenario?: string;
+};
+
 export type ValidatedFilingPackage = {
   valid: true;
   draft: FilingDraft;
-  confirmedNeed: { id: string; canonicalNeed?: string; originalText?: string };
+  confirmedNeed: ConfirmedFilingNeed;
   holder: InformationHolderRef;
   route: FilingRouteRef;
   validation: DraftValidation;
+  /** Optional attachment metadata represented by the filing package. */
+  attachments?: FilingAttachment[];
+};
+
+export type FilingAttachment = {
+  id?: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
 };
 
 export type FictionalFilingProfile = {
@@ -109,3 +133,46 @@ export type DemoStep =
   "draft" | "otp" | "identity" | "review" | "payment" | "confirmation";
 
 export type StepValidation = { valid: boolean; errors: string[] };
+
+export type FilingFee = { amountInr: number; method: "demo_upi" };
+
+export type FilingPackageArtifactInput = {
+  package: ValidatedFilingPackage;
+  profile: FictionalFilingProfile;
+  fee: FilingFee;
+  acknowledgement: DemoAcknowledgement;
+  attachments?: FilingAttachment[];
+};
+
+export type FilingPackageArtifact = {
+  artifactVersion: "1";
+  kind: "filing-package";
+  disclosure: "Independent research assistant—not an official RTI response.";
+  confirmedNeed: Record<string, unknown>;
+  filingPackage: {
+    draft: Pick<FilingDraft, "text" | "needId" | "holderId" | "routeId">;
+    holder: InformationHolderRef;
+    route: FilingRouteRef;
+    fictionalProfile: FictionalFilingProfile;
+    fee: FilingFee;
+    attachments?: FilingAttachment[];
+  };
+  acknowledgement: Pick<
+    DemoAcknowledgement,
+    | "registrationNumber"
+    | "disclosure"
+    | "holder"
+    | "route"
+    | "submittedDraft"
+    | "fee"
+    | "submittedAt"
+  >;
+  disclosures: {
+    routeValidation: "working";
+    draftValidation: "working";
+    filing: "simulated";
+    payment: "simulated";
+    governmentIntegration: "absent";
+    acknowledgement: "simulated";
+  };
+};

@@ -579,6 +579,24 @@ textarea::placeholder {
   color: var(--evidence-teal);
   line-height: 1.5;
 }
+.synthetic-watermark {
+  border-left: 4px solid var(--partial-slate);
+  background: color-mix(in srgb, var(--partial-slate) 12%, transparent);
+  padding: 0.45rem 0.6rem;
+  font-weight: 800;
+}
+.route-metadata {
+  border-top: 1px solid var(--evidence-teal);
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+}
+.route-metadata p {
+  margin: 0 0 0.35rem;
+}
+.route-metadata ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
 .evidence-type {
   font-size: 0.78rem;
   font-weight: 800;

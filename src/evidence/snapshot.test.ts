@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   groundingForCell,
+  groundingForFixtureValue,
   isAggregateRow,
   snapshot,
   validateSnapshot,
@@ -34,6 +35,27 @@ describe("Evidence Snapshot", () => {
     expect(grounding.sourceBlobHash).toBe(snapshot.source.sourceBlobHash);
   });
 
+  it("registers synthetic fixtures with immutable pointer provenance", () => {
+    const fixture = snapshot.syntheticFixtures.find(
+      (item) => item.id === "previous-rti-response-fixture",
+    );
+    expect(fixture).toMatchObject({
+      sourceType: "synthetic",
+      disclosure: expect.stringContaining("not an official response"),
+      sourceBlobHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      representationHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+    const grounding = groundingForFixtureValue(
+      "previous-rti-response-fixture",
+      "/disclosure",
+    );
+    expect(grounding.locator).toEqual({
+      kind: "jsonPointer",
+      pointer: "/disclosure",
+    });
+    expect(grounding.locatedContentHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
   it("rejects missing aggregate declarations", () => {
     const invalid = {
       ...snapshot,
@@ -49,9 +71,9 @@ describe("Evidence Snapshot", () => {
       ...snapshot,
       syntheticFixtures: [
         {
+          ...snapshot.syntheticFixtures[0],
           id: "fixture",
           disclosure: "Official response",
-          sourceType: "synthetic" as const,
         },
       ],
     };
@@ -97,6 +119,57 @@ describe("Evidence Snapshot", () => {
     };
     expect(() => validateSnapshot(changed)).toThrow(
       "SNAPSHOT_REPRESENTATION_HASH_MISMATCH",
+    );
+  });
+
+  it("rejects synthetic fixture content whose representation hash drifts", () => {
+    const fixture = snapshot.syntheticFixtures[0];
+    const invalid = {
+      ...snapshot,
+      syntheticFixtures: [
+        { ...fixture, content: `${fixture.content} changed` },
+        ...snapshot.syntheticFixtures.slice(1),
+      ],
+    };
+    expect(() => validateSnapshot(invalid)).toThrow(
+      "SNAPSHOT_FIXTURE_DISCLOSURE_INVALID",
+    );
+  });
+
+  it("rejects synthetic fixture pointers that do not locate the full content", () => {
+    const fixture = snapshot.syntheticFixtures[0];
+    const invalid = {
+      ...snapshot,
+      syntheticFixtures: [
+        {
+          ...fixture,
+          values: fixture.values.map((value) =>
+            value.pointer === "/content"
+              ? {
+                  ...value,
+                  locatedContent: value.locatedContent.split(". ")[0],
+                }
+              : value,
+          ),
+        },
+        ...snapshot.syntheticFixtures.slice(1),
+      ],
+    };
+    expect(() => validateSnapshot(invalid)).toThrow(
+      "SNAPSHOT_FIXTURE_DISCLOSURE_INVALID",
+    );
+  });
+
+  it("rejects capability scope changes without a new manifest hash", () => {
+    const invalid = {
+      ...snapshot,
+      capabilityManifest: {
+        ...snapshot.capabilityManifest,
+        authorities: ["Unregistered authority"],
+      },
+    };
+    expect(() => validateSnapshot(invalid)).toThrow(
+      "SNAPSHOT_CAPABILITY_HASH_MISMATCH",
     );
   });
 });

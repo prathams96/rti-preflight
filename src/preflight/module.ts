@@ -11,10 +11,15 @@ import type {
   RenderableResolution,
 } from "../domain/types";
 import {
+  groundingForFixtureValue,
   hashPlan,
   validateSnapshot,
   type Snapshot,
 } from "../evidence/snapshot";
+import {
+  resolveEpfoServiceRoute,
+  classifyEpfoRecordSubject,
+} from "../service/epfo-route";
 import type { InterpretationAdapter } from "../model/adapter";
 import { redactSensitiveIdentifiers } from "../model/redaction";
 import { DeterministicInterpretationAdapter } from "../model/fake-adapter";
@@ -267,45 +272,37 @@ function noFindingResolution(
 
 function syntheticFixtureResolution(
   need: InformationNeed,
+  source: Snapshot,
   traceId: string,
 ): RenderableResolution {
+  const fixture = source.syntheticFixtures.find(
+    (item) => item.id === "previous-rti-response-fixture",
+  );
+  if (!fixture) throw new Error("SYNTHETIC_FIXTURE_NOT_REGISTERED");
   const evidence: EvidenceItem = {
-    id: "previous-rti-response-fixture",
-    sourceTitle: "Fictional RTI Response Fixture",
-    publisher: "Synthetic demonstration authority",
+    id: fixture.id,
+    sourceTitle: fixture.title,
+    publisher: fixture.publisher,
     sourceType: "rti_response_fixture",
-    url: "https://example.invalid/rti-response-fixture",
-    applicablePeriod: "Not specified",
-    extract: "Fictional RTI Response Fixture—not an official response.",
+    applicablePeriod: fixture.applicablePeriod,
+    extract: `${fixture.disclosure} ${fixture.content}`,
+    syntheticDisclosure: fixture.disclosure,
     translationStatus: "original",
-    grounding: [
-      {
-        sourceBlobHash: "synthetic-fixture",
-        representationHash: "synthetic-fixture-v1",
-        locator: {
-          kind: "jsonPointer",
-          pointer: "/syntheticFixtures/previous-rti-response-fixture",
-        },
-        locatedContent:
-          "Fictional RTI Response Fixture—not an official response.",
-        locatedContentHash: "synthetic-fixture",
-        extractionMethod: "fixture-json",
-        extractionVersion: "fixture-v1",
-        confidence: "exact",
-      },
-    ],
+    grounding: fixture.values.map((value) =>
+      groundingForFixtureValue(fixture.id, value.pointer, source),
+    ),
   };
   const base: RenderableResolution = {
     outcome: "SOURCE_RESOLVED",
     headline: "A synthetic earlier RTI response fixture is available.",
     meaning:
       "This example demonstrates how a previous response could be displayed. It is fictional and does not represent an official response.",
-    evidenceStatus: "Found through a synthetic RTI Response Fixture",
+    evidenceStatus:
+      "Found through a Fictional RTI Response Fixture—not an official response",
     evidence: [evidence],
     rows: [],
     gaps: [],
-    searchScope:
-      "The prototype checked its clearly labelled synthetic RTI Response Fixture.",
+    searchScope: `The prototype checked the registered ${fixture.title}. ${fixture.disclosure}`,
     recommendedAction: "Review the fixture, or prepare a new RTI.",
     traceId,
   };
@@ -315,6 +312,84 @@ function syntheticFixtureResolution(
         "The confirmed Information Need selected a new written response.",
       )
     : base;
+}
+
+function epfoSubjectScope(need: InformationNeed) {
+  if (need.recordSubject)
+    return need.recordSubject === "own"
+      ? "own-record"
+      : need.recordSubject === "another"
+        ? "another-person"
+        : "unspecified";
+  return classifyEpfoRecordSubject(
+    `${need.originalText} ${need.canonicalNeed}`,
+  );
+}
+
+function epfoResolution(
+  need: InformationNeed,
+  traceId: string,
+): RenderableResolution {
+  const decision = resolveEpfoServiceRoute(epfoSubjectScope(need));
+  if (decision.kind === "not-own-record-service-route")
+    return {
+      outcome: "FORMAL_RESPONSE_REQUIRED",
+      headline:
+        decision.subjectScope === "another-person"
+          ? "An EPFO service route cannot establish another person’s record access."
+          : "Confirm whose EPF claim you need before choosing a route.",
+      meaning:
+        "Possessing another person’s identifier is not permission to access their record. This prototype does not request an account number, Aadhaar, PAN, OTP, or government login. You can prepare a records-focused Filing Draft without a promise that the authority will disclose the record.",
+      evidenceStatus: "No personal record retrieved",
+      evidence: [],
+      rows: [],
+      gaps: [
+        decision.subjectScope === "another-person"
+          ? "The requested record is not identified as your own; self-service access is not represented for another person’s record."
+          : "The record subject is not clear enough to select an own-record service route.",
+      ],
+      searchScope:
+        "The prototype does not retrieve personal records or accept account identifiers. Only the represented own-record service route can be opened.",
+      recommendedAction:
+        "Prepare a conservative Filing Draft asking for records, if appropriate.",
+      formalResponseReason:
+        "The represented authenticated service route is limited to the citizen’s own record.",
+      traceId,
+    };
+  return {
+    outcome: "OFFICIAL_SERVICE_ROUTE",
+    headline: "This looks like your own personal EPF record.",
+    meaning:
+      "The official EPFO claim-status route is intended for a member’s own claim. This prototype does not enter credentials, access a record, or promise a status.",
+    evidenceStatus: "Official service route—not a retrieved finding",
+    evidence: [
+      {
+        id: decision.route.id,
+        sourceTitle: "EPFO Know Your Claim Status",
+        publisher: decision.route.canonicalHolder,
+        sourceType: "official_service_route",
+        url: decision.route.officialUrl,
+        applicablePeriod: "Current own-record claim status",
+        extract:
+          "Use the official EPFO route yourself for your own claim. No account details are requested or transmitted by this prototype.",
+        translationStatus: "original",
+        grounding: [],
+      },
+    ],
+    rows: [],
+    gaps: [],
+    searchScope:
+      "The prototype classified this as an own-record service route; it did not retrieve a personal record or send any identifier.",
+    recommendedAction: "Open the official EPFO claim-status route yourself.",
+    serviceRoute: {
+      id: decision.route.id,
+      purpose: decision.route.purpose,
+      officialUrl: decision.route.officialUrl,
+      verifiedAt: decision.route.verificationDate,
+      primarySourceUrls: [...decision.route.primarySourceUrls],
+    },
+    traceId,
+  };
 }
 
 function resolveNeed(
@@ -334,50 +409,9 @@ function resolveNeed(
     return derivedNcrbResolution(need, source, traceId);
   if (need.scenario === "railway-filing")
     return noFindingResolution(need, source, traceId);
-  if (need.scenario === "epfo-status")
-    return {
-      outcome: "OFFICIAL_SERVICE_ROUTE",
-      headline: "This looks like a personal EPF record.",
-      meaning:
-        "An authenticated EPFO service route is the appropriate first place to check your own claim status. No account details are needed here.",
-      evidenceStatus: "Official service route",
-      evidence: [
-        {
-          id: "epfo-claim-status-route",
-          sourceTitle: "EPFO Know Your Claim Status",
-          publisher: "Employees' Provident Fund Organisation",
-          sourceType: "official_service_route",
-          url: "https://passbook.epfindia.gov.in/MemberPassBook/login",
-          applicablePeriod: "Current own-record claim status",
-          extract:
-            "The official EPFO service provides a route for a member to check the status of their own claim. This prototype does not enter or transmit account details.",
-          translationStatus: "original",
-          grounding: [
-            {
-              sourceBlobHash: "official-epfo-route",
-              representationHash: "official-epfo-route-2026-08",
-              locator: {
-                kind: "jsonPointer",
-                pointer: "/services/claim-status",
-              },
-              locatedContent: "EPFO Know Your Claim Status",
-              locatedContentHash: "official-epfo-route",
-              extractionMethod: "official-route-record",
-              extractionVersion: "route-v1",
-              confidence: "exact",
-            },
-          ],
-        },
-      ],
-      rows: [],
-      gaps: [],
-      searchScope:
-        "The prototype does not retrieve personal records or accept account identifiers.",
-      recommendedAction: "Open the official EPFO service route yourself.",
-      traceId,
-    };
+  if (need.scenario === "epfo-status") return epfoResolution(need, traceId);
   if (need.scenario === "previous-rti")
-    return syntheticFixtureResolution(need, traceId);
+    return syntheticFixtureResolution(need, source, traceId);
   const grievance =
     /\b(why|failed|delay|delayed|complaint|grievance|problem)\b/i.test(
       `${need.originalText} ${need.canonicalNeed}`,

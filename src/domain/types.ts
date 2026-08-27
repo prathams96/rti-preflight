@@ -15,6 +15,7 @@ export type InformationNeed = {
   resolutionPreference: ResolutionPreference;
   unresolvedClarifications: string[];
   scenario: ScenarioId;
+  recordSubject?: "own" | "another" | "unspecified";
 };
 
 export type ScenarioId =
@@ -69,9 +70,13 @@ export type EvidenceItem = {
   publisher: string;
   sourceType:
     "official_dataset" | "rti_response_fixture" | "official_service_route";
-  url: string;
+  url?: string;
   alternateUrl?: string;
   applicablePeriod: string;
+  publicationDate?: string;
+  scope?: string;
+  methodology?: string;
+  syntheticDisclosure?: string;
   extract: string;
   translationStatus: "original" | "machine_translated";
   grounding: GroundingReference[];
@@ -148,5 +153,12 @@ export type RenderableResolution = {
     rows: DerivedRow[];
   };
   formalResponseReason?: string;
+  serviceRoute?: {
+    id: string;
+    purpose: string;
+    officialUrl: string;
+    verifiedAt: string;
+    primarySourceUrls: string[];
+  };
   traceId: string;
 };

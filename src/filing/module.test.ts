@@ -2,20 +2,114 @@ import { describe, expect, it } from "vitest";
 import {
   DEMO_OTP,
   NORTHERN_RAILWAY_HOLDER,
+  NORTHERN_RAILWAY_PROFILE,
   NORTHERN_RAILWAY_ROUTE,
   createFilingModule,
   detectDraftDivergence,
   validateDraft,
   validateDemoStep,
+  buildFilingPackageArtifact,
+  serializeFilingPackageArtifact,
 } from "./index";
 
 const need = {
   id: "need-railway",
+  originalText: "Raw citizen prompt must not enter a Filing Package.",
   canonicalNeed:
     "maintenance expenditure for lifts and escalators and contractors at New Delhi Railway Station during FY 2024-25",
 };
 
 describe("Filing Module public seam", () => {
+  async function confirmedInput() {
+    const filing = createFilingModule();
+    const prepared = await filing.prepare({
+      need,
+      holder: NORTHERN_RAILWAY_HOLDER,
+      route: NORTHERN_RAILWAY_ROUTE,
+    });
+    const acknowledgement = await filing.demoSubmit({
+      package: prepared,
+      confirmation: {
+        otp: DEMO_OTP,
+        profile: filing.demoProfile,
+        reviewed: true,
+        payment: { method: "demo_upi", amountInr: 10 },
+      },
+    });
+    return {
+      package: {
+        ...prepared,
+        attachments: [
+          {
+            id: "attachment-1",
+            name: "records.pdf",
+            mimeType: "application/pdf",
+            sizeBytes: 42,
+            secret: "must-not-export",
+          },
+        ],
+        prompt: "must-not-export",
+        diagnostics: { rawModelPayload: "must-not-export" },
+      },
+      profile: { ...filing.demoProfile },
+      fee: { method: "demo_upi" as const, amountInr: 10 },
+      acknowledgement,
+    };
+  }
+
+  it("builds a JSON-safe artifact with confirmed fields, metadata, attachment metadata, and disclosures", async () => {
+    const input = await confirmedInput();
+    const artifact = buildFilingPackageArtifact(input);
+
+    expect(artifact.confirmedNeed).toMatchObject({
+      id: need.id,
+      canonicalNeed: need.canonicalNeed,
+    });
+    expect(artifact.filingPackage.route).toMatchObject({
+      id: NORTHERN_RAILWAY_ROUTE.id,
+      officialUrl: NORTHERN_RAILWAY_ROUTE.officialUrl,
+      profile: { id: NORTHERN_RAILWAY_PROFILE.id },
+    });
+    expect(artifact.filingPackage.attachments).toEqual([
+      {
+        id: "attachment-1",
+        name: "records.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 42,
+      },
+    ]);
+    expect(artifact.disclosures).toEqual({
+      routeValidation: "working",
+      draftValidation: "working",
+      filing: "simulated",
+      payment: "simulated",
+      governmentIntegration: "absent",
+      acknowledgement: "simulated",
+    });
+    const serialized = serializeFilingPackageArtifact(input);
+    expect(serialized).not.toContain("must-not-export");
+    expect(serialized).not.toContain("rawModelPayload");
+    expect(serialized).not.toContain("Raw citizen prompt");
+    expect(serialized).toContain("DEMO-RTI-2026-0042");
+  });
+
+  it("is detached, immutable, and deterministic", async () => {
+    const input = await confirmedInput();
+    const first = buildFilingPackageArtifact(input);
+    const second = buildFilingPackageArtifact(input);
+    expect(first).toEqual(second);
+    expect(serializeFilingPackageArtifact(input)).toBe(
+      serializeFilingPackageArtifact(input),
+    );
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(Object.isFrozen(first.filingPackage.route)).toBe(true);
+
+    input.package.draft.text = "changed after export";
+    input.profile.fullName = "changed after export";
+    expect(first.filingPackage.draft.text).not.toBe("changed after export");
+    expect(first.filingPackage.fictionalProfile.fullName).toBe("DEMO CITIZEN");
+  });
+
   it("exposes the verified Northern Railway route and its 3,000 character rule", () => {
     expect(NORTHERN_RAILWAY_HOLDER.canonicalName).toBe("Northern Railway");
     expect(NORTHERN_RAILWAY_ROUTE.profile.text.maxChars).toBe(3000);
