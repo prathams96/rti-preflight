@@ -1,0 +1,18 @@
+{
+  "buildPath": "comp",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/app/globals.css"
+        ],
+        "createdAt": "2026-08-27T10:15:02.168Z",
+        "reason": "Agent: after triage, the remaining side-tab uses in globals.css are intentional inspection brackets and explicit status/error affordances required by DESIGN.md; all decorative side accents were removed."
+      }
+    ]
+  }
+}

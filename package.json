@@ -1,0 +1,34 @@
+{
+  "name": "rti-preflight",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run validate:snapshot && next build",
+    "dev": "next dev",
+    "format": "prettier --write CONTRIBUTING.md .github/pull_request_template.md .github/workflows/ci.yml eslint.config.mjs next-env.d.ts next.config.ts package.json src",
+    "format:check": "prettier --check CONTRIBUTING.md .github/pull_request_template.md .github/workflows/ci.yml eslint.config.mjs next-env.d.ts next.config.ts package.json src",
+    "lint": "eslint .",
+    "start": "next start",
+    "test": "vitest run",
+    "validate:snapshot": "vitest run src/evidence/snapshot.test.ts --reporter=dot",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.3",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "vitest": "4.0.18"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
