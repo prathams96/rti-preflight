@@ -10,7 +10,9 @@ describe("normaliseNeedPhrase", () => {
 
   it("removes a leading need verb and normalises an individual-set phrase", () => {
     expect(
-      normaliseNeedPhrase("Identify individual States/UTs with increased theft."),
+      normaliseNeedPhrase(
+        "Identify individual States/UTs with increased theft.",
+      ),
     ).toBe("the States/UTs with increased theft");
   });
 
