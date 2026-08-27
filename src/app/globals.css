@@ -228,7 +228,7 @@ textarea::placeholder {
 }
 .examples {
   margin-top: 1rem;
-  border-left: 4px solid var(--evidence-teal);
+  border-top: 1px solid var(--evidence-teal);
   padding: 0.9rem 1.1rem;
 }
 .examples summary,
@@ -270,8 +270,8 @@ textarea::placeholder {
   padding: clamp(1.1rem, 4vw, 2rem);
 }
 .card-kicker {
-  border-left: 4px solid var(--evidence-teal);
-  padding-left: 0.8rem;
+  border-bottom: 1px solid var(--evidence-teal);
+  padding-bottom: 0.65rem;
   color: var(--evidence-teal);
   line-height: 1.5;
 }
@@ -292,7 +292,7 @@ textarea::placeholder {
 }
 .clarification {
   margin-top: 1.2rem;
-  border-left: 5px solid var(--partial-slate);
+  border-top: 1px solid var(--partial-slate);
   padding: 0.8rem 1rem;
   background: var(--table-mist);
 }
@@ -316,8 +316,8 @@ textarea::placeholder {
   text-align: left;
 }
 .progress-list {
-  border-left: 4px solid var(--evidence-teal);
-  padding-left: 1rem;
+  border-top: 1px solid var(--evidence-teal);
+  padding-top: 1rem;
   margin-top: 2rem;
   color: var(--evidence-teal);
 }
@@ -376,7 +376,7 @@ textarea::placeholder {
   font-size: 1rem;
 }
 .evidence-card {
-  border-left: 5px solid var(--evidence-teal);
+  border-top: 1px solid var(--evidence-teal);
   background: var(--table-mist);
   padding: 0.9rem 1rem;
   margin-top: 0.75rem;
@@ -451,7 +451,7 @@ th {
 .caveat,
 .gap-block {
   margin-top: 1.25rem;
-  border-left: 5px solid var(--partial-slate);
+  border-top: 1px solid var(--partial-slate);
   padding: 0.75rem 0.9rem;
   color: var(--evidence-teal);
   line-height: 1.55;
@@ -501,7 +501,7 @@ footer {
 .dialog {
   max-width: 620px;
   width: 100%;
-  border-left: 5px solid var(--inspection-teal);
+  border-top: 2px solid var(--inspection-teal);
   padding: 1.25rem;
 }
 .dialog-heading {
