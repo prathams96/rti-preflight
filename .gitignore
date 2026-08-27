@@ -1,0 +1,12 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.next/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+.playwright-cli/
+.impeccable/questions/
+
