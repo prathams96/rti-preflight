@@ -110,4 +110,59 @@ describe("PreflightModule public seam", () => {
       result.calculation?.planHash,
     );
   });
+
+  it("keeps arbitrary unsupported needs on a scoped filing path", async () => {
+    const preflight = new RTIPreflightModule();
+    const prompts = [
+      "What is the budget for a local park?",
+      "Why was my neighbourhood road delayed?",
+      "Please send me the records about a district library",
+    ];
+
+    for (const [index, text] of prompts.entries()) {
+      const need = (
+        await preflight.interpret({
+          text,
+          traceId: `trace-unsupported-${index}`,
+        })
+      ).needs[0];
+      const result = await preflight.resolve({ need, snapshot });
+      expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
+      expect(result.searchScope).toContain("Capability Manifest");
+      expect(result.recommendedAction).toContain("Filing Draft");
+      expect(result.meaning).toContain("cannot claim");
+    }
+  });
+
+  it("turns grievance wording into a records-focused path without answering why", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "Why did the municipal road work fail?",
+        traceId: "trace-grievance",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({ need, snapshot });
+    expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
+    expect(result.recommendedAction).toContain("records-focused");
+    expect(result.meaning).not.toMatch(/the reason|why it failed/i);
+  });
+
+  it("preserves the related finding when formal response is requested for a no-finding need", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "How much was spent on lifts at New Delhi Railway Station?",
+        traceId: "trace-formal-railway",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({
+      need: { ...need, resolutionPreference: "formal" },
+      snapshot,
+    });
+    expect(result.outcome).toBe("FORMAL_RESPONSE_REQUIRED");
+    expect(result.researchFinding?.outcome).toBe("NO_RELIABLE_FINDING");
+    expect(result.researchFinding?.evidence).toEqual([]);
+    expect(result.formalResponseReason).toContain("written response");
+  });
 });
