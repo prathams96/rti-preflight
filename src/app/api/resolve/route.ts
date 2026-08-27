@@ -17,7 +17,16 @@ export async function POST(request: Request) {
       snapshot,
     });
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_NEED") {
+      return NextResponse.json(
+        {
+          code: "INVALID_NEED",
+          message: "Confirm the Information Need before searching.",
+        },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
       {
         code: "RESOLUTION_UNAVAILABLE",

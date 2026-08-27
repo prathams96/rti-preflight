@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   InformationNeed,
   Language,
@@ -9,6 +9,7 @@ import type {
   ResolutionPreference,
 } from "../domain/types";
 import { SCENARIO_PROMPTS } from "../content/scenarios";
+import { DISCLOSURE_LEDGER } from "../disclosure/ledger";
 
 type Phase = "start" | "select" | "confirm" | "search" | "result";
 type SavedState = {
@@ -135,6 +136,7 @@ const outcomeLabel: Record<string, string> = {
   OUTSIDE_SNAPSHOT_COVERAGE: "Outside Snapshot Coverage",
   OFFICIAL_SERVICE_ROUTE: "Official Service Route",
   PARTIALLY_RESOLVED: "Partially Resolved",
+  EVIDENCE_CONFLICT: "Evidence Conflict",
   FORMAL_RESPONSE_REQUIRED: "Formal Response Required",
 };
 const outcomeLabelHi: Record<string, string> = {
@@ -144,6 +146,7 @@ const outcomeLabelHi: Record<string, string> = {
   OUTSIDE_SNAPSHOT_COVERAGE: "Snapshot के दायरे से बाहर",
   OFFICIAL_SERVICE_ROUTE: "आधिकारिक सेवा मार्ग",
   PARTIALLY_RESOLVED: "आंशिक रूप से हल",
+  EVIDENCE_CONFLICT: "प्रमाण में विरोध",
   FORMAL_RESPONSE_REQUIRED: "औपचारिक उत्तर ज़रूरी",
 };
 
@@ -167,16 +170,6 @@ function readPersistedState(): SavedState | undefined {
   }
 }
 
-let persistedState: SavedState | null | undefined;
-function subscribeToPersistedState() {
-  return () => undefined;
-}
-function getPersistedState() {
-  if (persistedState === undefined)
-    persistedState = readPersistedState() ?? null;
-  return persistedState ?? undefined;
-}
-
 function Field({
   label,
   value,
@@ -195,6 +188,15 @@ function Field({
 }
 
 function Details({ onClose }: { onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
   return (
     <div className="dialog-backdrop" role="presentation" onClick={onClose}>
       <section
@@ -211,6 +213,7 @@ function Details({ onClose }: { onClose: () => void }) {
           </div>
           <button
             className="icon-button"
+            ref={closeRef}
             onClick={onClose}
             aria-label="Close prototype details"
           >
@@ -222,33 +225,12 @@ function Details({ onClose }: { onClose: () => void }) {
           response.
         </p>
         <dl className="details-list">
-          <div>
-            <dt>NCRB source and figures</dt>
-            <dd>Real official public data</dd>
-          </div>
-          <div>
-            <dt>Evidence Snapshot</dt>
-            <dd>Curated, immutable prototype snapshot</dd>
-          </div>
-          <div>
-            <dt>Interpretation</dt>
-            <dd>
-              Working deterministic adapter; OpenAI is server-only when
-              configured
-            </dd>
-          </div>
-          <div>
-            <dt>Filtering and calculations</dt>
-            <dd>Working deterministic code</dd>
-          </div>
-          <div>
-            <dt>RTI response</dt>
-            <dd>Synthetic fixture only</dd>
-          </div>
-          <div>
-            <dt>OTP, identity, payment, filing</dt>
-            <dd>Simulated; no government integration</dd>
-          </div>
+          {DISCLOSURE_LEDGER.map((entry) => (
+            <div key={entry.id}>
+              <dt>{entry.label}</dt>
+              <dd>{entry.disclosure}</dd>
+            </div>
+          ))}
         </dl>
       </section>
     </div>
@@ -256,28 +238,33 @@ function Details({ onClose }: { onClose: () => void }) {
 }
 
 export default function PreflightApp() {
-  const initialState = useSyncExternalStore(
-    subscribeToPersistedState,
-    getPersistedState,
-    () => undefined,
-  );
-  const [language, setLanguage] = useState<Language>(
-    initialState?.language ?? "en",
-  );
-  const [phase, setPhase] = useState<Phase>(initialState?.phase ?? "start");
-  const [text, setText] = useState(initialState?.text ?? "");
-  const [needs, setNeeds] = useState<InformationNeed[]>(
-    initialState?.needs ?? (initialState?.need ? [initialState.need] : []),
-  );
-  const [need, setNeed] = useState<InformationNeed | undefined>(
-    initialState?.need,
-  );
-  const [result, setResult] = useState<RenderableResolution | undefined>(
-    initialState?.result,
-  );
+  const [language, setLanguage] = useState<Language>("en");
+  const [phase, setPhase] = useState<Phase>("start");
+  const [text, setText] = useState("");
+  const [needs, setNeeds] = useState<InformationNeed[]>([]);
+  const [need, setNeed] = useState<InformationNeed | undefined>();
+  const [result, setResult] = useState<RenderableResolution | undefined>();
   const [error, setError] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const copy = COPY[language];
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const saved = readPersistedState();
+      if (!saved) return;
+      setLanguage(saved.language);
+      setPhase(saved.phase);
+      setText(saved.text);
+      setNeeds(saved.needs ?? (saved.need ? [saved.need] : []));
+      setNeed(saved.need);
+      setResult(saved.result);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (phase !== "start")
@@ -567,17 +554,22 @@ export default function PreflightApp() {
           <h1>{copy.searching}</h1>
           <p className="lede">{copy.searchingDetail}</p>
           <div className="progress-list">
-            <p className="done">
-              <span aria-hidden="true">✓</span> Checking likely public
-              authorities
-            </p>
-            <p className="active">
-              <span aria-hidden="true">◌</span> Checking official datasets and
-              reports
-            </p>
-            <p>
-              <span aria-hidden="true">○</span> Verifying supporting passages
-            </p>
+            {(need?.scenario === "ncrb-property"
+              ? [
+                  "Confirmed Information Need",
+                  "Checked NCRB Table 20A.1 in the prototype Evidence Snapshot",
+                  "Applied deterministic filters and validated grounding",
+                ]
+              : [
+                  "Confirmed Information Need",
+                  "Checked registered Evidence Snapshot capabilities",
+                  "Prepared the supported result state",
+                ]
+            ).map((stage, index) => (
+              <p className={index < 2 ? "done" : "active"} key={stage}>
+                <span aria-hidden="true">{index < 2 ? "✓" : "◌"}</span> {stage}
+              </p>
+            ))}
           </div>
         </section>
       )}
@@ -639,6 +631,16 @@ export default function PreflightApp() {
                     <a href={item.url} target="_blank" rel="noreferrer">
                       {copy.openSource}
                     </a>
+                    {item.alternateUrl && (
+                      <a
+                        className="source-link-secondary"
+                        href={item.alternateUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open pinned CSV ↗
+                      </a>
+                    )}
                   </article>
                 ))}
               </div>
@@ -668,7 +670,10 @@ export default function PreflightApp() {
                     </thead>
                     <tbody>
                       {result.rows.map((row) => (
-                        <tr key={row.geography}>
+                        <tr
+                          key={row.geography}
+                          data-testid={`result-row-${row.geography}`}
+                        >
                           <th scope="row">{row.geography}</th>
                           <td data-label="Stolen">
                             ₹{row.stolen2021} → ₹{row.stolen2023} crore
@@ -687,6 +692,54 @@ export default function PreflightApp() {
                     </tbody>
                   </table>
                 </div>
+                <div
+                  className="row-inspection-list"
+                  aria-label="Inspect row evidence"
+                >
+                  {result.rows.map((row) => (
+                    <details
+                      key={`inspect-${row.geography}`}
+                      className="row-inspection"
+                    >
+                      <summary>
+                        Inspect {row.geography} operands and source cells
+                      </summary>
+                      <p>
+                        {row.stolen2021} → {row.stolen2023} crore; change{" "}
+                        {row.stolenDelta}. Recovery {row.recovery2021}% →{" "}
+                        {row.recovery2023}%; change {row.recoveryDelta}.
+                      </p>
+                      <ul>
+                        {row.lineage.map((reference, index) => (
+                          <li key={`${row.geography}-${index}`}>
+                            <code>
+                              {reference.locator.kind === "cell"
+                                ? `${reference.locator.rowKey} · ${reference.locator.colKey}`
+                                : reference.locator.pointer}
+                            </code>
+                            : {reference.locatedContent}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ))}
+                </div>
+                <details className="calculation-details">
+                  <summary>View the registered calculation plan</summary>
+                  <p>{result.calculation?.operation}</p>
+                  <ul>
+                    {result.calculation?.filters.map((filter) => (
+                      <li key={filter}>{filter}</li>
+                    ))}
+                  </ul>
+                  {result.calculationMetadata && (
+                    <p className="audit-hashes">
+                      Plan {result.calculationMetadata.planHash.slice(0, 12)} ·
+                      Engine {result.calculationMetadata.engineVersion} · Policy{" "}
+                      {result.calculationMetadata.policyVersion}
+                    </p>
+                  )}
+                </details>
                 <p className="caveat">{result.calculation?.caveat}</p>
               </>
             )}
@@ -698,7 +751,7 @@ export default function PreflightApp() {
                 ))}
               </div>
             )}
-            <details className="scope">
+            <details className="scope" open={result.gaps.length > 0}>
               <summary>{copy.scope}</summary>
               <p>{result.searchScope}</p>
             </details>

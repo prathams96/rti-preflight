@@ -67,5 +67,47 @@ describe("PreflightModule public seam", () => {
     ]);
     expect(outside.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
     expect(outside.executionReceipt).toBeUndefined();
+    expect(outside.coverageManifest?.capabilityManifestHash).toBe(
+      snapshot.capabilityManifest.hash,
+    );
+    expect(outside.meaning).toContain("cannot claim");
+  });
+
+  it("preserves a supported research finding when formal response is selected", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "Between 2021 and 2023 which States reported property stolen up and recovery down?",
+        traceId: "trace-formal",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({
+      need: { ...need, resolutionPreference: "formal" },
+      snapshot,
+    });
+    expect(result.outcome).toBe("FORMAL_RESPONSE_REQUIRED");
+    expect(result.researchFinding?.outcome).toBe("DERIVED_FINDING");
+    expect(result.researchFinding?.rows).toHaveLength(16);
+    expect(result.formalResponseReason).toContain("written response");
+  });
+
+  it("emits complete audit metadata for the deterministic calculation", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "Between 2021 and 2023 which States reported property stolen up and recovery down?",
+        traceId: "trace-audit",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({ need, snapshot });
+    expect(result.executionReceipt).toMatchObject({
+      snapshotHash: snapshot.representation.hash,
+      capabilityManifestHash: snapshot.capabilityManifest.hash,
+      engineVersion: "registered-table-decimal-v1",
+      policyVersion: "decimal-policy-v1",
+    });
+    expect(result.calculationMetadata?.planHash).toBe(
+      result.calculation?.planHash,
+    );
   });
 });
