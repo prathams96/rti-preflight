@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   clarificationsForNeeds,
   interpretWithFixture,
@@ -23,6 +22,7 @@ import {
 import type { InterpretationAdapter } from "../model/adapter";
 import { redactSensitiveIdentifiers } from "../model/redaction";
 import { DeterministicInterpretationAdapter } from "../model/fake-adapter";
+import { normalizeTraceId } from "../observability";
 import { executeNcrbPlan } from "../calc/ncrb-plan";
 import { classifyOutcome } from "./classifier";
 import {
@@ -30,10 +30,6 @@ import {
   narrateOrFallback,
 } from "../model/narration-adapter.server";
 import type { PreflightModule } from "./interface";
-
-function sha256(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
 
 function validNeed(need: InformationNeed): boolean {
   return Boolean(
@@ -456,6 +452,7 @@ export class RTIPreflightModule implements PreflightModule {
   async resolve(input: {
     need: InformationNeed;
     snapshot: Snapshot;
+    traceId?: string;
   }): Promise<RenderableResolution> {
     if (!validNeed(input.need)) throw new Error("INVALID_NEED");
     validateSnapshot(input.snapshot);
@@ -463,7 +460,7 @@ export class RTIPreflightModule implements PreflightModule {
       ...resolveNeed(
         input.need,
         input.snapshot,
-        sha256(input.need.originalText).slice(0, 16),
+        normalizeTraceId(input.traceId),
       ),
       narration: "deterministic" as const,
     };

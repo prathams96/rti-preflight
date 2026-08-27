@@ -13,5 +13,6 @@ export interface PreflightModule {
   resolve(input: {
     need: InformationNeed;
     snapshot: Snapshot;
+    traceId?: string;
   }): Promise<RenderableResolution>;
 }
