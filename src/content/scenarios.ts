@@ -212,7 +212,7 @@ function needForScenario(
         period: "Not yet specified",
         informationHolder: "To be confirmed",
         unresolvedClarifications: [
-          "What specific public information, place, and period should be checked?",
+          "Which municipal corporation or city, and which financial year should be checked?",
         ],
       };
   }

@@ -71,6 +71,31 @@ type SavedPreflight = {
   language: Language;
 };
 
+type PersistedEnvelope<T> = { version: 2; state: T };
+const RESEARCH_KEY = "rti-preflight-state-v2";
+const FILING_KEY = "rti-preflight-filing-v2";
+const LEGACY_RESEARCH_KEY = "rti-preflight-draft";
+const LEGACY_FILING_KEY = "rti-preflight-filing";
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+const isNeed = (value: unknown): value is InformationNeed =>
+  isObject(value) &&
+  ["id", "originalText", "canonicalNeed", "measure", "geography", "period", "breakdown", "informationHolder"].every((key) => typeof value[key] === "string") &&
+  Array.isArray(value.unresolvedClarifications);
+const validSavedState = (value: unknown): value is SavedState => {
+  if (!isObject(value) || !["start", "select", "confirm", "search", "result"].includes(value.phase as string)) return false;
+  if (typeof value.text !== "string" || (value.language !== "en" && value.language !== "hi")) return false;
+  if (value.phase === "confirm" || value.phase === "search") return isNeed(value.need);
+  if (value.phase === "result") return isNeed(value.need) && isObject(value.result);
+  return true;
+};
+const validFilingState = (value: unknown): value is SessionFilingState =>
+  isObject(value) &&
+  ["draft", "file", "acknowledgement"].includes(value.phase as string) &&
+  typeof value.draftText === "string" &&
+  isObject(value.package) &&
+  ["otp", "identity", "review", "payment", "confirmation"].includes(value.step as string);
+
 const COPY = {
   en: {
     independent:
@@ -417,7 +442,10 @@ const outcomeLabelHi: Record<string, string> = {
 
 function persist(state: SavedState) {
   try {
-    window.localStorage.setItem("rti-preflight-draft", JSON.stringify(state));
+    window.localStorage.setItem(
+      RESEARCH_KEY,
+      JSON.stringify({ version: 2, state } satisfies PersistedEnvelope<SavedState>),
+    );
   } catch {
     /* optional enhancement */
   }
@@ -426,11 +454,11 @@ function persist(state: SavedState) {
 function readPersistedState(): SavedState | undefined {
   if (typeof window === "undefined") return undefined;
   try {
-    const parsed = JSON.parse(
-      window.localStorage.getItem("rti-preflight-draft") ?? "null",
-    ) as SavedState | null;
-    return parsed ?? undefined;
+    const parsed = JSON.parse(window.localStorage.getItem(RESEARCH_KEY) ?? "null") as unknown;
+    if (!isObject(parsed) || parsed.version !== 2 || !validSavedState(parsed.state)) throw new Error("invalid");
+    return parsed.state;
   } catch {
+    clearPrototypeStorage();
     return undefined;
   }
 }
@@ -438,13 +466,22 @@ function readPersistedState(): SavedState | undefined {
 function readSessionFilingState(): SessionFilingState | undefined {
   if (typeof window === "undefined") return undefined;
   try {
-    const parsed = JSON.parse(
-      window.sessionStorage.getItem("rti-preflight-filing") ?? "null",
-    ) as SessionFilingState | null;
-    return parsed ?? undefined;
+    const parsed = JSON.parse(window.sessionStorage.getItem(FILING_KEY) ?? "null") as unknown;
+    if (!isObject(parsed) || parsed.version !== 2 || !validFilingState(parsed.state)) throw new Error("invalid");
+    return parsed.state;
   } catch {
+    clearPrototypeStorage();
     return undefined;
   }
+}
+
+function clearPrototypeStorage() {
+  try {
+    [RESEARCH_KEY, FILING_KEY, LEGACY_RESEARCH_KEY, LEGACY_FILING_KEY].forEach((key) => {
+      window.localStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
+    });
+  } catch { /* optional storage */ }
 }
 
 function readSavedPreflights(): SavedPreflight[] {
@@ -618,6 +655,8 @@ export default function PreflightApp() {
   const [briefFeedback, setBriefFeedback] = useState("");
   const [savedPreflights, setSavedPreflights] = useState<SavedPreflight[]>([]);
   const [savedPreflightsLoaded, setSavedPreflightsLoaded] = useState(false);
+  const [resumeState, setResumeState] = useState<SavedState | undefined>();
+  const [recoveryNotice, setRecoveryNotice] = useState(false);
   const copy = COPY[language];
 
   useEffect(() => {
@@ -628,16 +667,13 @@ export default function PreflightApp() {
     const timer = window.setTimeout(() => {
       setSavedPreflights(readSavedPreflights());
       setSavedPreflightsLoaded(true);
+      const hadSavedState = Boolean(window.localStorage.getItem(RESEARCH_KEY));
       const saved = readPersistedState();
-      if (!saved) return;
-      setLanguage(saved.language);
-      setPhase(saved.phase);
-      setText(saved.text);
-      setNeeds(saved.needs ?? (saved.need ? [saved.need] : []));
-      setNeed(saved.need);
-      setResult(saved.result);
-      setChallengedEvidenceId(saved.challengedEvidenceId ?? "");
-      setChallengedNeedSignature(saved.challengedNeedSignature ?? "");
+      if (!saved) {
+        setRecoveryNotice(hadSavedState);
+        return;
+      }
+      setResumeState(saved);
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
@@ -700,18 +736,14 @@ export default function PreflightApp() {
       return;
     try {
       window.sessionStorage.setItem(
-        "rti-preflight-filing",
+        FILING_KEY,
         JSON.stringify({
-          phase,
-          draftText,
-          package: filingPackage,
-          step: filingStep,
-          otp,
-          profile,
-          reviewed,
-          paymentConfirmed,
-          acknowledgement,
-        } satisfies SessionFilingState),
+          version: 2,
+          state: {
+            phase, draftText, package: filingPackage, step: filingStep, otp,
+            profile, reviewed, paymentConfirmed, acknowledgement,
+          } satisfies SessionFilingState,
+        } satisfies PersistedEnvelope<SessionFilingState>),
       );
     } catch {
       /* optional session persistence */
@@ -729,8 +761,26 @@ export default function PreflightApp() {
   ]);
 
   const updateNeed = (field: keyof InformationNeed, value: string) => {
-    if (need) setNeed({ ...need, [field]: value } as InformationNeed);
+    if (!need) return;
+    const next = { ...need, [field]: value } as InformationNeed;
+    if (next.scenario === "unsupported" && next.informationHolder !== "To be confirmed" && next.informationHolder !== "Unknown" && next.geography !== "Not yet specified" && next.period !== "Not yet specified")
+      next.unresolvedClarifications = [];
+    setNeed(next);
   };
+  const unresolvedClarifications =
+    need?.unresolvedClarifications.filter((item) => !item.startsWith("Unknown:")) ?? [];
+  function resumePrevious() {
+    if (!resumeState) return;
+    setLanguage(resumeState.language);
+    setPhase(resumeState.phase);
+    setText(resumeState.text);
+    setNeeds(resumeState.needs ?? (resumeState.need ? [resumeState.need] : []));
+    setNeed(resumeState.need);
+    setResult(resumeState.result);
+    setChallengedEvidenceId(resumeState.challengedEvidenceId ?? "");
+    setChallengedNeedSignature(resumeState.challengedNeedSignature ?? "");
+    setResumeState(undefined);
+  }
 
   function openDraft() {
     if (!need) return;
@@ -1142,12 +1192,12 @@ export default function PreflightApp() {
     setSavedPreflights([]);
     setError("");
     try {
-      window.localStorage.removeItem("rti-preflight-draft");
+      clearPrototypeStorage();
       window.localStorage.removeItem("rti-preflight-saved");
-      window.sessionStorage.removeItem("rti-preflight-filing");
     } catch {
       /* no-op */
     }
+    setResumeState(undefined);
   }
   const displayOutcome = challengedEvidenceId
     ? "PARTIALLY_RESOLVED"
@@ -1197,6 +1247,26 @@ export default function PreflightApp() {
             <h1 id="start-title">{copy.headline}</h1>
             <p className="lede">{copy.supporting}</p>
           </div>
+          {recoveryNotice && (
+            <p className="error-message" role="status">
+              Your previous prototype session could not be restored. Start a
+              new Preflight.
+            </p>
+          )}
+          {resumeState && (
+            <aside className="resume-panel" aria-label="Resume previous Preflight">
+              <strong>Resume previous Preflight</strong>
+              <p>Your saved prototype journey is ready to continue.</p>
+              <div className="button-row">
+                <button className="action-button" onClick={resumePrevious}>
+                  Resume
+                </button>
+                <button className="secondary-button" onClick={reset}>
+                  Start fresh
+                </button>
+              </div>
+            </aside>
+          )}
           <section
             className="active-plane ask-plane"
             aria-label="Ask for public information"
@@ -1347,20 +1417,27 @@ export default function PreflightApp() {
                 <option value="unsure">Not sure—help me decide</option>
               </select>
             </label>
-            {need.unresolvedClarifications.length > 0 && (
-              <div className="clarification status-partial">
+            {unresolvedClarifications.map((clarification) => (
+              <div className="clarification status-partial" key={clarification}>
                 <strong>{copy.clarification}</strong>
-                <p>{need.unresolvedClarifications[0]}</p>
+                <p>{clarification}</p>
+                <p className="supporting-copy">Answer using the fields above, or retain this one detail as unknown.</p>
                 <button
                   className="quiet-button"
                   onClick={() =>
-                    setNeed({ ...need, unresolvedClarifications: [] })
+                    setNeed({
+                      ...need,
+                      informationHolder: need.informationHolder === "To be confirmed" ? "Unknown" : need.informationHolder,
+                      unresolvedClarifications: need.unresolvedClarifications.map((item) =>
+                        item === clarification ? `Unknown: ${item}` : item,
+                      ),
+                    })
                   }
                 >
                   {copy.unsure}
                 </button>
               </div>
-            )}
+            ))}
             {error && (
               <p className="error-message" role="alert">
                 <span aria-hidden="true">!</span>
@@ -1368,7 +1445,7 @@ export default function PreflightApp() {
               </p>
             )}
             <div className="button-row">
-              <button className="action-button" onClick={resolve}>
+              <button className="action-button" disabled={unresolvedClarifications.length > 0} onClick={resolve}>
                 {copy.search}
               </button>
               <button className="secondary-button" onClick={reset}>
