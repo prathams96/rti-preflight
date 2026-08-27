@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { RTIPreflightModule } from "../../../preflight/module";
-import {
-  DeterministicInterpretationAdapter,
-  traceIdFor,
-} from "../../../model/fake-adapter";
+import { DeterministicInterpretationAdapter } from "../../../model/fake-adapter";
 import { OpenAIInterpretationAdapter } from "../../../model/openai-adapter.server";
+import { normalizeTraceId } from "../../../observability";
 
 export const runtime = "nodejs";
 
@@ -24,7 +22,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const traceId = traceIdFor(body.text);
+    const traceId = normalizeTraceId(request.headers.get("x-rti-trace-id"));
     const deterministic = new DeterministicInterpretationAdapter();
     let interpretation;
     if (process.env.OPENAI_API_KEY) {

@@ -23,6 +23,8 @@ import {
   type ValidatedFilingPackage,
 } from "../filing";
 import { EPFO_CLAIM_STATUS_ROUTE } from "../service/epfo-route";
+import { serializeEvidenceBrief } from "../evidence/brief";
+import { createTraceRecorder, generateTraceId } from "../observability";
 
 type Phase =
   | "start"
@@ -113,6 +115,26 @@ const COPY = {
     unresolved: "What remains unresolved",
     scope: "Search based on the prototype Evidence Snapshot · View scope",
     evidence: "Supporting evidence",
+    officialRoute: "Official service route",
+    syntheticFixture: "Synthetic fixture",
+    verifiedWord: "verified",
+    officialSource: "Official source ↗",
+    pinnedCsv: "Open pinned CSV ↗",
+    tableCaption: "States and Union Territories matching the NCRB conditions",
+    stateColumn: "State/UT",
+    stolenColumn: "Stolen 2021 → 2023",
+    changeColumn: "Change",
+    recoveryColumn: "Recovery 2021 → 2023",
+    inspectEvidence: "Inspect row evidence",
+    inspectRow: (geography: string) =>
+      `Inspect ${geography} operands and source cells`,
+    viewPlan: "View the registered calculation plan",
+    saveBrief: "Save/share Evidence Brief",
+    briefSaved: "Evidence Brief downloaded.",
+    briefShared: "Evidence Brief shared.",
+    briefCancelled: "Sharing was cancelled. The result remains available here.",
+    briefFailed:
+      "We couldn’t save this Evidence Brief. The result remains available here.",
     sourceData: "Real official public data",
     publisher: "Publisher",
     applicablePeriod: "Applicable period",
@@ -253,6 +275,25 @@ const COPY = {
     unresolved: "क्या अभी अनसुलझा है",
     scope: "प्रोटोटाइप Evidence Snapshot पर आधारित खोज · दायरा देखें",
     evidence: "सहायक प्रमाण",
+    officialRoute: "आधिकारिक सेवा मार्ग",
+    syntheticFixture: "सिंथेटिक फ़िक्स्चर",
+    verifiedWord: "सत्यापित",
+    officialSource: "आधिकारिक स्रोत खोलें ↗",
+    pinnedCsv: "पिन किया गया CSV खोलें ↗",
+    tableCaption: "NCRB शर्तों से मेल खाने वाले राज्य और केंद्र शासित प्रदेश",
+    stateColumn: "राज्य/केंद्र शासित प्रदेश",
+    stolenColumn: "चोरी 2021 → 2023",
+    changeColumn: "बदलाव",
+    recoveryColumn: "बरामदगी 2021 → 2023",
+    inspectEvidence: "पंक्ति के प्रमाण देखें",
+    inspectRow: (geography: string) =>
+      `${geography} के operands और स्रोत सेल देखें`,
+    viewPlan: "पंजीकृत गणना योजना देखें",
+    saveBrief: "Evidence Brief सहेजें/साझा करें",
+    briefSaved: "Evidence Brief डाउनलोड हो गया।",
+    briefShared: "Evidence Brief साझा हो गया।",
+    briefCancelled: "साझा करना रद्द किया गया। नतीजा यहाँ उपलब्ध है।",
+    briefFailed: "Evidence Brief सहेजा नहीं जा सका। नतीजा यहाँ उपलब्ध है।",
     sourceData: "वास्तविक आधिकारिक सार्वजनिक डेटा",
     publisher: "प्रकाशक",
     applicablePeriod: "लागू अवधि",
@@ -544,6 +585,8 @@ function Details({ onClose }: { onClose: () => void }) {
 
 export default function PreflightApp() {
   const filingModule = useMemo(() => createFilingModule(), []);
+  const traceRecorder = useMemo(() => createTraceRecorder(), []);
+  const journeyTraceId = useMemo(() => generateTraceId(), []);
   const [language, setLanguage] = useState<Language>("en");
   const [phase, setPhase] = useState<Phase>("start");
   const [text, setText] = useState("");
@@ -572,6 +615,7 @@ export default function PreflightApp() {
   const [acknowledgement, setAcknowledgement] = useState<
     DemoAcknowledgement | undefined
   >();
+  const [briefFeedback, setBriefFeedback] = useState("");
   const [savedPreflights, setSavedPreflights] = useState<SavedPreflight[]>([]);
   const [savedPreflightsLoaded, setSavedPreflightsLoaded] = useState(false);
   const copy = COPY[language];
@@ -707,6 +751,12 @@ export default function PreflightApp() {
           route: NORTHERN_RAILWAY_ROUTE,
         })
         .then((prepared) => {
+          traceRecorder.record("route.validated", journeyTraceId, {
+            component: "filing-route",
+            version: prepared.route.profile.version,
+            status: "working",
+            code: prepared.route.id,
+          });
           setFilingPackage(prepared);
           setDraftText(prepared.draft.text);
           setDraftOriginalText(prepared.draft.text);
@@ -835,10 +885,21 @@ export default function PreflightApp() {
     if (!need) return;
     setChallengedEvidenceId(evidenceId);
     setChallengedNeedSignature(needSignature(need));
+    traceRecorder.record(
+      "evidence.rejected",
+      result?.traceId ?? journeyTraceId,
+      {
+        component: "grounding-gate",
+        version: "grounding-gate-v1",
+        status: "downgraded",
+        code: "citizen-challenge",
+      },
+    );
   }
 
   function finishDemoSubmission() {
     if (!filingPackage || !reviewed || !paymentConfirmed) return;
+    const traceId = result?.traceId ?? journeyTraceId;
     filingModule
       .demoSubmit({
         package: filingPackage,
@@ -850,11 +911,23 @@ export default function PreflightApp() {
         },
       })
       .then((completed) => {
+        traceRecorder.record("filing.acknowledged", traceId, {
+          component: "demo-adapter",
+          version: "demo-adapter-v1",
+          status: "simulated",
+          code: "demo-submission-complete",
+        });
         setAcknowledgement(completed);
         setFilingStep("confirmation");
         setPhase("acknowledgement");
       })
       .catch(() => {
+        traceRecorder.record("filing.acknowledged", traceId, {
+          component: "demo-adapter",
+          version: "demo-adapter-v1",
+          status: "rejected",
+          code: "demo-submission-rejected",
+        });
         setFilingError(
           "The Filing Package must be valid and explicitly confirmed before Demo Submission.",
         );
@@ -879,13 +952,70 @@ export default function PreflightApp() {
     link.remove();
   }
 
+  async function saveOrShareEvidenceBrief() {
+    if (!need || !result) return;
+    setBriefFeedback("");
+    try {
+      const serialized = serializeEvidenceBrief({
+        need,
+        result,
+        searchDate:
+          result.executionReceipt?.executedAt.slice(0, 10) ??
+          new Date().toISOString().slice(0, 10),
+      });
+      const blob = new Blob([serialized], { type: "application/json" });
+      const file = new File([blob], "rti-preflight-evidence-brief.json", {
+        type: "application/json",
+      });
+      if (
+        typeof navigator.share === "function" &&
+        (!navigator.canShare || navigator.canShare({ files: [file] }))
+      ) {
+        try {
+          await navigator.share({
+            title: "RTI Preflight Evidence Brief",
+            text: "Independent research assistant—not an official RTI response.",
+            files: [file],
+          });
+          setBriefFeedback(copy.briefShared);
+          return;
+        } catch (caught) {
+          if (caught instanceof DOMException && caught.name === "AbortError") {
+            setBriefFeedback(copy.briefCancelled);
+            return;
+          }
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "rti-preflight-evidence-brief.json";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setBriefFeedback(copy.briefSaved);
+    } catch {
+      setBriefFeedback(copy.briefFailed);
+    }
+  }
+
   async function interpret() {
     if (!text.trim()) return;
     setError("");
+    traceRecorder.record("interpretation.started", journeyTraceId, {
+      component: "interpretation-route",
+      version: "interpretation-route-v1",
+      status: "started",
+    });
     try {
       const response = await fetch("/api/interpret", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          "x-rti-trace-id": journeyTraceId,
+        },
         body: JSON.stringify({ text }),
       });
       const payload = (await response.json()) as NeedInterpretation & {
@@ -896,10 +1026,22 @@ export default function PreflightApp() {
           payload.message ??
             "We couldn’t interpret your request just now. Nothing was submitted.",
         );
+      traceRecorder.record("interpretation.completed", payload.traceId, {
+        component: "interpretation-route",
+        version: "interpretation-route-v1",
+        status: "ok",
+        counts: { needs: payload.needs.length },
+      });
       setNeeds(payload.needs);
       setNeed(payload.needs[0]);
       setPhase(payload.needs.length > 1 ? "select" : "confirm");
     } catch (caught) {
+      traceRecorder.record("interpretation.completed", journeyTraceId, {
+        component: "interpretation-route",
+        version: "interpretation-route-v1",
+        status: "error",
+        code: "interpretation-unavailable",
+      });
       setError(
         caught instanceof Error
           ? caught.message
@@ -921,10 +1063,18 @@ export default function PreflightApp() {
     }
     setError("");
     setPhase("search");
+    traceRecorder.record("resolution.started", journeyTraceId, {
+      component: "resolution-route",
+      version: "resolution-route-v1",
+      status: "started",
+    });
     try {
       const response = await fetch("/api/resolve", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          "x-rti-trace-id": journeyTraceId,
+        },
         body: JSON.stringify({ need }),
       });
       const payload = (await response.json()) as RenderableResolution & {
@@ -935,11 +1085,31 @@ export default function PreflightApp() {
           payload.message ??
             "We couldn’t check the prototype snapshot just now.",
         );
+      traceRecorder.record("resolution.completed", payload.traceId, {
+        component: "resolution-route",
+        version:
+          payload.calculationMetadata?.engineVersion ?? "resolution-route-v1",
+        hash:
+          payload.calculationMetadata?.engineHash ??
+          payload.executionReceipt?.snapshotHash,
+        status: "ok",
+        code: payload.outcome,
+        counts: {
+          evidence: payload.evidence.length,
+          rows: payload.rows.length,
+        },
+      });
       setResult(payload);
       setChallengedEvidenceId("");
       setChallengedNeedSignature("");
       setPhase("result");
     } catch (caught) {
+      traceRecorder.record("resolution.completed", journeyTraceId, {
+        component: "resolution-route",
+        version: "resolution-route-v1",
+        status: "error",
+        code: "resolution-unavailable",
+      });
       setError(
         caught instanceof Error
           ? caught.message
@@ -968,6 +1138,7 @@ export default function PreflightApp() {
     setPaymentConfirmed(false);
     setFilingError("");
     setAcknowledgement(undefined);
+    setBriefFeedback("");
     setSavedPreflights([]);
     setError("");
     try {
@@ -1266,7 +1437,7 @@ export default function PreflightApp() {
               </p>
             )}
             {result.evidence.length > 0 && (
-              <div className="evidence-list" aria-label="Supporting evidence">
+              <div className="evidence-list" aria-label={copy.evidence}>
                 <h3>{copy.evidence}</h3>
                 {result.evidence.map((item) => (
                   <article className="evidence-card" key={item.id}>
@@ -1274,8 +1445,8 @@ export default function PreflightApp() {
                       {item.sourceType === "official_dataset"
                         ? copy.sourceData
                         : item.sourceType === "official_service_route"
-                          ? "Official service route"
-                          : "Synthetic fixture"}
+                          ? copy.officialRoute
+                          : copy.syntheticFixture}
                     </p>
                     <h3>{item.sourceTitle}</h3>
                     {item.syntheticDisclosure && (
@@ -1317,7 +1488,7 @@ export default function PreflightApp() {
                       result.serviceRoute && (
                         <div className="route-metadata">
                           <p>
-                            {result.serviceRoute.purpose} · verified{" "}
+                            {result.serviceRoute.purpose} · {copy.verifiedWord}{" "}
                             {result.serviceRoute.verifiedAt}
                           </p>
                           <ul>
@@ -1329,7 +1500,7 @@ export default function PreflightApp() {
                                     target="_blank"
                                     rel="noreferrer"
                                   >
-                                    Official source ↗
+                                    {copy.officialSource}
                                   </a>
                                 </li>
                               ),
@@ -1354,7 +1525,7 @@ export default function PreflightApp() {
                         target="_blank"
                         rel="noreferrer"
                       >
-                        Open pinned CSV ↗
+                        {copy.pinnedCsv}
                       </a>
                     )}
                   </article>
@@ -1372,16 +1543,14 @@ export default function PreflightApp() {
                 </div>
                 <div className="table-wrap">
                   <table>
-                    <caption className="sr-only">
-                      States and Union Territories matching the NCRB conditions
-                    </caption>
+                    <caption className="sr-only">{copy.tableCaption}</caption>
                     <thead>
                       <tr>
-                        <th scope="col">State/UT</th>
-                        <th scope="col">Stolen 2021 → 2023</th>
-                        <th scope="col">Change</th>
-                        <th scope="col">Recovery 2021 → 2023</th>
-                        <th scope="col">Change</th>
+                        <th scope="col">{copy.stateColumn}</th>
+                        <th scope="col">{copy.stolenColumn}</th>
+                        <th scope="col">{copy.changeColumn}</th>
+                        <th scope="col">{copy.recoveryColumn}</th>
+                        <th scope="col">{copy.changeColumn}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1391,16 +1560,22 @@ export default function PreflightApp() {
                           data-testid={`result-row-${row.geography}`}
                         >
                           <th scope="row">{row.geography}</th>
-                          <td data-label="Stolen">
+                          <td data-label={copy.stolenColumn}>
                             ₹{row.stolen2021} → ₹{row.stolen2023} crore
                           </td>
-                          <td data-label="Change" className="numeric">
+                          <td
+                            data-label={copy.changeColumn}
+                            className="numeric"
+                          >
                             {row.stolenDelta}
                           </td>
-                          <td data-label="Recovery">
+                          <td data-label={copy.recoveryColumn}>
                             {row.recovery2021}% → {row.recovery2023}%
                           </td>
-                          <td data-label="Change" className="numeric">
+                          <td
+                            data-label={copy.changeColumn}
+                            className="numeric"
+                          >
                             {row.recoveryDelta}
                           </td>
                         </tr>
@@ -1410,16 +1585,14 @@ export default function PreflightApp() {
                 </div>
                 <div
                   className="row-inspection-list"
-                  aria-label="Inspect row evidence"
+                  aria-label={copy.inspectEvidence}
                 >
                   {result.rows.map((row) => (
                     <details
                       key={`inspect-${row.geography}`}
                       className="row-inspection"
                     >
-                      <summary>
-                        Inspect {row.geography} operands and source cells
-                      </summary>
+                      <summary>{copy.inspectRow(row.geography)}</summary>
                       <p>
                         {row.stolen2021} → {row.stolen2023} crore; change{" "}
                         {row.stolenDelta}. Recovery {row.recovery2021}% →{" "}
@@ -1441,7 +1614,7 @@ export default function PreflightApp() {
                   ))}
                 </div>
                 <details className="calculation-details">
-                  <summary>View the registered calculation plan</summary>
+                  <summary>{copy.viewPlan}</summary>
                   <p>{result.calculation?.operation}</p>
                   <ul>
                     {result.calculation?.filters.map((filter) => (
@@ -1472,6 +1645,12 @@ export default function PreflightApp() {
               <p>{result.searchScope}</p>
             </details>
             <div className="result-actions">
+              <button
+                className="action-button"
+                onClick={saveOrShareEvidenceBrief}
+              >
+                {copy.saveBrief}
+              </button>
               {result.outcome === "OFFICIAL_SERVICE_ROUTE" ? (
                 <a
                   className="action-button action-link"
@@ -1507,6 +1686,20 @@ export default function PreflightApp() {
                 {copy.restart}
               </button>
             </div>
+            {briefFeedback && (
+              <p className="download-feedback" role="status" aria-live="polite">
+                <span
+                  className="status-icon inline-status-icon"
+                  aria-hidden="true"
+                >
+                  {briefFeedback === copy.briefFailed ||
+                  briefFeedback === copy.briefCancelled
+                    ? "i"
+                    : "✓"}
+                </span>{" "}
+                {briefFeedback}
+              </p>
+            )}
           </article>
         </section>
       )}
