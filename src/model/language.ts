@@ -51,6 +51,15 @@ function normalizedNumbers(value: string): string[] {
   );
 }
 
+function sameNumbers(a: string, b: string): boolean {
+  const left = normalizedNumbers(a).sort();
+  const right = normalizedNumbers(b).sort();
+  return (
+    left.length === right.length &&
+    left.every((number, index) => number === right[index])
+  );
+}
+
 /** Validates that selected-language presentation retains deterministic concepts. */
 export function preservesMeaning(
   source: string,
@@ -105,35 +114,12 @@ export function preservesPresentationField(input: {
     // authority must never masquerade as a different one.
     const canonicalAuthority = resolveAuthorityName(canonical);
     const displayAuthority = resolveAuthorityName(presentation);
-    if (
-      canonicalAuthority &&
-      displayAuthority &&
-      canonicalAuthority.id === displayAuthority.id
-    )
-      return true;
+    if (canonicalAuthority) {
+      if (!displayAuthority || displayAuthority.id !== canonicalAuthority.id)
+        return false;
+      return sameNumbers(canonical, presentation);
+    }
   }
   if (!matchesLanguage(presentation, language)) return false;
-  if (
-    normalizedNumbers(canonical).some(
-      (number) => !normalizedNumbers(presentation).includes(number),
-    )
-  )
-    return false;
-  if (language === "en") {
-    const sourceTerms = canonical.toLocaleLowerCase().match(/[a-z]{4,}/g) ?? [];
-    const targetTerms = new Set(
-      presentation.toLocaleLowerCase().match(/[a-z]{4,}/g) ?? [],
-    );
-    return (
-      sourceTerms.length === 0 ||
-      sourceTerms.some((term) => targetTerms.has(term))
-    );
-  }
-  const applicable = CONCEPTS.filter(([sourcePattern]) =>
-    sourcePattern.test(canonical),
-  );
-  return (
-    applicable.length === 0 ||
-    applicable.every(([, targetPattern]) => targetPattern.test(presentation))
-  );
+  return sameNumbers(canonical, presentation);
 }

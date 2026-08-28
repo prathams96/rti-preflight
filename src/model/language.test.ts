@@ -22,6 +22,56 @@ describe("provider language validation", () => {
 });
 
 describe("field-aware presentation validation", () => {
+  it("accepts natural English geography paraphrases", () => {
+    expect(
+      preservesPresentationField({
+        field: "geography",
+        canonical: "All States/UTs",
+        presentation: "India, by State and Union Territory",
+        language: "en",
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts natural English measure paraphrases", () => {
+    expect(
+      preservesPresentationField({
+        field: "measure",
+        canonical: "Stolen and recovered property value",
+        presentation:
+          "Value of property reported stolen and subsequently recovered",
+        language: "en",
+      }),
+    ).toBe(true);
+  });
+
+  it("preserves the exact set of numbers in presentation fields", () => {
+    expect(
+      preservesPresentationField({
+        field: "period",
+        canonical: "2021 and 2023",
+        presentation: "Figures for 2021 and 2023",
+        language: "en",
+      }),
+    ).toBe(true);
+    expect(
+      preservesPresentationField({
+        field: "period",
+        canonical: "2021 and 2023",
+        presentation: "Figures for 2022 and 2023",
+        language: "en",
+      }),
+    ).toBe(false);
+    expect(
+      preservesPresentationField({
+        field: "period",
+        canonical: "2021 and 2023",
+        presentation: "Figures for 2021, 2023 and 2024",
+        language: "en",
+      }),
+    ).toBe(false);
+  });
+
   it("allows registered authority abbreviations and names to stay Roman in Hindi mode", () => {
     expect(
       preservesPresentationField({
@@ -74,6 +124,14 @@ describe("field-aware presentation validation", () => {
         field: "canonicalNeed",
         canonical: "My claim status",
         presentation: "मेरे दावे की स्थिति",
+        language: "hi",
+      }),
+    ).toBe(true);
+    expect(
+      preservesPresentationField({
+        field: "geography",
+        canonical: "All States/UTs",
+        presentation: "भारत के सभी राज्यों और केंद्र शासित प्रदेशों के अनुसार",
         language: "hi",
       }),
     ).toBe(true);
