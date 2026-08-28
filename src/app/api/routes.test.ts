@@ -254,6 +254,24 @@ describe("release boundary routes", () => {
     expect(payload.language).toBe("en");
   });
 
+  it("does not regex-reinterpret arbitrary free text after provider failure", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "configured-key");
+    const fetchMock = vi.fn().mockRejectedValue(new Error("provider down"));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await interpret(
+      new Request("http://localhost/api/interpret", {
+        method: "POST",
+        body: JSON.stringify({
+          text: "Identify States/UTs where property stolen declined and recovery percentage increased between 2021 and 2023.",
+        }),
+      }),
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      code: "INTERPRETATION_UNAVAILABLE",
+    });
+  });
+
   it("uses deterministic interpretation without a key", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
     const fetchMock = vi.fn();

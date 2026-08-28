@@ -25,8 +25,10 @@ export function measureBinding(
   table: RegisteredTable,
   name: string,
 ): RegisteredMeasure | undefined {
-  return table.measures?.find(
-    (measure) => measure.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+  return table.measures?.find((measure) =>
+    [measure.name, ...(measure.aliases ?? [])].some(
+      (candidate) => candidate.toLocaleLowerCase() === name.toLocaleLowerCase(),
+    ),
   );
 }
 
@@ -49,14 +51,12 @@ export function planForAnalysis(
     const right = binding?.periodColumns[predicate.fromPeriod];
     if (!binding || !left || !right)
       throw new Error("PLAN_MEASURE_PERIOD_UNSUPPORTED");
-    const prefix =
-      binding.name === "value of property stolen" ? "stolen" : "recovery";
     return {
       predicate,
       binding,
       left,
       right,
-      delta: `${prefix}_delta`,
+      delta: `${binding.key}_delta`,
     };
   });
   const filters = derivations.map(({ predicate, left, right }) => ({
@@ -75,7 +75,8 @@ export function planForAnalysis(
         };
   const ranking = intent.ranking
     ? derivations.find(
-        ({ binding }) => binding.name === intent.ranking?.measure,
+        ({ binding }) =>
+          binding.key === measureBinding(table, intent.ranking!.measure)?.key,
       )
     : undefined;
   const output = [

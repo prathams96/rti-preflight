@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { snapshot } from "../evidence/snapshot";
 import { createOfflinePreflightModule, RTIPreflightModule } from "./module";
 import { planForAnalysis, type PlanAdapter } from "../model/plan-adapter";
-import { ncrbRegisteredTable } from "../calc/ncrb-plan";
+import { NCRB_MEASURES, ncrbRegisteredTable } from "../calc/ncrb-plan";
 
 async function needFor(text: string) {
   return (
@@ -218,5 +218,63 @@ describe("registered-table calculation planning", () => {
 
     const table = ncrbRegisteredTable(snapshot);
     expect(table.columns.map((column) => column.key)).toContain("stolen_2022");
+  });
+
+  it("uses registered measure keys for a synthetic third measure", async () => {
+    const table = ncrbRegisteredTable(snapshot);
+    const withCases = {
+      ...table,
+      measures: [
+        ...NCRB_MEASURES,
+        {
+          key: "cases",
+          name: "number of cases",
+          periodColumns: { "2021": "stolen_2021", "2023": "stolen_2023" },
+          unit: "count" as const,
+        },
+      ],
+    };
+    const plan = planForAnalysis(
+      {
+        ...(await needFor(
+          "Identify States/UTs where the number of cases increased between 2021 and 2023.",
+        )),
+        analysisIntent: {
+          predicates: [
+            {
+              measure: "number of cases",
+              comparison: "increase",
+              fromPeriod: "2021",
+              toPeriod: "2023",
+            },
+          ],
+          logic: "and",
+        },
+      },
+      withCases,
+    );
+    expect(plan.steps).toContainEqual(
+      expect.objectContaining({ kind: "derive", column: "cases_delta" }),
+    );
+    expect(plan.steps).not.toContainEqual(
+      expect.objectContaining({ kind: "derive", column: "recovery_delta" }),
+    );
+  });
+
+  it("fails safely when a model need has no analytical intent", async () => {
+    const parsedNeed = await needFor(
+      "Identify States/UTs where property stolen declined and recovery percentage increased between 2021 and 2023.",
+    );
+    const need = { ...parsedNeed, analysisIntent: undefined };
+    const result = await createOfflinePreflightModule().resolve({
+      need,
+      snapshot,
+    });
+    expect(result.outcome).toBe("NO_RELIABLE_FINDING");
+    expect(result.planningFailure).toMatchObject({
+      code: "PLAN_INPUT_MISSING_ANALYSIS_INTENT",
+    });
+    expect(result.rows).toEqual([]);
+    expect(result.outcome).not.toBe("OUTSIDE_SNAPSHOT_COVERAGE");
   });
 });

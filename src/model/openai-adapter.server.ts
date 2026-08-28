@@ -11,9 +11,9 @@ import {
   clarificationsForNeeds,
   hasExplicitDraftingIntent,
   interpretWithFixture,
-  SCENARIO_PROMPTS,
   scenarioForModelNeed,
-  ncrbAnalysisIntent,
+  canonicalNeedFromAnalysisIntent,
+  isExactScenarioPrompt,
 } from "../content/scenarios";
 import { resolveAuthorityName } from "./authority-registry";
 import {
@@ -35,6 +35,10 @@ type OpenAIResponse = {
   output?: Array<{ content?: Array<{ text?: string }> }>;
 };
 
+type ModelAnalysisIntent = Omit<AnalysisIntent, "ranking"> & {
+  ranking?: AnalysisIntent["ranking"] | null;
+};
+
 type ModelNeed = {
   canonicalNeed: string;
   measure: string;
@@ -44,7 +48,7 @@ type ModelNeed = {
   informationHolder: string;
   resolutionPreference: ResolutionPreference;
   unresolvedClarifications: string[];
-  analysisIntent?: AnalysisIntent;
+  analysisIntent?: ModelAnalysisIntent | null;
   display?: {
     canonicalNeed: string;
     measure: string;
@@ -56,13 +60,126 @@ type ModelNeed = {
   };
 };
 
+const ANALYSIS_INTENT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    logic: { type: "string", enum: ["and", "or"] },
+    predicates: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          measure: { type: "string" },
+          comparison: { type: "string", enum: ["increase", "decrease"] },
+          fromPeriod: { type: "string" },
+          toPeriod: { type: "string" },
+        },
+        required: ["measure", "comparison", "fromPeriod", "toPeriod"],
+      },
+    },
+    ranking: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            measure: { type: "string" },
+            direction: { type: "string", enum: ["asc", "desc"] },
+            limit: { type: "integer", minimum: 1 },
+          },
+          required: ["measure", "direction", "limit"],
+        },
+        { type: "null" },
+      ],
+    },
+  },
+  required: ["logic", "predicates", "ranking"],
+};
+
+export const INFORMATION_NEED_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    needs: {
+      type: "array",
+      maxItems: 5,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          canonicalNeed: { type: "string" },
+          measure: { type: "string" },
+          geography: { type: "string" },
+          period: { type: "string" },
+          breakdown: { type: "string" },
+          informationHolder: { type: "string" },
+          resolutionPreference: {
+            type: "string",
+            enum: ["published", "formal", "unsure"],
+          },
+          unresolvedClarifications: {
+            type: "array",
+            maxItems: 2,
+            items: { type: "string" },
+          },
+          analysisIntent: {
+            anyOf: [ANALYSIS_INTENT_SCHEMA, { type: "null" }],
+          },
+          display: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              canonicalNeed: { type: "string" },
+              measure: { type: "string" },
+              geography: { type: "string" },
+              period: { type: "string" },
+              breakdown: { type: "string" },
+              informationHolder: { type: "string" },
+              unresolvedClarifications: {
+                type: "array",
+                items: { type: "string" },
+                maxItems: 2,
+              },
+            },
+            required: [
+              "canonicalNeed",
+              "measure",
+              "geography",
+              "period",
+              "breakdown",
+              "informationHolder",
+              "unresolvedClarifications",
+            ],
+          },
+        },
+        required: [
+          "canonicalNeed",
+          "measure",
+          "geography",
+          "period",
+          "breakdown",
+          "informationHolder",
+          "resolutionPreference",
+          "unresolvedClarifications",
+          "analysisIntent",
+          "display",
+        ],
+      },
+    },
+  },
+  required: ["needs"],
+};
+
 function isStringArray(value: unknown): value is string[] {
   return (
     Array.isArray(value) && value.every((item) => typeof item === "string")
   );
 }
 
-function isAnalysisIntent(value: unknown): value is AnalysisIntent {
+function isAnalysisIntent(value: unknown): value is ModelAnalysisIntent {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const intent = value as Record<string, unknown>;
   return (
@@ -85,6 +202,7 @@ function isAnalysisIntent(value: unknown): value is AnalysisIntent {
       );
     }) &&
     (intent.ranking === undefined ||
+      intent.ranking === null ||
       (typeof intent.ranking === "object" &&
         intent.ranking !== null &&
         !Array.isArray(intent.ranking) &&
@@ -95,6 +213,14 @@ function isAnalysisIntent(value: unknown): value is AnalysisIntent {
         Number.isInteger((intent.ranking as Record<string, unknown>).limit) &&
         Number((intent.ranking as Record<string, unknown>).limit) > 0))
   );
+}
+
+function normalizeAnalysisIntent(value: ModelAnalysisIntent): AnalysisIntent {
+  return {
+    predicates: value.predicates,
+    logic: value.logic,
+    ...(value.ranking ? { ranking: value.ranking } : {}),
+  };
 }
 
 function isModelNeed(value: unknown): value is ModelNeed {
@@ -113,6 +239,7 @@ function isModelNeed(value: unknown): value is ModelNeed {
     ) &&
     isStringArray(need.unresolvedClarifications) &&
     (need.analysisIntent === undefined ||
+      need.analysisIntent === null ||
       isAnalysisIntent(need.analysisIntent)) &&
     Boolean(display) &&
     typeof display === "object" &&
@@ -161,43 +288,57 @@ export function modelNeedsToInterpretation(input: {
     )
   )
     throw new Error("LANGUAGE_MISMATCH");
-  const normalizedOriginal = input.originalText.trim().toLocaleLowerCase();
-  const seededFixture = SCENARIO_PROMPTS.some(
-    (scenario) =>
-      scenario.prompt.trim().toLocaleLowerCase() === normalizedOriginal ||
-      scenario.hiPrompt.trim().toLocaleLowerCase() === normalizedOriginal,
-  )
+  const seededFixture = isExactScenarioPrompt(input.originalText)
     ? interpretWithFixture(input.originalText)[0]
     : undefined;
   const explicitDrafting = hasExplicitDraftingIntent(input.originalText);
   const needs: InformationNeed[] = input.needs.map((modelNeed, index) => {
+    const modelIntent =
+      modelNeed.analysisIntent === null
+        ? undefined
+        : modelNeed.analysisIntent
+          ? normalizeAnalysisIntent(modelNeed.analysisIntent)
+          : undefined;
     const normalizedNeed =
-      index === 0 && seededFixture ? seededFixture : modelNeed;
+      index === 0 && seededFixture
+        ? seededFixture
+        : modelIntent
+          ? {
+              ...modelNeed,
+              analysisIntent: modelIntent,
+              canonicalNeed: canonicalNeedFromAnalysisIntent(modelIntent),
+              measure: modelIntent.predicates
+                .map((predicate) => predicate.measure)
+                .join(` ${modelIntent.logic.toUpperCase()} `),
+              period: `${modelIntent.predicates[0].fromPeriod} versus ${modelIntent.predicates[0].toPeriod}`,
+            }
+          : modelNeed;
+    const analysisIntent =
+      normalizedNeed.analysisIntent === undefined ||
+      normalizedNeed.analysisIntent === null
+        ? undefined
+        : normalizeAnalysisIntent(normalizedNeed.analysisIntent);
     const holder = resolveAuthorityName(normalizedNeed.informationHolder);
-    if (
-      modelNeed.display &&
-      !(
-        [
-          ["canonicalNeed", normalizedNeed.canonicalNeed],
-          ["measure", normalizedNeed.measure],
-          ["geography", normalizedNeed.geography],
-          ["period", normalizedNeed.period],
-          ["breakdown", normalizedNeed.breakdown],
-          [
-            "informationHolder",
-            holder?.name ?? normalizedNeed.informationHolder,
-          ],
-        ] as Array<[PresentationField, string]>
-      ).every(([field, canonical]) =>
-        preservesPresentationField({
-          field,
-          canonical,
-          presentation: modelNeed.display![field],
-          language,
-        }),
-      )
-    )
-      throw new Error("PRESENTATION_MISMATCH");
+    if (modelNeed.display) {
+      const presentationFields = [
+        ["canonicalNeed", normalizedNeed.canonicalNeed],
+        ["measure", normalizedNeed.measure],
+        ["geography", normalizedNeed.geography],
+        ["period", normalizedNeed.period],
+        ["breakdown", normalizedNeed.breakdown],
+        ["informationHolder", holder?.name ?? normalizedNeed.informationHolder],
+      ] as Array<[PresentationField, string]>;
+      const mismatch = presentationFields.find(
+        ([field, canonical]) =>
+          !preservesPresentationField({
+            field,
+            canonical,
+            presentation: modelNeed.display![field],
+            language,
+          }),
+      );
+      if (mismatch) throw new Error(`PRESENTATION_MISMATCH:${mismatch[0]}`);
+    }
     return {
       id: `model-need-${index + 1}`,
       originalText: input.originalText,
@@ -218,14 +359,7 @@ export function modelNeedsToInterpretation(input: {
               explicitDrafting,
             ),
       draftingIntent: explicitDrafting,
-      ...(normalizedNeed.analysisIntent
-        ? { analysisIntent: normalizedNeed.analysisIntent }
-        : index === 0
-          ? (() => {
-              const intent = ncrbAnalysisIntent(input.originalText);
-              return intent ? { analysisIntent: intent } : {};
-            })()
-          : {}),
+      ...(analysisIntent ? { analysisIntent } : {}),
       ...(modelNeed.display
         ? {
             presentation: {
@@ -281,119 +415,7 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
               type: "json_schema",
               name: "information_need_interpretation",
               strict: true,
-              schema: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  needs: {
-                    type: "array",
-                    maxItems: 5,
-                    items: {
-                      type: "object",
-                      additionalProperties: false,
-                      properties: {
-                        canonicalNeed: { type: "string" },
-                        measure: { type: "string" },
-                        geography: { type: "string" },
-                        period: { type: "string" },
-                        breakdown: { type: "string" },
-                        informationHolder: { type: "string" },
-                        resolutionPreference: {
-                          type: "string",
-                          enum: ["published", "formal", "unsure"],
-                        },
-                        unresolvedClarifications: {
-                          type: "array",
-                          maxItems: 2,
-                          items: { type: "string" },
-                        },
-                        analysisIntent: {
-                          type: "object",
-                          additionalProperties: false,
-                          properties: {
-                            logic: { type: "string", enum: ["and", "or"] },
-                            predicates: {
-                              type: "array",
-                              minItems: 1,
-                              items: {
-                                type: "object",
-                                additionalProperties: false,
-                                properties: {
-                                  measure: { type: "string" },
-                                  comparison: {
-                                    type: "string",
-                                    enum: ["increase", "decrease"],
-                                  },
-                                  fromPeriod: { type: "string" },
-                                  toPeriod: { type: "string" },
-                                },
-                                required: [
-                                  "measure",
-                                  "comparison",
-                                  "fromPeriod",
-                                  "toPeriod",
-                                ],
-                              },
-                            },
-                            ranking: {
-                              type: "object",
-                              additionalProperties: false,
-                              properties: {
-                                measure: { type: "string" },
-                                direction: {
-                                  type: "string",
-                                  enum: ["asc", "desc"],
-                                },
-                                limit: { type: "integer", minimum: 1 },
-                              },
-                              required: ["measure", "direction", "limit"],
-                            },
-                          },
-                          required: ["logic", "predicates"],
-                        },
-                        display: {
-                          type: "object",
-                          additionalProperties: false,
-                          properties: {
-                            canonicalNeed: { type: "string" },
-                            measure: { type: "string" },
-                            geography: { type: "string" },
-                            period: { type: "string" },
-                            breakdown: { type: "string" },
-                            informationHolder: { type: "string" },
-                            unresolvedClarifications: {
-                              type: "array",
-                              items: { type: "string" },
-                              maxItems: 2,
-                            },
-                          },
-                          required: [
-                            "canonicalNeed",
-                            "measure",
-                            "geography",
-                            "period",
-                            "breakdown",
-                            "informationHolder",
-                            "unresolvedClarifications",
-                          ],
-                        },
-                      },
-                      required: [
-                        "canonicalNeed",
-                        "measure",
-                        "geography",
-                        "period",
-                        "breakdown",
-                        "informationHolder",
-                        "resolutionPreference",
-                        "unresolvedClarifications",
-                        "display",
-                      ],
-                    },
-                  },
-                },
-                required: ["needs"],
-              },
+              schema: INFORMATION_NEED_SCHEMA,
             },
           },
         }),

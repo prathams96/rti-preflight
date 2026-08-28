@@ -49,6 +49,24 @@ describe("seeded scenario boundaries", () => {
     }
   });
 
+  it("only applies the canonical hero sentence to the exact seeded prompt", () => {
+    const exact = interpretWithFixture(SCENARIO_PROMPTS[0].prompt)[0];
+    expect(exact.canonicalNeed).toBe(
+      "Identify individual States/UTs where reported property stolen increased and recovery percentage declined between 2021 and 2023.",
+    );
+
+    const near = interpretWithFixture(
+      "Identify States/UTs where property stolen declined and recovery percentage increased between 2021 and 2023.",
+    )[0];
+    expect(near.canonicalNeed).toContain("value of property stolen declined");
+    expect(near.canonicalNeed).toContain(
+      "percentage recovery of stolen property increased between 2021 and 2023",
+    );
+    expect(near.canonicalNeed).not.toContain(
+      "property stolen increased and recovery percentage declined",
+    );
+  });
+
   it("detects explicit drafting intent in English, Hindi, and mixed script", () => {
     for (const text of [
       "Help me prepare an RTI",
@@ -124,4 +142,34 @@ describe("seeded scenario boundaries", () => {
       }),
     ).toBe(false);
   });
+
+  it.each([
+    ["stolen increased AND recovery declined", "increase", "decrease", "and"],
+    ["stolen declined AND recovery increased", "decrease", "increase", "and"],
+    ["stolen declined OR recovery increased", "decrease", "increase", "or"],
+  ])(
+    "preserves semantic directions for %s",
+    (phrase, stolen, recovery, logic) => {
+      const need = interpretWithFixture(
+        `Identify States/UTs where property stolen ${stolen === "increase" ? "increased" : "declined"} ${logic === "or" ? "or" : "and"} recovery percentage ${recovery === "increase" ? "increased" : "declined"} between 2021 and 2023.`,
+      )[0];
+      expect(need.analysisIntent).toMatchObject({ logic });
+      expect(need.analysisIntent?.predicates).toEqual([
+        expect.objectContaining({
+          measure: "value of property stolen",
+          comparison: stolen,
+        }),
+        expect.objectContaining({
+          measure: "percentage recovery of stolen property",
+          comparison: recovery,
+        }),
+      ]);
+      expect(need.canonicalNeed).toContain(
+        `value of property stolen ${stolen === "increase" ? "increased" : "declined"}`,
+      );
+      expect(need.canonicalNeed).toContain(
+        `percentage recovery of stolen property ${recovery === "increase" ? "increased" : "declined"}`,
+      );
+    },
+  );
 });

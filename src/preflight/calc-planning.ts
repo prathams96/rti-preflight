@@ -33,8 +33,30 @@ export function matchRegisteredTable(
   if (
     source.source.id !== table.id ||
     need.informationHolder !== "National Crime Records Bureau" ||
-    !/states?|union territories?|states?\/uts?/i.test(need.geography) ||
-    !intent ||
+    !/states?|union territories?|states?\/uts?/i.test(need.geography)
+  )
+    return undefined;
+
+  // A model-backed need without structured analytical intent still matched an
+  // approved capability, but it must fail in planning rather than be treated
+  // as a source-coverage miss or reinterpreted from free text.
+  if (!intent) {
+    return need.scenario === "ncrb-property"
+      ? {
+          need,
+          table,
+          approvedCapability: {
+            authority: "National Crime Records Bureau",
+            resourceId: table.id,
+            measures: source.capabilityManifest.measures,
+            periods: source.capabilityManifest.periods,
+            operations: source.capabilityManifest.operations,
+          },
+        }
+      : undefined;
+  }
+
+  if (
     intent.predicates.length === 0 ||
     periods.length !== 2 ||
     intent.predicates.some(
@@ -146,11 +168,9 @@ export function validatePlanForNeed(
     const binding = measureBinding(table, predicate.measure);
     const left = binding!.periodColumns[predicate.toPeriod];
     const right = binding!.periodColumns[predicate.fromPeriod];
-    const prefix =
-      binding!.name === "value of property stolen" ? "stolen" : "recovery";
-    const delta = `${prefix}_delta`;
+    const delta = `${binding!.key}_delta`;
     expectedOutput.push(right, left, delta);
-    return { left, right, delta };
+    return { binding: binding!, left, right, delta };
   });
   const derives = plan.steps.filter((step) => step.kind === "derive");
   if (
@@ -188,12 +208,9 @@ export function validatePlanForNeed(
     )
       throw new Error("PLAN_UNREQUESTED_RANKING");
   } else {
-    const prefix =
-      intent.ranking.measure === "value of property stolen"
-        ? "stolen"
-        : "recovery";
-    const ranked = expectedDerivations.find((derivation) =>
-      derivation.delta.startsWith(prefix),
+    const rankingBinding = measureBinding(table, intent.ranking.measure);
+    const ranked = expectedDerivations.find(
+      (derivation) => derivation.binding.key === rankingBinding?.key,
     );
     if (
       !ranked ||

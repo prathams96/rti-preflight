@@ -148,17 +148,33 @@ function signed(value: string): string {
 function displayColumn(
   key: string,
   value: string,
+  table: RegisteredTable,
+  plan: CalcPlan,
 ): { key: string; label: string; value: string } {
-  const period = key.match(/^(?:stolen|recovery)_(\d{4})$/)?.[1];
-  if (period && key.startsWith("stolen_"))
-    return { key, label: `Stolen ${period}`, value: `₹${value} crore` };
-  if (period && key.startsWith("recovery_"))
-    return { key, label: `Recovery ${period}`, value: `${value}%` };
-  if (key.startsWith("stolen_delta"))
-    return { key, label: "Change", value: signed(value) };
-  if (key.startsWith("recovery_delta"))
-    return { key, label: "Change", value: `${signed(value)} pp` };
-  return { key, label: key.replaceAll("_", " "), value };
+  const column = table.columns.find((candidate) => candidate.key === key);
+  const derive = plan.steps.find(
+    (step): step is Extract<CalcPlan["steps"][number], { kind: "derive" }> =>
+      step.kind === "derive" && step.column === key,
+  );
+  if (derive) {
+    const source = table.columns.find(
+      (candidate) => candidate.key === derive.left.column,
+    );
+    return {
+      key,
+      label: "Change",
+      value: `${signed(value)}${source?.unit === "%" ? " pp" : ""}`,
+    };
+  }
+  if (column?.unit === "INR crore")
+    return { key, label: column.displayLabel ?? key, value: `₹${value} crore` };
+  if (column?.unit === "%")
+    return { key, label: column.displayLabel ?? key, value: `${value}%` };
+  return {
+    key,
+    label: column?.displayLabel ?? key.replaceAll("_", " "),
+    value,
+  };
 }
 
 function uniqueLineage(row: {
@@ -302,8 +318,8 @@ function derivedTableResolution(
   const rows = execution.rows.map((row) => ({
     geography: row.values[plan.output[0]]!,
     columns: plan.output
-      .filter((column) => column !== "state")
-      .map((column) => displayColumn(column, row.values[column]!)),
+      .filter((column) => column !== plan.output[0])
+      .map((column) => displayColumn(column, row.values[column]!, table, plan)),
     ...(row.values.stolen_2021 ? { stolen2021: row.values.stolen_2021 } : {}),
     ...(row.values.stolen_2023 ? { stolen2023: row.values.stolen_2023 } : {}),
     ...(row.values.stolen_delta
@@ -325,9 +341,8 @@ function derivedTableResolution(
   const intent = need.analysisIntent!;
   const filters = intent.predicates.map((predicate) => {
     const label =
-      predicate.measure === "value of property stolen"
-        ? "stolen value"
-        : "recovery percentage";
+      measureBinding(table, predicate.measure)?.comparisonLabel ??
+      predicate.measure;
     return `${predicate.toPeriod} ${label} ${predicate.comparison === "increase" ? ">" : "<"} ${predicate.fromPeriod} ${label}`;
   });
   const operation = `Compare ${intent.predicates
@@ -424,6 +439,19 @@ function planningFailureResolution(
         "You chose a written response from a government authority.",
       )
     : base;
+}
+
+function planningFailureStage(
+  code: string,
+): "provider" | "parse" | "validation" {
+  if (code.includes("PARSE") || code.includes("REFUSED")) return "parse";
+  if (
+    code === "PLAN_INPUT_MISSING_ANALYSIS_INTENT" ||
+    code === "PLAN_MEASURE_PERIOD_UNSUPPORTED" ||
+    code === "PLAN_GEOGRAPHY_COLUMN_MISSING"
+  )
+    return "validation";
+  return "provider";
 }
 
 function noFindingResolution(
@@ -607,9 +635,7 @@ async function resolveNeed(
       return planningFailureResolution(
         need,
         traceId,
-        code.includes("PARSE") || code.includes("REFUSED")
-          ? "parse"
-          : "provider",
+        planningFailureStage(code),
         code,
       );
     }

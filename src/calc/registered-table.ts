@@ -37,8 +37,12 @@ export type RegisteredTable = {
 };
 
 export type RegisteredMeasure = {
+  /** Stable identity used for generated columns; never derived from labels. */
+  key: string;
   name: string;
+  aliases?: readonly string[];
   displayLabel?: string;
+  comparisonLabel?: string;
   periodColumns: Readonly<Record<string, string>>;
   unit: ColumnUnit;
 };

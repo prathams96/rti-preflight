@@ -305,6 +305,25 @@ function translateText(text: string, language: Language): string {
   );
   if (matchedReferences)
     return `${matchedReferences[1]} अपरिवर्तनीय संदर्भ, जिनमें सामग्री हैश हैं`;
+  const analyticalConditions = [
+    ...text.matchAll(
+      /reported (value of property stolen|percentage recovery of stolen property) (increased|declined) between (20\d{2}) and (20\d{2})/g,
+    ),
+  ];
+  if (analyticalConditions.length > 0) {
+    const conditions = analyticalConditions.map((match) => {
+      const measure =
+        match[1] === "value of property stolen"
+          ? "चोरी की संपत्ति का मूल्य"
+          : "बरामदगी प्रतिशत";
+      const direction = match[2] === "increased" ? "बढ़ा" : "घटा";
+      return `रिपोर्ट की गई ${measure} ${direction}`;
+    });
+    const fromPeriod = analyticalConditions[0][3];
+    const toPeriod = analyticalConditions[0][4];
+    const conjunction = /\sOR\s/.test(text) ? " या " : " और ";
+    return `${fromPeriod} और ${toPeriod} के बीच जिन अलग-अलग राज्यों/केंद्र शासित प्रदेशों में ${conditions.join(conjunction)} उन्हें पहचानें।`;
+  }
   if (text === "Route metadata; no personal record was retrieved")
     return "मार्ग मेटाडेटा; कोई व्यक्तिगत रिकॉर्ड प्राप्त नहीं हुआ";
   if (text.startsWith("The prototype checked the registered ")) {

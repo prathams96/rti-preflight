@@ -78,4 +78,26 @@ describe("OpenAI CalcPlan adapter", () => {
       "PROVIDER_TIMEOUT",
     );
   });
+
+  it("normalizes nullable optional derive fields from provider output", () => {
+    const input = candidate();
+    const plan = planForAnalysis(input.need, input.table);
+    const derived = plan.steps.find((step) => step.kind === "derive");
+    expect(derived?.kind).toBe("derive");
+    const parsed = parseCalcPlan({
+      ...plan,
+      steps: plan.steps.map((step) =>
+        step.kind === "derive"
+          ? { ...step, right: null, displayScale: null, periods: null }
+          : step,
+      ),
+    });
+    const normalized = parsed.steps.find((step) => step.kind === "derive");
+    expect(normalized).toMatchObject({
+      kind: "derive",
+      right: undefined,
+      displayScale: undefined,
+      periods: undefined,
+    });
+  });
 });

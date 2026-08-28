@@ -1,5 +1,9 @@
 import type { CalcPlan, CalcStep, Predicate } from "../calc/registered-table";
-import type { PlanAdapter, PlanInput } from "./plan-adapter";
+import {
+  measureBinding,
+  type PlanAdapter,
+  type PlanInput,
+} from "./plan-adapter";
 import {
   OPENAI_MODEL,
   OPENAI_REASONING,
@@ -107,10 +111,14 @@ function isCalcStep(value: unknown): value is CalcStep {
         isRecord(value.left) &&
         typeof value.left.column === "string" &&
         (value.right === undefined ||
+          value.right === null ||
           (isRecord(value.right) && typeof value.right.column === "string")) &&
         (value.displayScale === undefined ||
+          value.displayScale === null ||
           typeof value.displayScale === "number") &&
-        (value.periods === undefined || typeof value.periods === "number")
+        (value.periods === undefined ||
+          value.periods === null ||
+          typeof value.periods === "number")
       );
     case "project":
     case "distinct":
@@ -195,10 +203,19 @@ export function parseCalcPlan(value: unknown): CalcPlan {
     value.output.length === 0
   )
     throw new Error("PLAN_PARSE_FAILED");
+  const steps = (value.steps as unknown[]).map((step) => {
+    if (!isRecord(step) || step.kind !== "derive") return step as CalcStep;
+    return {
+      ...step,
+      right: step.right ?? undefined,
+      displayScale: step.displayScale ?? undefined,
+      periods: step.periods ?? undefined,
+    } as CalcStep;
+  });
   return {
     version: value.version,
     tableId: value.tableId,
-    steps: value.steps,
+    steps,
     output: value.output,
   };
 }
@@ -206,33 +223,77 @@ export function parseCalcPlan(value: unknown): CalcPlan {
 const predicateSchema = {
   $defs: {
     predicate: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        kind: {
-          type: "string",
-          enum: ["all", "any", "compare", "in", "notNull"],
-        },
-        predicates: { type: "array", items: { $ref: "#/$defs/predicate" } },
-        column: { type: "string" },
-        operator: {
-          type: "string",
-          enum: ["eq", "neq", "gt", "gte", "lt", "lte"],
-        },
-        value: {
-          anyOf: [
-            { type: "string" },
-            {
-              type: "object",
-              additionalProperties: false,
-              properties: { column: { type: "string" } },
-              required: ["column"],
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            kind: { type: "string", enum: ["all"] },
+            predicates: {
+              type: "array",
+              minItems: 1,
+              items: { $ref: "#/$defs/predicate" },
             },
-          ],
+          },
+          required: ["kind", "predicates"],
         },
-        values: { type: "array", items: { type: "string" } },
-      },
-      required: ["kind"],
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            kind: { type: "string", enum: ["any"] },
+            predicates: {
+              type: "array",
+              minItems: 1,
+              items: { $ref: "#/$defs/predicate" },
+            },
+          },
+          required: ["kind", "predicates"],
+        },
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            kind: { type: "string", enum: ["compare"] },
+            column: { type: "string" },
+            operator: {
+              type: "string",
+              enum: ["eq", "neq", "gt", "gte", "lt", "lte"],
+            },
+            value: {
+              anyOf: [
+                { type: "string" },
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: { column: { type: "string" } },
+                  required: ["column"],
+                },
+              ],
+            },
+          },
+          required: ["kind", "column", "operator", "value"],
+        },
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            kind: { type: "string", enum: ["in"] },
+            column: { type: "string" },
+            values: { type: "array", items: { type: "string" } },
+          },
+          required: ["kind", "column", "values"],
+        },
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            kind: { type: "string", enum: ["notNull"] },
+            column: { type: "string" },
+          },
+          required: ["kind", "column"],
+        },
+      ],
     },
   },
 };
@@ -252,7 +313,7 @@ export const CALC_PLAN_SCHEMA = {
             type: "object",
             additionalProperties: false,
             properties: {
-              kind: { const: "excludeAggregates" },
+              kind: { type: "string", enum: ["excludeAggregates"] },
               column: { type: "string" },
               values: { type: "array", items: { type: "string" } },
             },
@@ -262,7 +323,7 @@ export const CALC_PLAN_SCHEMA = {
             type: "object",
             additionalProperties: false,
             properties: {
-              kind: { const: "excludeNulls" },
+              kind: { type: "string", enum: ["excludeNulls"] },
               columns: { type: "array", items: { type: "string" } },
             },
             required: ["kind", "columns"],
@@ -271,7 +332,7 @@ export const CALC_PLAN_SCHEMA = {
             type: "object",
             additionalProperties: false,
             properties: {
-              kind: { const: "filter" },
+              kind: { type: "string", enum: ["filter"] },
               predicate: { $ref: "#/$defs/predicate" },
             },
             required: ["kind", "predicate"],
@@ -280,7 +341,7 @@ export const CALC_PLAN_SCHEMA = {
             type: "object",
             additionalProperties: false,
             properties: {
-              kind: { const: "derive" },
+              kind: { type: "string", enum: ["derive"] },
               column: { type: "string" },
               operation: {
                 type: "string",
@@ -303,21 +364,38 @@ export const CALC_PLAN_SCHEMA = {
                 required: ["column"],
               },
               right: {
-                type: "object",
-                additionalProperties: false,
-                properties: { column: { type: "string" } },
-                required: ["column"],
+                anyOf: [
+                  {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: { column: { type: "string" } },
+                    required: ["column"],
+                  },
+                  { type: "null" },
+                ],
               },
-              displayScale: { type: "number" },
-              periods: { type: "number" },
+              displayScale: {
+                anyOf: [{ type: "number" }, { type: "null" }],
+              },
+              periods: {
+                anyOf: [{ type: "number" }, { type: "null" }],
+              },
             },
-            required: ["kind", "column", "operation", "left"],
+            required: [
+              "kind",
+              "column",
+              "operation",
+              "left",
+              "right",
+              "displayScale",
+              "periods",
+            ],
           },
           {
             type: "object",
             additionalProperties: false,
             properties: {
-              kind: { const: "project" },
+              kind: { type: "string", enum: ["project"] },
               columns: { type: "array", items: { type: "string" } },
             },
             required: ["kind", "columns"],
@@ -326,7 +404,7 @@ export const CALC_PLAN_SCHEMA = {
             type: "object",
             additionalProperties: false,
             properties: {
-              kind: { const: "distinct" },
+              kind: { type: "string", enum: ["distinct"] },
               columns: { type: "array", items: { type: "string" } },
             },
             required: ["kind", "columns"],
@@ -335,7 +413,7 @@ export const CALC_PLAN_SCHEMA = {
             type: "object",
             additionalProperties: false,
             properties: {
-              kind: { const: "sort" },
+              kind: { type: "string", enum: ["sort"] },
               keys: {
                 type: "array",
                 items: {
@@ -355,7 +433,7 @@ export const CALC_PLAN_SCHEMA = {
             type: "object",
             additionalProperties: false,
             properties: {
-              kind: { const: "limit" },
+              kind: { type: "string", enum: ["limit"] },
               count: { type: "integer", minimum: 0 },
             },
             required: ["kind", "count"],
@@ -382,6 +460,7 @@ function outputText(payload: ResponsePayload): string {
 }
 
 function planningContext(input: PlanInput): string {
+  const intent = input.need.analysisIntent;
   return JSON.stringify({
     informationNeed: input.need,
     table: {
@@ -392,6 +471,22 @@ function planningContext(input: PlanInput): string {
       allowedOperations: input.table.allowedOperations,
     },
     approvedCapability: input.approvedCapability,
+    requestedShape: intent
+      ? {
+          comparisons: intent.predicates.map((predicate) => {
+            const measure = measureBinding(input.table, predicate.measure);
+            return {
+              measureKey: measure?.key ?? null,
+              fromColumn: measure?.periodColumns[predicate.fromPeriod] ?? null,
+              toColumn: measure?.periodColumns[predicate.toPeriod] ?? null,
+              deltaColumn: measure ? `${measure.key}_delta` : null,
+              operator: predicate.comparison === "increase" ? "gt" : "lt",
+            };
+          }),
+          logic: intent.logic,
+          ranking: intent.ranking ?? null,
+        }
+      : null,
   });
 }
 
@@ -415,7 +510,7 @@ export class OpenAICalcPlanAdapter implements PlanAdapter {
             {
               role: "system",
               content:
-                "You are planning a calculation over one registered deterministic table. You do not calculate the answer. You do not invent values, columns, sources, periods, measures, or operations. Use only the supplied table schema and allowed operations. Return only a declarative CalcPlan. Do not add predicates, measures, time periods, rankings, groupings, or filters that were not requested. Preserve AND versus OR semantics. If the request cannot be expressed with the supplied schema and operations, return a plan that the application will reject; never approximate it. The application validates and executes your plan deterministically.",
+                "You are planning a calculation over one registered deterministic table. You do not calculate the answer. You do not invent values, columns, sources, periods, measures, or operations. Use only the supplied table schema and allowed operations. Return only a declarative CalcPlan. Do not add predicates, measures, time periods, rankings, groupings, or filters that were not requested. Preserve AND versus OR semantics. For a supported two-period comparison, derive one delta column per requested measure using the registered measure key plus _delta with operation exactly delta, compare the requested to-period source column directly with the requested from-period source column (gt for increase, lt for decrease), and never filter on a derived delta or on a literal zero. Start by excluding the declared aggregate row keys. If ranking is requested, exclude nulls from the ranked delta before sorting, then sort by the requested measure delta, add the requested limit, and project the geography, each requested from-period column, to-period column, and delta in that order. Otherwise sort by the geography column ascending. The final project columns and output must match exactly. If the request cannot be expressed with the supplied schema and operations, return a plan that the application will reject; never approximate it. The application validates and executes your plan deterministically.",
             },
             { role: "user", content: planningContext(input) },
           ],

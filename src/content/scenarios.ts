@@ -100,6 +100,45 @@ const NCRB_MEASURES = {
   recovery: "percentage recovery of stolen property",
 } as const;
 
+export function isExactScenarioPrompt(text: string): boolean {
+  const normalized = text.trim().toLocaleLowerCase();
+  return SCENARIO_PROMPTS.some(
+    (scenario) =>
+      normalized === scenario.prompt.toLocaleLowerCase() ||
+      normalized === scenario.hiPrompt.toLocaleLowerCase(),
+  );
+}
+
+export function isExactNcrbSeededPrompt(text: string): boolean {
+  const normalized = text.trim().toLocaleLowerCase();
+  return (
+    normalized === SCENARIO_PROMPTS[0].prompt.toLocaleLowerCase() ||
+    normalized === SCENARIO_PROMPTS[0].hiPrompt.toLocaleLowerCase()
+  );
+}
+
+export function canonicalNeedFromAnalysisIntent(
+  intent: AnalysisIntent,
+): string {
+  const firstPeriod = intent.predicates[0];
+  const sharedPeriod = intent.predicates.every(
+    (predicate) =>
+      predicate.fromPeriod === firstPeriod.fromPeriod &&
+      predicate.toPeriod === firstPeriod.toPeriod,
+  );
+  const conditions = intent.predicates.map(
+    (predicate) =>
+      `reported ${predicate.measure} ${predicate.comparison === "increase" ? "increased" : "declined"}${sharedPeriod ? "" : ` between ${predicate.fromPeriod} and ${predicate.toPeriod}`}`,
+  );
+  const period = sharedPeriod
+    ? ` between ${firstPeriod.fromPeriod} and ${firstPeriod.toPeriod}`
+    : "";
+  const ranking = intent.ranking
+    ? ` Rank by ${intent.ranking.measure} change in ${intent.ranking.direction === "desc" ? "descending" : "ascending"} order.`
+    : "";
+  return `Identify individual States/UTs where ${conditions.join(` ${intent.logic.toUpperCase()} `)}${period}.${ranking}`;
+}
+
 function ncrbYears(text: string): string[] {
   return [
     ...new Set([...text.matchAll(/\b(20\d{2})\b/g)].map((match) => match[1])),
@@ -152,7 +191,23 @@ function recoveryComparisonFor(
   return comparisonFor(text.slice(clauseStart >= 0 ? clauseStart : 0));
 }
 
-export function ncrbAnalysisIntent(text: string): AnalysisIntent | undefined {
+function stolenComparisonFor(
+  text: string,
+): "increase" | "decrease" | undefined {
+  const normalized = text.toLocaleLowerCase();
+  const recoveryIndex = Math.max(
+    normalized.indexOf("recover"),
+    Math.max(text.indexOf("बरामदगी"), text.indexOf("बरामद")),
+  );
+  return comparisonFor(
+    recoveryIndex >= 0 ? text.slice(0, recoveryIndex) : text,
+  );
+}
+
+/** Offline/test fixture parser; model-backed interpretation never calls this. */
+export function deterministicNcrbFixtureIntent(
+  text: string,
+): AnalysisIntent | undefined {
   const [fromPeriod, toPeriod] = ncrbYears(text);
   if (!fromPeriod || !toPeriod) return undefined;
   const predicateCandidates: Array<
@@ -168,7 +223,7 @@ export function ncrbAnalysisIntent(text: string): AnalysisIntent | undefined {
     /चोरी.*संपत्ति|संपत्ति.*चोरी/u.test(text)
       ? {
           measure: NCRB_MEASURES.stolen,
-          comparison: comparisonFor(text),
+          comparison: stolenComparisonFor(text),
           fromPeriod,
           toPeriod,
         }
@@ -357,31 +412,26 @@ function needForScenario(
 
   switch (id) {
     case "ncrb-property": {
-      const analysisIntent = ncrbAnalysisIntent(text);
+      const analysisIntent = deterministicNcrbFixtureIntent(text);
       const predicates = analysisIntent?.predicates ?? [];
-      const seeded =
-        text.trim().toLocaleLowerCase() ===
-          SCENARIO_PROMPTS[0].prompt.toLocaleLowerCase() ||
-        text.trim() === SCENARIO_PROMPTS[0].hiPrompt;
-      const heroSemantics =
-        predicates.length === 2 &&
-        predicates[0].fromPeriod === "2021" &&
-        predicates[0].toPeriod === "2023";
+      const seeded = isExactNcrbSeededPrompt(text);
       return {
         ...common,
-        canonicalNeed:
-          seeded || heroSemantics
-            ? "Identify individual States/UTs where reported property stolen increased and recovery percentage declined between 2021 and 2023."
-            : predicates.length === 2
-              ? `Identify individual States/UTs where the requested conditions hold between ${predicates[0].fromPeriod} and ${predicates[0].toPeriod}.`
-              : predicates.length === 1
-                ? `Identify individual States/UTs where reported ${predicates[0].measure} ${predicates[0].comparison === "increase" ? "increased" : "declined"} between ${predicates[0].fromPeriod} and ${predicates[0].toPeriod}.`
-                : text.trim(),
+        canonicalNeed: seeded
+          ? "Identify individual States/UTs where reported property stolen increased and recovery percentage declined between 2021 and 2023."
+          : predicates.length === 2
+            ? canonicalNeedFromAnalysisIntent(analysisIntent!)
+            : predicates.length === 1
+              ? canonicalNeedFromAnalysisIntent(analysisIntent!)
+              : text.trim(),
         measure:
-          (seeded || heroSemantics
+          (seeded
             ? "Value of property stolen and percentage recovered"
-            : predicates.map((predicate) => predicate.measure).join(" and ")) ||
-          "Property data",
+            : analysisIntent
+              ? predicates
+                  .map((predicate) => predicate.measure)
+                  .join(` ${analysisIntent.logic.toUpperCase()} `)
+              : "") || "Property data",
         geography: "All States/UTs",
         period:
           predicates.length > 0

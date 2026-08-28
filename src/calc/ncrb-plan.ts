@@ -95,8 +95,11 @@ export const NCRB_PLAN: CalcPlan = {
 
 export const NCRB_MEASURES: readonly RegisteredMeasure[] = [
   {
+    key: "stolen",
     name: "value of property stolen",
+    aliases: ["property stolen", "increase in value of property stolen"],
     displayLabel: "Stolen",
+    comparisonLabel: "stolen value",
     periodColumns: {
       "2021": "stolen_2021",
       "2022": "stolen_2022",
@@ -105,8 +108,15 @@ export const NCRB_MEASURES: readonly RegisteredMeasure[] = [
     unit: "INR crore",
   },
   {
+    key: "recovery",
     name: "percentage recovery of stolen property",
+    aliases: [
+      "percentage of stolen property recovered",
+      "recovery percentage",
+      "property recovery percentage",
+    ],
     displayLabel: "Recovery",
+    comparisonLabel: "recovery percentage",
     periodColumns: {
       "2021": "recovery_2021",
       "2022": "recovery_2022",
