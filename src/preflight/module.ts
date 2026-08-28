@@ -25,6 +25,7 @@ import { DeterministicInterpretationAdapter } from "../model/fake-adapter";
 import { normalizeTraceId } from "../observability";
 import { executeNcrbPlan } from "../calc/ncrb-plan";
 import { classifyOutcome } from "./classifier";
+import { informationNeedEditErrors } from "./need-validation";
 import {
   OpenAINarrationAdapter,
   narrateOrFallback,
@@ -32,19 +33,21 @@ import {
 import type { PreflightModule } from "./interface";
 
 function validNeed(need: InformationNeed): boolean {
-  return Boolean(
-    need &&
-    typeof need === "object" &&
-    typeof need.originalText === "string" &&
-    typeof need.canonicalNeed === "string" &&
-    typeof need.measure === "string" &&
-    typeof need.geography === "string" &&
-    typeof need.period === "string" &&
-    typeof need.breakdown === "string" &&
-    typeof need.informationHolder === "string" &&
-    ["published", "formal", "unsure"].includes(need.resolutionPreference) &&
-    Array.isArray(need.unresolvedClarifications) &&
-    typeof need.scenario === "string",
+  return (
+    Boolean(
+      need &&
+      typeof need === "object" &&
+      typeof need.originalText === "string" &&
+      typeof need.canonicalNeed === "string" &&
+      typeof need.measure === "string" &&
+      typeof need.geography === "string" &&
+      typeof need.period === "string" &&
+      typeof need.breakdown === "string" &&
+      typeof need.informationHolder === "string" &&
+      ["published", "formal", "unsure"].includes(need.resolutionPreference) &&
+      Array.isArray(need.unresolvedClarifications) &&
+      typeof need.scenario === "string",
+    ) && informationNeedEditErrors(need).length === 0
   );
 }
 
@@ -361,7 +364,7 @@ function epfoResolution(
     evidence: [
       {
         id: decision.route.id,
-        sourceTitle: "EPFO Know Your Claim Status",
+        sourceTitle: "EPFO Member Passbook",
         publisher: decision.route.canonicalHolder,
         sourceType: "official_service_route",
         url: decision.route.officialUrl,

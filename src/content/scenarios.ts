@@ -77,8 +77,39 @@ export const CPCB_CONFLICT_DECISION = {
 
 const DEFAULT_PREFERENCE = "unsure" as const;
 
+/**
+ * Detect an explicit request to prepare, write, draft, or file a new RTI.
+ * This is deterministic routing metadata, not a model-generated conclusion.
+ */
+export function hasExplicitDraftingIntent(text: string): boolean {
+  const normalized = text.replace(/[“”‘’]/g, "'");
+  const english =
+    /\b(?:help(?:\s+me)?(?:\s+to)?\s+)?(?:prepare|draft|write|file|submit|make|create)\s+(?:a\s+|an\s+|the\s+)?(?:new\s+)?rti\b|\b(?:please\s+)?help(?:\s+me)?(?:\s+to)?\s+(?:prepare|draft|write|file|submit|make|create)\s+(?:an?\s+)?rti\b|\b(?:i\s+want|i\s+need|please)\s+(?:to\s+)?(?:prepare|draft|write|file|submit|make|create)\s+(?:an?\s+)?rti\b|\brti\b[\s\S]{0,70}\b(?:prepare|draft|write|file|submit|make|create)\b/i.test(
+      normalized,
+    );
+  const hindiOrMixed =
+    /(?:आरटीआई|rti)[\s\S]{0,80}(?:तैयार|ड्राफ्ट|लिख|दाखिल|फाइल|बना|करना\s+है|करें)|(?:तैयार|ड्राफ्ट|लिख|दाखिल|फाइल|बना)[\s\S]{0,80}(?:आरटीआई|rti)/iu.test(
+      normalized,
+    );
+  return english || hindiOrMixed;
+}
+
+/** Existing NCRB evidence may still be shown; other explicit RTI goals draft directly. */
+export function shouldPreferDraftingRoute(
+  need: Pick<InformationNeed, "draftingIntent" | "scenario">,
+): boolean {
+  return Boolean(need.draftingIntent && need.scenario !== "ncrb-property");
+}
+
 export function scenarioForText(text: string): ScenarioId {
   const normalized = text.toLocaleLowerCase();
+  // An explicit drafting goal must not be mistaken for the synthetic
+  // previous-response example just because both mention an earlier RTI.
+  if (
+    hasExplicitDraftingIntent(text) &&
+    /(?:earlier|previous|पुरानी|पिछली|पहले की)\s*(?:rti|आरटीआई)/iu.test(text)
+  )
+    return "unsupported";
   if (normalized.includes("property") && normalized.includes("stolen"))
     return "ncrb-property";
   if (
@@ -113,11 +144,12 @@ function needForScenario(
   const common = {
     id: `${id}-${suffix}`,
     originalText: text,
-    breakdown: "As reported by each State/UT",
+    breakdown: "Not yet specified",
     resolutionPreference: DEFAULT_PREFERENCE,
     unresolvedClarifications: [] as string[],
     scenario: id,
     informationHolderStatus: "unverified" as const,
+    draftingIntent: hasExplicitDraftingIntent(text),
   };
 
   switch (id) {
@@ -129,6 +161,7 @@ function needForScenario(
         measure: "Value of property stolen and percentage recovered",
         geography: "All States/UTs",
         period: "2021 versus 2023",
+        breakdown: "State / UT",
         informationHolder: "National Crime Records Bureau",
         informationHolderStatus: "verified",
       };
@@ -141,6 +174,7 @@ function needForScenario(
           "Maintenance expenditure, work orders, contracts, and contractor names",
         geography: "New Delhi Railway Station",
         period: "Financial year 2024–25",
+        breakdown: "Contractor",
         informationHolder: "Northern Railway",
         informationHolderStatus: "verified",
       };
@@ -176,6 +210,7 @@ function needForScenario(
         ...common,
         ...subjectFields,
         period: "Current claim",
+        breakdown: "Claim",
         informationHolder: "Employees' Provident Fund Organisation",
         informationHolderStatus: "verified",
         recordSubject,
@@ -189,6 +224,7 @@ function needForScenario(
         measure: "Relevant earlier RTI response",
         geography: "A selected Central public authority",
         period: "Not specified",
+        breakdown: "Public authority",
         informationHolder: "Central public authority",
         informationHolderStatus: "unverified",
       };
@@ -200,6 +236,7 @@ function needForScenario(
         measure: "Air-quality metric",
         geography: "As covered by the publications",
         period: "Applicable publication periods",
+        breakdown: "Publication",
         informationHolder: "Central Pollution Control Board",
         informationHolderStatus: "verified",
       };

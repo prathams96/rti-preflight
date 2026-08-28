@@ -15,6 +15,8 @@ export type InformationNeed = {
   resolutionPreference: ResolutionPreference;
   unresolvedClarifications: string[];
   scenario: ScenarioId;
+  /** The citizen explicitly asked for a new RTI draft or filing journey. */
+  draftingIntent?: boolean;
   recordSubject?: "own" | "another" | "unspecified";
 };
 

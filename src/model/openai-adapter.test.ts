@@ -106,4 +106,29 @@ describe("structured interpretation mapping", () => {
     });
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it("preserves explicit drafting intent over a model's seeded fixture interpretation", () => {
+    const result = modelNeedsToInterpretation({
+      originalText: "Please help me prepare an RTI",
+      redactedText: "Please help me prepare an RTI",
+      traceId: "trace-drafting",
+      needs: [
+        {
+          canonicalNeed: "A previously issued RTI response",
+          measure: "Relevant earlier RTI response",
+          geography: "A selected Central public authority",
+          period: "Not specified",
+          breakdown: "Public authority",
+          informationHolder: "Central public authority",
+          resolutionPreference: "formal",
+          unresolvedClarifications: [],
+        },
+      ],
+    });
+    expect(result.needs[0]).toMatchObject({
+      scenario: "unsupported",
+      draftingIntent: true,
+      originalText: "Please help me prepare an RTI",
+    });
+  });
 });

@@ -16,7 +16,12 @@ import type {
   RenderableResolution,
   ResolutionPreference,
 } from "../domain/types";
-import { CPCB_CONFLICT_DECISION, SCENARIO_PROMPTS } from "../content/scenarios";
+import {
+  CPCB_CONFLICT_DECISION,
+  hasExplicitDraftingIntent,
+  SCENARIO_PROMPTS,
+  shouldPreferDraftingRoute,
+} from "../content/scenarios";
 import { DISCLOSURE_LEDGER } from "../disclosure/ledger";
 import {
   createFilingModule,
@@ -34,12 +39,14 @@ import { normaliseNeedPhrase } from "../filing/phrase";
 import { EPFO_CLAIM_STATUS_ROUTE } from "../service/epfo-route";
 import { serializeEvidenceBrief } from "../evidence/brief";
 import { createTraceRecorder, generateTraceId } from "../observability";
+<<<<<<< HEAD
 import { ASK_SCREEN_COPY } from "./start-screen-copy";
 import {
   RESULT_STAGE_COPY,
   resultOutcomeAfterCitationReview,
   type CitationReviewState,
 } from "./result-stage";
+import { informationNeedEditErrors } from "../preflight/need-validation";
 
 type Phase =
   | "start"
@@ -197,11 +204,11 @@ const COPY = {
       "We kept your original wording and separated the needs so each one can be checked clearly.",
     oneNeed:
       "Only one need is active at a time. You can start another Preflight later.",
-    measure: "Information or measure requested",
-    geography: "Geography",
+    measure: "What you're asking for",
+    geography: "For",
     period: "Period",
-    breakdown: "Requested breakdown",
-    holder: "Likely to hold this",
+    breakdown: "Breakdown by",
+    holder: "Likely department to ask",
     preference: "What kind of answer do you need?",
     prefPublished: "Reliable information from a published government source",
     prefFormal: "A new written response from a public authority",
@@ -347,6 +354,11 @@ const COPY = {
       "In a real filing you'd now get an acknowledgement number by email, and the authority has 30 days to reply.",
     provenance: (count: number, date: string) =>
       `Checked against ${count} official values · last verified ${date}`,
+    customOption: "Other / custom — type your own",
+    customHelp: "Choose a common value or type your own.",
+    customAccepted: "Custom value accepted.",
+    invalidNeed:
+      "Complete each Information Need field before checking. You can type a custom geography or period.",
   },
   hi: {
     independent: "स्वतंत्र प्रोटोटाइप — कोई सरकारी सेवा नहीं।",
@@ -376,11 +388,11 @@ const COPY = {
       "हमने आपके मूल शब्द रखे हैं और ज़रूरतों को अलग किया है ताकि हर ज़रूरत को स्पष्ट रूप से जाँचा जा सके।",
     oneNeed:
       "एक समय में केवल एक ज़रूरत सक्रिय है। बाद में एक और Preflight शुरू कर सकते हैं।",
-    measure: "मांगी गई जानकारी या माप",
-    geography: "भूगोल",
+    measure: "आप क्या माँग रहे हैं",
+    geography: "किसके लिए / कहाँ",
     period: "अवधि",
-    breakdown: "मांगा गया विवरण",
-    holder: "संभावित सूचना-धारक",
+    breakdown: "किस आधार पर",
+    holder: "किस विभाग से पूछें",
     preference: "आपको किस तरह का उत्तर चाहिए?",
     prefPublished: "प्रकाशित सरकारी स्रोत से विश्वसनीय जानकारी",
     prefFormal: "किसी लोक प्राधिकरण से नया लिखित उत्तर",
@@ -524,6 +536,11 @@ const COPY = {
       "असली फाइलिंग में अब आपको ईमेल पर पावती संख्या मिलती और प्राधिकरण को 30 दिनों में उत्तर देना होता।",
     provenance: (count: number, date: string) =>
       `${count} आधिकारिक मानों से मिलान किया गया · अंतिम सत्यापन ${date}`,
+    customOption: "अन्य / अपनी जानकारी लिखें",
+    customHelp: "कोई सामान्य विकल्प चुनें या अपनी जानकारी लिखें।",
+    customAccepted: "अपनी जानकारी स्वीकार की गई है।",
+    invalidNeed:
+      "जाँचने से पहले सूचना-ज़रूरत के सभी फ़ील्ड भरें। आप अपनी जगह या अवधि लिख सकते हैं।",
   },
 } as const;
 
@@ -652,6 +669,75 @@ function Field({
     <label className="field">
       <span>{label}</span>
       <input value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+const COMMON_GEOGRAPHIES = [
+  "All States/UTs",
+  "New Delhi Railway Station",
+  "A selected city or municipality",
+  "A selected district",
+  "A selected State/UT",
+  "My EPFO account",
+  "Another person's EPFO account",
+  "EPFO account subject to confirmation",
+  "Not yet specified",
+];
+const COMMON_PERIODS = [
+  "2021 versus 2023",
+  "Financial year 2024–25",
+  "Current claim",
+  "A selected calendar year",
+  "A selected financial year",
+  "Not specified",
+  "Not yet specified",
+];
+
+function StructuredNeedInput({
+  id,
+  label,
+  value,
+  options,
+  customOption,
+  customHelp,
+  customAccepted,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  options: readonly string[];
+  customOption: string;
+  customHelp: string;
+  customAccepted: string;
+  onChange: (value: string) => void;
+}) {
+  const isCustom = value.length > 0 && !options.includes(value);
+  const isInvalid = value.trim().length === 0 || value === customOption;
+  return (
+    <label className="field" htmlFor={id}>
+      <span>{label}</span>
+      <input
+        id={id}
+        list={`${id}-options`}
+        value={value}
+        onChange={(event) =>
+          onChange(
+            event.target.value === customOption ? "" : event.target.value,
+          )
+        }
+        aria-invalid={isInvalid}
+      />
+      <datalist id={`${id}-options`}>
+        {options.map((option) => (
+          <option value={option} key={option} />
+        ))}
+        <option value={customOption} />
+      </datalist>
+      <small className="field-help">
+        {isCustom ? `${customHelp} ${customAccepted}` : customHelp}
+      </small>
     </label>
   );
 }
@@ -1065,6 +1151,12 @@ export default function PreflightApp() {
       next.period !== "Not yet specified"
     )
       next.unresolvedClarifications = [];
+    if (result) {
+      setResult(undefined);
+      setFilingPackage(undefined);
+      setDraftText("");
+      setDraftOriginalText("");
+    }
     setNeed(next);
   };
   const unresolvedClarifications =
@@ -1129,6 +1221,33 @@ export default function PreflightApp() {
       `Please provide records showing ${normaliseNeedPhrase(need.canonicalNeed)}.\n\nPlease provide the records in electronic form.`,
     );
     setPhase("draft");
+  }
+
+  function confirmNeed() {
+    if (!need) return;
+    if (informationNeedEditErrors(need).length > 0) {
+      setError(copy.invalidNeed);
+      return;
+    }
+    const explicitDrafting = Boolean(
+      need.draftingIntent ?? hasExplicitDraftingIntent(need.originalText),
+    );
+    if (
+      shouldPreferDraftingRoute({ ...need, draftingIntent: explicitDrafting })
+    ) {
+      openDraft();
+      return;
+    }
+    void resolve();
+  }
+
+  function editConfirmedNeed() {
+    setError("");
+    setResult(undefined);
+    setFilingPackage(undefined);
+    setDraftText("");
+    setDraftOriginalText("");
+    setPhase("confirm");
   }
 
   function draftValidation() {
@@ -1529,6 +1648,14 @@ export default function PreflightApp() {
     need && detectDraftDivergence(need, draftText).diverged,
   );
   const draftIsInvalid = draftValidation()?.valid === false;
+  const prefersDraftingRoute = Boolean(
+    need &&
+    shouldPreferDraftingRoute({
+      ...need,
+      draftingIntent:
+        need.draftingIntent ?? hasExplicitDraftingIntent(need.originalText),
+    }),
+  );
   const statusClass = useMemo(
     () => displayOutcome?.toLocaleLowerCase().replaceAll("_", "-") ?? "",
     [displayOutcome],
@@ -1717,14 +1844,24 @@ export default function PreflightApp() {
               onChange={(value) => updateNeed("measure", value)}
             />
             <div className="field-grid">
-              <Field
+              <StructuredNeedInput
+                id="need-geography"
                 label={copy.geography}
                 value={need.geography}
+                options={COMMON_GEOGRAPHIES}
+                customOption={copy.customOption}
+                customHelp={copy.customHelp}
+                customAccepted={copy.customAccepted}
                 onChange={(value) => updateNeed("geography", value)}
               />
-              <Field
+              <StructuredNeedInput
+                id="need-period"
                 label={copy.period}
                 value={need.period}
+                options={COMMON_PERIODS}
+                customOption={copy.customOption}
+                customHelp={copy.customHelp}
+                customAccepted={copy.customAccepted}
                 onChange={(value) => updateNeed("period", value)}
               />
             </div>
@@ -1788,13 +1925,22 @@ export default function PreflightApp() {
                 {error}
               </p>
             )}
+            {informationNeedEditErrors(need).length > 0 && !error && (
+              <p className="error-message" role="alert">
+                <span aria-hidden="true">!</span>
+                {copy.invalidNeed}
+              </p>
+            )}
             <div className="button-row">
               <button
                 className="action-button"
-                disabled={unresolvedClarifications.length > 0}
-                onClick={resolve}
+                disabled={
+                  unresolvedClarifications.length > 0 ||
+                  informationNeedEditErrors(need).length > 0
+                }
+                onClick={confirmNeed}
               >
-                {copy.search}
+                {prefersDraftingRoute ? copy.prepare : copy.search}
               </button>
               <button className="secondary-button" onClick={reset}>
                 {copy.restart}
@@ -1837,7 +1983,7 @@ export default function PreflightApp() {
               <p className="eyebrow">{copy.resultStage}</p>
               <h1 id="result-title">{copy.result}</h1>
             </div>
-            <button className="text-button" onClick={() => setPhase("confirm")}>
+            <button className="text-button" onClick={editConfirmedNeed}>
               {copy.back}
             </button>
           </div>
@@ -2137,8 +2283,7 @@ export default function PreflightApp() {
               <button
                 className="secondary-button"
                 onClick={() => {
-                  setError("");
-                  setPhase("confirm");
+                  editConfirmedNeed();
                 }}
               >
                 {copy.correction}

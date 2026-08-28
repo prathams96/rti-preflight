@@ -7,6 +7,7 @@ import type { InterpretationAdapter } from "./adapter";
 import { redactSensitiveIdentifiers } from "./redaction";
 import {
   clarificationsForNeeds,
+  hasExplicitDraftingIntent,
   interpretWithFixture,
   scenarioForText,
 } from "../content/scenarios";
@@ -50,9 +51,10 @@ export function modelNeedsToInterpretation(input: {
       informationHolderStatus: holder ? "verified" : "unverified",
       resolutionPreference: modelNeed.resolutionPreference,
       unresolvedClarifications: modelNeed.unresolvedClarifications.slice(0, 2),
-      scenario: scenarioForText(
-        `${modelNeed.canonicalNeed} ${modelNeed.measure}`,
-      ),
+      scenario: hasExplicitDraftingIntent(input.originalText)
+        ? scenarioForText(input.originalText)
+        : scenarioForText(`${modelNeed.canonicalNeed} ${modelNeed.measure}`),
+      draftingIntent: hasExplicitDraftingIntent(input.originalText),
     };
   });
   return {

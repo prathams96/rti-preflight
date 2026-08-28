@@ -183,9 +183,12 @@ describe("PreflightModule public seam", () => {
     expect(result.outcome).toBe("OFFICIAL_SERVICE_ROUTE");
     expect(result.serviceRoute).toMatchObject({
       id: "epfo-claim-status",
-      officialUrl: "https://passbook.epfindia.gov.in/MemClaimStatusUAN/",
+      officialUrl: "https://passbook.epfindia.gov.in/MemberPassBook/login",
       verifiedAt: "2026-08-27",
     });
+    expect(result.serviceRoute?.primarySourceUrls).toEqual([
+      "https://passbook.epfindia.gov.in/MemberPassBook/login",
+    ]);
     expect(result.meaning).toMatch(/does not .*promise/i);
   });
 
@@ -242,5 +245,39 @@ describe("PreflightModule public seam", () => {
     expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
     expect(result.outcome).not.toBe("EVIDENCE_CONFLICT");
     expect(result.meaning).toContain("cannot claim");
+  });
+
+  it("keeps custom geography and period edits conservative", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "Between 2021 and 2023 which States reported property stolen up and recovery down?",
+        traceId: "trace-custom-fields",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({
+      need: {
+        ...need,
+        geography: "A custom municipality",
+        period: "January 2024 to March 2024",
+      },
+      snapshot,
+    });
+    expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
+    expect(result.rows).toEqual([]);
+    expect(result.meaning).toContain("cannot claim");
+  });
+
+  it("rejects an empty structured edit before retrieval", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "What is the budget for a local park?",
+        traceId: "trace-invalid-edit",
+      })
+    ).needs[0];
+    await expect(
+      preflight.resolve({ need: { ...need, geography: "" }, snapshot }),
+    ).rejects.toThrow("INVALID_NEED");
   });
 });
