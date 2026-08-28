@@ -24,6 +24,10 @@ const HINDI_TEXT: Record<string, string> = {
     "इस प्रोटोटाइप में जाँचे गए सरकारी स्रोत आपके सवाल का पूरा जवाब नहीं देते। संबंधित प्राधिकरण से सीधे जानकारी माँगने के लिए RTI मदद कर सकती है।",
   "The sources checked did not provide a reliable answer":
     "जाँचे गए स्रोतों से विश्वसनीय उत्तर नहीं मिला",
+  "The sources checked by this prototype did not provide a reliable answer for this question.":
+    "इस प्रोटोटाइप द्वारा जाँचे गए स्रोतों से इस सवाल का विश्वसनीय उत्तर नहीं मिला।",
+  "Compare value of property stolen AND percentage recovery of stolen property for each individual State/UT.":
+    "हर राज्य/केंद्र शासित प्रदेश के लिए चोरी की संपत्ति के मूल्य और बरामदगी प्रतिशत की तुलना करें।",
   "We found a similar earlier RTI response":
     "हमें ऐसी ही एक पिछली RTI का जवाब मिला",
   "An earlier response may help answer your question before you file a new RTI.":
@@ -338,7 +342,7 @@ function translateText(text: string, language: Language): string {
     return `${translateText("Fictional RTI Response Fixture—not an official response.", language)} ${translateText(text.slice("Fictional RTI Response Fixture—not an official response. ".length), language)}`;
   if (text.startsWith("The requested record is not identified as your own;"))
     return "माँगा गया रिकॉर्ड आपके अपने रिकॉर्ड के रूप में पहचाना नहीं गया; दूसरे व्यक्ति के रिकॉर्ड के लिए स्व-सेवा पहुँच उपलब्ध नहीं है।";
-  return text;
+  return text.replace(/\bcrore\b/g, "करोड़");
 }
 
 export function localizeText(text: string, language: Language): string {
@@ -352,6 +356,20 @@ function localizeResultColumnLabel(label: string, language: Language): string {
   const comparison = label.match(/^(Stolen|Recovery) (\d{4} → \d{4})$/);
   if (!comparison) return label;
   return `${comparison[1] === "Stolen" ? "चोरी" : "बरामदगी"} ${comparison[2]}`;
+}
+
+function localizeDerivedRows(
+  rows: RenderableResolution["rows"],
+  language: Language,
+): RenderableResolution["rows"] {
+  return rows.map((row) => ({
+    ...row,
+    columns: row.columns.map((column) => ({
+      ...column,
+      label: translateText(column.label, language),
+      value: translateText(column.value, language),
+    })),
+  }));
 }
 
 const REVERSE_NEED_TEXT = Object.fromEntries(
@@ -532,6 +550,7 @@ export function localizeResolution(
   const modelAuthored = result.narration === "verified_model";
   return {
     ...result,
+    rows: localizeDerivedRows(result.rows, language),
     headline: modelAuthored
       ? result.headline
       : translateText(result.headline, language),
@@ -577,6 +596,17 @@ export function localizeResolution(
             ...column,
             label: localizeResultColumnLabel(column.label, language),
           })),
+          rows: result.resultTable.rows.map((row) => ({
+            ...row,
+            values: Object.fromEntries(
+              Object.entries(row.values).map(([key, value]) => [
+                key,
+                typeof value === "string"
+                  ? value.replace(/\bcrore\b/g, "करोड़")
+                  : value,
+              ]),
+            ),
+          })),
         }
       : result.resultTable,
     serviceRoute: result.serviceRoute
@@ -603,6 +633,7 @@ export function localizeResolution(
               ? translateText(item.syntheticDisclosure, language)
               : item.syntheticDisclosure,
           })),
+          rows: localizeDerivedRows(result.researchFinding.rows, language),
         }
       : result.researchFinding,
     formalResponseReason: result.formalResponseReason

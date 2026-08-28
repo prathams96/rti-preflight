@@ -110,7 +110,8 @@ type SavedPreflight = {
   language: Language;
 };
 
-type IconName = "info" | "external" | "check" | "warning" | "pending";
+type IconName =
+  "info" | "external" | "insert" | "check" | "warning" | "pending";
 
 function Icon({ name }: { name: IconName }) {
   const paths = {
@@ -121,6 +122,7 @@ function Icon({ name }: { name: IconName }) {
       </>
     ),
     external: <path d="M13 5h6v6m-1-5-8 8M16 15v3H5V7h3" />,
+    insert: <path d="M5 12h12m-5-5 5 5-5 5" />,
     check: <path d="m5 12 4.2 4L19 6.5" />,
     warning: (
       <>
@@ -667,6 +669,8 @@ export const COPY = {
     unsure: "I’m not sure",
     calculation: "Calculation",
     matching: "matching rows",
+    evidenceLock: "Evidence locked to the checked rows",
+    scenarioSelected: "Currently loaded in the question field",
     emptyResult: "No States/UTs matched these conditions.",
     unresolved: "What remains unresolved",
     whatFound: "What we found",
@@ -741,7 +745,7 @@ export const COPY = {
     stepOtp: "1. OTP",
     stepIdentity: "2. Applicant details",
     stepReview: "3. Review",
-    stepPayment: "4. Payment",
+    stepPayment: "4. Demo payment",
     otpTitle: "Demo only",
     applicantTitle: "Applicant details",
     reviewTitle: "Review your RTI",
@@ -963,6 +967,8 @@ export const COPY = {
     unsure: "मैं निश्चित नहीं हूँ",
     calculation: "गणना",
     matching: "मिलती पंक्तियाँ",
+    evidenceLock: "जाँची गई पंक्तियों से प्रमाण तय",
+    scenarioSelected: "अभी सवाल वाले फ़ील्ड में लोड है",
     emptyResult: "इन शर्तों से कोई राज्य/केंद्र शासित प्रदेश मेल नहीं खाया।",
     unresolved: "क्या अभी अनसुलझा है",
     whatFound: "हमें क्या मिला",
@@ -1036,7 +1042,7 @@ export const COPY = {
     stepOtp: "1. OTP",
     stepIdentity: "2. आवेदक का विवरण",
     stepReview: "3. समीक्षा",
-    stepPayment: "4. भुगतान",
+    stepPayment: "4. डेमो भुगतान",
     otpTitle: "केवल डेमो",
     applicantTitle: "आवेदक का विवरण",
     reviewTitle: "अपनी RTI की समीक्षा करें",
@@ -3122,25 +3128,27 @@ export default function PreflightApp() {
               </span>
             </summary>
             <div className="scenario-list">
-              {SCENARIO_PROMPTS.map((scenario) => (
-                <button
-                  key={scenario.id}
-                  className="scenario"
-                  aria-label={
-                    language === "hi" ? scenario.hiLabel : scenario.label
-                  }
-                  onClick={() =>
-                    updateAskText(
-                      language === "hi" ? scenario.hiPrompt : scenario.prompt,
-                    )
-                  }
-                >
-                  <span>
-                    {language === "hi" ? scenario.hiPrompt : scenario.prompt}
-                  </span>
-                  <Icon name="external" />
-                </button>
-              ))}
+              {SCENARIO_PROMPTS.map((scenario) => {
+                const scenarioPrompt =
+                  language === "hi" ? scenario.hiPrompt : scenario.prompt;
+                const isSelected = text.trim() === scenarioPrompt.trim();
+                return (
+                  <button
+                    key={scenario.id}
+                    className={isSelected ? "scenario selected" : "scenario"}
+                    onClick={() => updateAskText(scenarioPrompt)}
+                  >
+                    <strong>
+                      {language === "hi" ? scenario.hiLabel : scenario.label}
+                    </strong>
+                    <span>{scenarioPrompt}</span>
+                    {isSelected && (
+                      <span className="sr-only">{copy.scenarioSelected}</span>
+                    )}
+                    <Icon name={isSelected ? "check" : "insert"} />
+                  </button>
+                );
+              })}
             </div>
           </details>
           {savedPreflights.length > 0 && (
@@ -3509,11 +3517,19 @@ export default function PreflightApp() {
             )}
             {displayTable && displayResult.calculation && (
               <>
-                <div className="calculation-strip">
-                  <strong>{copy.calculation}</strong>
-                  <span>{displayResult?.calculation?.operation}</span>
-                  <span>
-                    {displayTable.rows.length} {copy.matching}
+                <div className="calculation-strip evidence-lock">
+                  <strong className="evidence-stamp">
+                    <span className="evidence-count">
+                      {displayTable.rows.length}
+                    </span>
+                    <span>{copy.matching}</span>
+                    <Icon name="check" />
+                  </strong>
+                  <span className="calculation-operation">
+                    {displayResult?.calculation?.operation}
+                  </span>
+                  <span className="evidence-lock-label">
+                    {copy.evidenceLock}
                   </span>
                 </div>
                 <div className="table-wrap">
@@ -3968,11 +3984,12 @@ export default function PreflightApp() {
             </button>
           </div>
           <p className="stage-boundary">{copy.fileIntro}</p>
-          <div className="stepper" aria-label={copy.stepperAria}>
+          <ol className="stepper" aria-label={copy.stepperAria}>
             {["otp", "identity", "review", "payment"].map((step, index) => (
-              <span
+              <li
                 className={filingStep === step ? "step active" : "step"}
                 key={step}
+                aria-current={filingStep === step ? "step" : undefined}
               >
                 {index + 1}.{" "}
                 {step === "otp"
@@ -3982,9 +3999,9 @@ export default function PreflightApp() {
                     : step === "review"
                       ? copy.stepReview.replace("3. ", "")
                       : copy.stepPayment.replace("4. ", "")}
-              </span>
+              </li>
             ))}
-          </div>
+          </ol>
           <section className="active-plane filing-plane">
             {filingStep === "otp" && (
               <div>
