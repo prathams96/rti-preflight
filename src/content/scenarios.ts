@@ -10,27 +10,43 @@ export const SCENARIO_PROMPTS = [
   {
     id: "ncrb-property" as const,
     label: "Explore hidden public data",
+    hiLabel: "सार्वजनिक आँकड़ों में छिपा पैटर्न देखें",
     prompt:
       "Between 2021 and 2023, which States/UTs reported an increase in the value of property stolen but a decline in the percentage recovered?",
+    hiPrompt:
+      "2021 और 2023 के बीच किन राज्यों/केंद्र शासित प्रदेशों में रिपोर्ट की गई चोरी की संपत्ति का मूल्य बढ़ा लेकिन बरामदगी प्रतिशत घटा?",
   },
   {
     id: "previous-rti" as const,
     label: "Find an earlier RTI response",
+    hiLabel: "पिछला RTI उत्तर खोजें",
     prompt:
       "Find an earlier RTI response relevant to a selected Central information need.",
+    hiPrompt: "चुनी गई केंद्रीय सूचना-ज़रूरत से संबंधित पिछला RTI उत्तर खोजें।",
   },
   {
     id: "railway-filing" as const,
     label: "Prepare a new RTI",
+    hiLabel: "नई RTI तैयार करें",
     prompt:
       "How much was spent maintaining lifts and escalators at New Delhi Railway Station during FY 2024–25, and which contractors received the work?",
+    hiPrompt:
+      "वित्तीय वर्ष 2024–25 में नई दिल्ली रेलवे स्टेशन पर लिफ्ट और एस्केलेटर के रखरखाव पर कितना खर्च हुआ और किन ठेकेदारों को काम मिला?",
   },
   {
     id: "epfo-status" as const,
     label: "Check an EPF claim",
+    hiLabel: "EPF दावा जाँचें",
     prompt: "What is the status of my EPF claim?",
+    hiPrompt: "मेरे EPF दावे की स्थिति क्या है?",
   },
-] satisfies ReadonlyArray<{ id: ScenarioId; label: string; prompt: string }>;
+] satisfies ReadonlyArray<{
+  id: ScenarioId;
+  label: string;
+  hiLabel: string;
+  prompt: string;
+  hiPrompt: string;
+}>;
 
 export const CPCB_CONFLICT_DECISION = {
   status: "cut" as const,
@@ -110,19 +126,27 @@ export function scenarioForText(text: string): ScenarioId {
     /(?:earlier|previous|पुरानी|पिछली|पहले की)\s*(?:rti|आरटीआई)/iu.test(text)
   )
     return "unsupported";
-  if (normalized.includes("property") && normalized.includes("stolen"))
+  if (
+    (normalized.includes("property") && normalized.includes("stolen")) ||
+    (text.includes("चोरी") && text.includes("संपत्ति"))
+  )
     return "ncrb-property";
   if (
     normalized.includes("railway") ||
     normalized.includes("escalator") ||
-    normalized.includes("lift")
+    normalized.includes("lift") ||
+    text.includes("रेलवे") ||
+    text.includes("एस्केलेटर") ||
+    text.includes("लिफ्ट")
   ) {
     return "railway-filing";
   }
   if (
     normalized.includes("epf") ||
     normalized.includes("epfo") ||
-    normalized.includes("provident fund")
+    normalized.includes("provident fund") ||
+    text.includes("EPF") ||
+    text.includes("भविष्य निधि")
   ) {
     return "epfo-status";
   }
@@ -131,7 +155,11 @@ export function scenarioForText(text: string): ScenarioId {
   // fabricated conflict scenario.
   if (normalized.includes("cpcb") || normalized.includes("air quality"))
     return "unsupported";
-  if (normalized.includes("earlier rti") || normalized.includes("previous rti"))
+  if (
+    normalized.includes("earlier rti") ||
+    normalized.includes("previous rti") ||
+    text.includes("पिछला RTI")
+  )
     return "previous-rti";
   return "unsupported";
 }

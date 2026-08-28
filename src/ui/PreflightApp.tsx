@@ -50,6 +50,12 @@ import {
   type CitationReviewState,
 } from "./result-stage";
 import { informationNeedEditErrors } from "../preflight/need-validation";
+import {
+  localizeFilingDraft,
+  localizeMessage,
+  localizeNeed,
+  localizeResolution,
+} from "./localization";
 
 type Phase =
   | "start"
@@ -81,6 +87,7 @@ type SessionFilingState = {
   reviewed: boolean;
   paymentConfirmed: boolean;
   acknowledgement?: DemoAcknowledgement;
+  language: Language;
 };
 
 type SavedPreflight = {
@@ -172,12 +179,15 @@ const validFilingState = (value: unknown): value is SessionFilingState =>
   isObject(value) &&
   ["draft", "file", "acknowledgement"].includes(value.phase as string) &&
   typeof value.draftText === "string" &&
+  (value.language === "en" ||
+    value.language === "hi" ||
+    value.language === undefined) &&
   isObject(value.package) &&
   ["otp", "identity", "review", "payment", "confirmation"].includes(
     value.step as string,
   );
 
-const COPY = {
+export const COPY = {
   en: {
     independent: "Independent prototype — not a government service.",
     headline: "Find out before you file an RTI",
@@ -364,6 +374,52 @@ const COPY = {
     customAccepted: "Custom value accepted.",
     invalidNeed:
       "Complete each Information Need field before checking. You can type a custom geography or period.",
+    disclosure: "Disclosure",
+    closeDetails: "Close prototype details",
+    verifiedRouteProfile: "Verified Filing Route profile",
+    epfoRouteDetails: "EPFO Official Service Route",
+    cpcbScenario: "CPCB conflict scenario",
+    officialEpfoSource: "Official EPFO source",
+    resumeTitle: "Resume previous Preflight",
+    resumeBody: "Your saved prototype journey is ready to continue.",
+    startFresh: "Start fresh",
+    askAria: "Ask for public information",
+    placeholder:
+      "For example: How much did my municipality spend on road repairs in 2024-25?",
+    interpreting: "Interpreting your need",
+    unknownClarification:
+      "Answer using the fields above, or retain this one detail as unknown.",
+    rowDetail: (row: string, values: string) =>
+      `Inspect ${row} operands and source cells: ${values}`,
+    changeLabel: "change",
+    recoveryLabel: "Recovery",
+    crore: "crore",
+    plan: "Plan",
+    engine: "Engine",
+    policy: "Policy",
+    demoUpi: "Demo UPI",
+    noPersonalRecord: "Route metadata; no personal record was retrieved",
+    immutableReferences: (count: number) =>
+      `${count} immutable references with content hashes`,
+    progressNeed: "Confirmed Information Need",
+    progressNcrb: "Checked NCRB Table 20A.1 in the prototype Evidence Snapshot",
+    progressNcrbDone: "Applied deterministic filters and validated grounding",
+    progressCapabilities: "Checked registered Evidence Snapshot capabilities",
+    progressResult: "Prepared the supported result state",
+    demoSubmissionFailure:
+      "The Filing Package must be valid and explicitly confirmed before Demo Submission.",
+    recheckChallenge:
+      "Change and reconfirm the Information Need before rechecking this challenged source.",
+    recoveryNotice:
+      "Your previous prototype session could not be restored. Start a new Preflight.",
+    independentDetails:
+      "This is an independent research assistant—not an official RTI response.",
+    routeProfileVersion: (version: string, date: string) =>
+      `Northern Railway route profile v${version}, verified ${date}.`,
+    routeMetadataDetails: (purpose: string, date: string) =>
+      `${purpose}; verified ${date}. This is route metadata, not a retrieved personal record.`,
+    cpcbDecision: (date: string) =>
+      `Decision recorded ${date}; no conflict evidence is registered.`,
   },
   hi: {
     independent: "स्वतंत्र प्रोटोटाइप — कोई सरकारी सेवा नहीं।",
@@ -407,7 +463,7 @@ const COPY = {
     calculation: "गणना",
     matching: "मिलती पंक्तियाँ",
     unresolved: "क्या अभी अनसुलझा है",
-    scope: "प्रोटोटाइप Evidence Snapshot पर आधारित खोज · दायरा देखें",
+    scope: "प्रोटोटाइप प्रमाण स्नैपशॉट पर आधारित खोज · दायरा देखें",
     evidence: "सहायक प्रमाण",
     officialRoute: "आधिकारिक सेवा मार्ग",
     syntheticFixture: "सिंथेटिक फ़िक्स्चर",
@@ -420,8 +476,7 @@ const COPY = {
     changeColumn: "बदलाव",
     recoveryColumn: "बरामदगी 2021 → 2023",
     inspectEvidence: "पंक्ति के प्रमाण देखें",
-    inspectRow: (geography: string) =>
-      `${geography} के operands और स्रोत सेल देखें`,
+    inspectRow: (geography: string) => `${geography} के मान और स्रोत सेल देखें`,
     viewPlan: "पंजीकृत गणना योजना देखें",
     saveBrief: "Evidence Brief (PDF) डाउनलोड करें",
     downloadTechnicalBrief: "तकनीकी JSON डाउनलोड करें",
@@ -429,7 +484,7 @@ const COPY = {
     briefShared: "Evidence Brief PDF साझा हो गया।",
     technicalBriefSaved: "तकनीकी Evidence Brief JSON डाउनलोड हो गया।",
     briefCancelled: "साझा करना रद्द किया गया। नतीजा यहाँ उपलब्ध है।",
-    briefFailed: "Evidence Brief सहेजा नहीं जा सका। नतीजा यहाँ उपलब्ध है।",
+    briefFailed: "प्रमाण सारांश सहेजा नहीं जा सका। नतीजा यहाँ उपलब्ध है।",
     sourceData: "वास्तविक आधिकारिक सार्वजनिक डेटा",
     publisher: "प्रकाशक",
     applicablePeriod: "लागू अवधि",
@@ -447,20 +502,20 @@ const COPY = {
     draftIntro: RESULT_STAGE_COPY.hi.draftIntro,
     to: "सूचना-धारक",
     request: "अनुरोध",
-    route: "आधिकारिक Filing Route",
+    route: "आधिकारिक फाइलिंग मार्ग",
     verified: "अंतिम जाँच",
     characters: "अक्षर",
     continueFiling: "फाइलिंग डेमो पर जाएँ",
-    saveDraft: "यह ड्राफ्ट सहेजें",
-    savedDraft: "सहेजा गया Filing Draft",
+    saveDraft: "ड्राफ्ट सहेजें",
+    savedDraft: "सहेजा गया फाइलिंग ड्राफ्ट",
     returnResult: "नतीजे पर लौटें",
     guidedUnavailable:
-      "इस प्राधिकरण के लिए निर्देशित फाइलिंग इस प्रोटोटाइप में उपलब्ध नहीं है। आप इस draft की नकल करके स्वयं उस प्राधिकरण के RTI माध्यम से दाखिल कर सकते हैं।",
-    divergenceTitle: "यह बदलाव दूसरी Information Need जोड़ सकता है",
+      "इस प्राधिकरण के लिए निर्देशित फाइलिंग इस प्रोटोटाइप में उपलब्ध नहीं है। आप इस ड्राफ्ट की नकल करके स्वयं उस प्राधिकरण के RTI माध्यम से दाखिल कर सकते हैं।",
+    divergenceTitle: "यह बदलाव दूसरी सूचना-ज़रूरत जोड़ सकता है",
     divergenceBody:
       "ड्राफ्ट पर नियंत्रण रखने का तरीका चुनें। कुछ भी छोटा या चुपचाप बदला नहीं जाएगा।",
     keepWritten: "जैसा लिखा है वैसा रखें",
-    separateNeed: "दूसरे Saved Preflight में अलग करें",
+    separateNeed: "दूसरी सहेजी गई जाँच में अलग करें",
     undoChanges: "बदलाव वापस लें",
     fileStage: RESULT_STAGE_COPY.hi.fileStage,
     fileTitle: RESULT_STAGE_COPY.hi.fileTitle,
@@ -470,25 +525,25 @@ const COPY = {
     stepReview: "3. समीक्षा",
     stepPayment: "4. शुल्क",
     otpPrompt: "हैकाथॉन प्रोटोटाइप: OTP 123456 डालें। कोई SMS नहीं भेजा गया।",
-    verifyOtp: "Demo OTP सत्यापित करें",
-    identityPrompt: "ये विवरण काल्पनिक हैं और session state में रहते हैं।",
+    verifyOtp: "डेमो OTP सत्यापित करें",
+    identityPrompt: "ये विवरण काल्पनिक हैं और सत्र की स्थिति में रहते हैं।",
     continue: "जारी रखें",
-    reviewPrompt: "Payment से पहले पूरे Filing Package की समीक्षा करें।",
+    reviewPrompt: "भुगतान से पहले पूरे फाइलिंग पैकेज की समीक्षा करें।",
     confirmPackage: "मैं इस पूरे Filing Package की पुष्टि करता/करती हूँ",
-    paymentPrompt: "Demo Payment: ₹10 · Demo UPI",
-    noRealPayment: "कोई वास्तविक payment नहीं होगा।",
-    confirmDemo: "Simulated filing पूरी करें",
+    paymentPrompt: "डेमो भुगतान: ₹10 · डेमो UPI",
+    noRealPayment: "कोई वास्तविक भुगतान नहीं होगा।",
+    confirmDemo: "डेमो सबमिशन की पुष्टि करें",
     acknowledgementStage: "पूरा हुआ",
     acknowledgementTitle: RESULT_STAGE_COPY.hi.acknowledgementTitle,
     fictionalRegistration: "काल्पनिक पंजीकरण",
     noGovernment:
-      "किसी सरकारी सिस्टम को अनुरोध, payment या व्यक्तिगत जानकारी नहीं भेजी गई।",
-    downloadPackage: "Demo Filing Package डाउनलोड करें",
+      "किसी सरकारी सिस्टम को अनुरोध, भुगतान या व्यक्तिगत जानकारी नहीं भेजी गई।",
+    downloadPackage: "फाइलिंग पैकेज डाउनलोड करें",
     startAnother: "कुछ और पूछें",
     correction: "यह वह नहीं है जो मैंने पूछा था",
     challenge: "Citation की समस्या रिपोर्ट करें",
     challengePending:
-      "आपने citation की समस्या रिपोर्ट की है। नीचे मूल नतीजा दिखता रहेगा, लेकिन इस स्रोत के दोबारा सत्यापन तक इसकी स्थिति आंशिक रूप से हल की गई होगी। आप फिर भी RTI Draft तैयार कर सकते हैं।",
+      "इस उद्धरण की समस्या रिपोर्ट की गई है। मूल नतीजा दिखता रहेगा, लेकिन इस स्रोत के दोबारा सत्यापन तक इसकी स्थिति आंशिक रूप से हल की गई होगी। आप फिर भी RTI Draft तैयार कर सकते हैं।",
     challengeDialogTitle: "Citation की समस्या रिपोर्ट करें?",
     challengeDialogBody: (sourceTitle: string) =>
       `आप रिपोर्ट कर रहे हैं कि “${sourceTitle}” इस नतीजे का समर्थन नहीं कर सकता।`,
@@ -496,43 +551,43 @@ const COPY = {
       "पुष्टि करने के बाद मूल नतीजा और प्रमाण दिखते रहेंगे, लेकिन दोबारा सत्यापन तक इसकी स्थिति downgrade होगी।",
     confirmChallenge: "समस्या रिपोर्ट करके downgrade करें",
     cancel: "रद्द करें",
-    draftLabel: "Filing Draft",
-    routeNotVerified: "इस प्रोटोटाइप में route जानकारी सत्यापित नहीं है",
+    draftLabel: "फाइलिंग ड्राफ्ट",
+    routeNotVerified: "इस प्रोटोटाइप में मार्ग की जानकारी सत्यापित नहीं है",
     routeVerification:
-      "इस तारीख को अंतिम बार जाँची गई route जानकारी के आधार पर सत्यापित; बाहरी स्वीकृति की गारंटी नहीं है।",
+      "इस तारीख को अंतिम बार जाँची गई मार्ग जानकारी के आधार पर सत्यापित; बाहरी स्वीकृति की गारंटी नहीं है।",
     unverified: "असत्यापित",
     draftHelp:
       "इसे बेझिझक बदलें — हम आपके शब्द नहीं बदलेंगे। यह कारण नहीं, रिकॉर्ड माँगता है, जिसका आपको RTI अधिनियम के तहत अधिकार है।",
     divergenceSaved:
-      "ड्राफ्ट editing के लिए सहेजा गया है, लेकिन अतिरिक्त ज़रूरत हटाने या अलग करने तक filing रोकी गई है।",
-    editDraft: "Filing Draft बदलें",
-    demoOtp: "Demo OTP",
+      "ड्राफ्ट संपादन के लिए सहेजा गया है, लेकिन अतिरिक्त ज़रूरत हटाने या अलग करने तक फाइलिंग रोकी गई है।",
+    editDraft: "फाइलिंग ड्राफ्ट बदलें",
+    demoOtp: "डेमो OTP",
     name: "नाम",
     email: "ईमेल",
     address: "पता",
     state: "राज्य",
     pin: "PIN",
-    routeLine: "Route",
+    routeLine: "मार्ग",
     fictionalApplicant: "आवेदक",
     mockFee: "शुल्क",
     componentSummary:
-      "Working: route validation। Simulated: OTP, identity, payment, filing और acknowledgement।",
+      "कार्यशील: मार्ग सत्यापन। अनुकरण: OTP, पहचान, भुगतान, फाइलिंग और पावती।",
     paymentCredentials:
-      "कोई UPI ID, card, CVV, bank या payment credential नहीं लिया जाता।",
-    paymentCheck: "मैं समझता/समझती हूँ कि यह simulated payment step है।",
+      "कोई UPI ID, कार्ड, CVV, बैंक या भुगतान क्रेडेंशियल नहीं लिया जाता।",
+    paymentCheck: "मैं समझता/समझती हूँ कि यह अनुकरण किया गया भुगतान चरण है।",
     fictionalTime: "जमा किया गया",
-    submittedDraft: "Submitted draft snapshot",
-    draftAria: "Filing Draft",
-    stepperAria: "Simulated filing steps",
-    prepareFailure: "अभी Filing Draft तैयार नहीं हो सका।",
+    submittedDraft: "जमा किए गए ड्राफ्ट का स्नैपशॉट",
+    draftAria: "फाइलिंग ड्राफ्ट",
+    stepperAria: "अनुकरण किए गए फाइलिंग चरण",
+    prepareFailure: "अभी फाइलिंग ड्राफ्ट तैयार नहीं हो सका।",
     revalidationError:
-      "Filing से पहले इस Filing Draft का फिर से सत्यापन ज़रूरी है। अतिरिक्त ज़रूरत हटाएँ या उसे दूसरे Saved Preflight में अलग करें।",
+      "फाइलिंग से पहले इस फाइलिंग ड्राफ्ट का फिर से सत्यापन ज़रूरी है। अतिरिक्त ज़रूरत हटाएँ या उसे दूसरी सहेजी गई जाँच में अलग करें।",
     divergenceSeparate:
-      "बदला हुआ text यहाँ रखा गया है और अलग Saved Preflight के लिए चिह्नित है।",
-    savedPreflights: "Saved Preflights",
+      "बदला हुआ पाठ यहाँ रखा गया है और अलग सहेजी गई जाँच के लिए चिह्नित है।",
+    savedPreflights: "सहेजी गई जाँचें",
     resume: "फिर शुरू करें",
-    originalNeed: "मूल पुष्टि की गई Information Need",
-    separatedDraft: "अलग किया गया draft समझें",
+    originalNeed: "मूल पुष्ट की गई सूचना-ज़रूरत",
+    separatedDraft: "अलग किए गए ड्राफ्ट को समझें",
     cpcbCut:
       "जब तक दो संगत आधिकारिक स्रोत सहमत नहीं होते, वायु-गुणवत्ता के नतीजे नहीं दिखाए जाते। ऐसा आँकड़ा दिखाने से बेहतर है कुछ न दिखाना जिस पर हम भरोसा न कर सकें।",
     askReassurance: ASK_SCREEN_COPY.hi.reassurance,
@@ -549,6 +604,51 @@ const COPY = {
     customAccepted: "अपनी जानकारी स्वीकार की गई है।",
     invalidNeed:
       "जाँचने से पहले सूचना-ज़रूरत के सभी फ़ील्ड भरें। आप अपनी जगह या अवधि लिख सकते हैं।",
+    disclosure: "प्रकटीकरण",
+    closeDetails: "प्रोटोटाइप विवरण बंद करें",
+    verifiedRouteProfile: "सत्यापित फाइलिंग मार्ग प्रोफ़ाइल",
+    epfoRouteDetails: "EPFO आधिकारिक सेवा मार्ग",
+    cpcbScenario: "CPCB विरोधाभास परिदृश्य",
+    officialEpfoSource: "आधिकारिक EPFO स्रोत",
+    resumeTitle: "पिछली जाँच फिर शुरू करें",
+    resumeBody: "आपकी सहेजी गई प्रोटोटाइप यात्रा जारी रखने के लिए तैयार है।",
+    startFresh: "नई शुरुआत करें",
+    askAria: "सार्वजनिक जानकारी पूछें",
+    placeholder:
+      "उदाहरण: मेरी नगरपालिका ने 2024-25 में सड़क की मरम्मत पर कितना खर्च किया?",
+    interpreting: "आपकी ज़रूरत समझी जा रही है",
+    unknownClarification:
+      "ऊपर दिए फ़ील्ड से उत्तर दें या इस विवरण को अज्ञात रहने दें।",
+    rowDetail: (row: string, values: string) =>
+      `${row} के मान और स्रोत सेल देखें: ${values}`,
+    changeLabel: "बदलाव",
+    recoveryLabel: "बरामदगी",
+    crore: "करोड़",
+    plan: "योजना",
+    engine: "इंजन",
+    policy: "नीति",
+    demoUpi: "डेमो UPI",
+    noPersonalRecord: "मार्ग मेटाडेटा; कोई व्यक्तिगत रिकॉर्ड प्राप्त नहीं हुआ",
+    immutableReferences: (count: number) =>
+      `${count} अपरिवर्तनीय संदर्भ, जिनमें सामग्री हैश हैं`,
+    progressNeed: "पुष्ट की गई सूचना-ज़रूरत",
+    progressNcrb: "प्रोटोटाइप प्रमाण स्नैपशॉट में NCRB तालिका 20A.1 जाँची",
+    progressNcrbDone: "तय नियमों से फ़िल्टर लगाए और प्रमाण का सत्यापन किया",
+    progressCapabilities: "पंजीकृत प्रमाण स्नैपशॉट की क्षमताएँ जाँचीं",
+    progressResult: "समर्थित नतीजे की स्थिति तैयार की",
+    demoSubmissionFailure:
+      "डेमो सबमिशन से पहले फाइलिंग पैकेज मान्य और स्पष्ट रूप से पुष्ट होना चाहिए।",
+    recheckChallenge:
+      "इस चुनौती दिए गए स्रोत को फिर से जाँचने से पहले सूचना-ज़रूरत बदलकर उसकी पुष्टि करें।",
+    recoveryNotice:
+      "आपका पिछला प्रोटोटाइप सत्र वापस नहीं लाया जा सका। नई जाँच शुरू करें।",
+    independentDetails: "यह स्वतंत्र शोध सहायक है — आधिकारिक RTI उत्तर नहीं।",
+    routeProfileVersion: (version: string, date: string) =>
+      `Northern Railway मार्ग प्रोफ़ाइल v${version}, ${date} को सत्यापित।`,
+    routeMetadataDetails: (_purpose: string, date: string) =>
+      `EPFO दावा-स्थिति मार्ग; ${date} को सत्यापित। यह मार्ग मेटाडेटा है, प्राप्त व्यक्तिगत रिकॉर्ड नहीं।`,
+    cpcbDecision: (date: string) =>
+      `निर्णय ${date} को दर्ज किया गया; कोई विरोधाभास प्रमाण पंजीकृत नहीं है।`,
   },
 } as const;
 
@@ -754,16 +854,20 @@ function ExternalLink({
   href,
   children,
   className,
+  language,
 }: {
   href: string;
   children: ReactNode;
   className?: string;
+  language?: Language;
 }) {
   return (
     <a className={className} href={href} target="_blank" rel="noreferrer">
       {children}
       <span aria-hidden="true"> ↗</span>
-      <span className="visually-hidden"> (opens in a new tab)</span>
+      <span className="visually-hidden">
+        {language === "hi" ? " (नए टैब में खुलेगा)" : " (opens in a new tab)"}
+      </span>
     </a>
   );
 }
@@ -771,9 +875,25 @@ function ExternalLink({
 function Details({
   onClose,
   copy,
+  language,
 }: {
   onClose: () => void;
-  copy: { cpcbCut: string };
+  language: Language;
+  copy: {
+    cpcbCut: string;
+    disclosure: string;
+    closeDetails: string;
+    verifiedRouteProfile: string;
+    epfoRouteDetails: string;
+    cpcbScenario: string;
+    officialEpfoSource: string;
+    details: string;
+    officialSource: string;
+    independentDetails: string;
+    routeProfileVersion: (version: string, date: string) => string;
+    routeMetadataDetails: (purpose: string, date: string) => string;
+    cpcbDecision: (date: string) => string;
+  };
 }) {
   const dialogRef = useRef<HTMLElement>(null);
 
@@ -829,21 +949,18 @@ function Details({
       >
         <div className="dialog-heading">
           <div>
-            <p className="eyebrow">Disclosure</p>
-            <h2 id="details-title">Prototype details</h2>
+            <p className="eyebrow">{copy.disclosure}</p>
+            <h2 id="details-title">{copy.details}</h2>
           </div>
           <button
             className="icon-button"
             onClick={onClose}
-            aria-label="Close prototype details"
+            aria-label={copy.closeDetails}
           >
             ×
           </button>
         </div>
-        <p>
-          This is an independent research assistant—not an official RTI
-          response.
-        </p>
+        <p>{copy.independentDetails}</p>
         <dl className="details-list">
           {DISCLOSURE_LEDGER.map((entry) => (
             <div key={entry.id}>
@@ -853,11 +970,12 @@ function Details({
           ))}
         </dl>
         <div className="route-provenance">
-          <h3>Verified Filing Route profile</h3>
+          <h3>{copy.verifiedRouteProfile}</h3>
           <p>
-            Northern Railway route profile v
-            {NORTHERN_RAILWAY_ROUTE.profile.version}, verified{" "}
-            {NORTHERN_RAILWAY_ROUTE.profile.verifiedAt}.
+            {copy.routeProfileVersion(
+              NORTHERN_RAILWAY_ROUTE.profile.version,
+              NORTHERN_RAILWAY_ROUTE.profile.verifiedAt,
+            )}
           </p>
           <ul>
             {NORTHERN_RAILWAY_ROUTE.profile.constraintSources?.map(
@@ -865,8 +983,8 @@ function Details({
                 <li key={constraint.id}>
                   {constraint.label}{" "}
                   {constraint.sourceUrls.map((url) => (
-                    <ExternalLink href={url} key={url}>
-                      Official source
+                    <ExternalLink href={url} key={url} language={language}>
+                      {copy.officialSource}
                     </ExternalLink>
                   ))}
                 </li>
@@ -875,25 +993,23 @@ function Details({
           </ul>
         </div>
         <div className="route-provenance">
-          <h3>EPFO Official Service Route</h3>
+          <h3>{copy.epfoRouteDetails}</h3>
           <p>
-            {EPFO_CLAIM_STATUS_ROUTE.purpose}; verified{" "}
-            {EPFO_CLAIM_STATUS_ROUTE.verificationDate}. This is route metadata,
-            not a retrieved personal record.
+            {copy.routeMetadataDetails(
+              EPFO_CLAIM_STATUS_ROUTE.purpose,
+              EPFO_CLAIM_STATUS_ROUTE.verificationDate,
+            )}
           </p>
           {EPFO_CLAIM_STATUS_ROUTE.primarySourceUrls.map((url) => (
-            <ExternalLink href={url} key={url}>
-              Official EPFO source
+            <ExternalLink href={url} key={url} language={language}>
+              {copy.officialEpfoSource}
             </ExternalLink>
           ))}
         </div>
         <div className="route-provenance">
-          <h3>CPCB conflict scenario</h3>
+          <h3>{copy.cpcbScenario}</h3>
           <p>{copy.cpcbCut}</p>
-          <p>
-            Decision recorded {CPCB_CONFLICT_DECISION.decidedAt}; no conflict
-            evidence is registered.
-          </p>
+          <p>{copy.cpcbDecision(CPCB_CONFLICT_DECISION.decidedAt)}</p>
         </div>
       </section>
     </div>
@@ -1039,6 +1155,32 @@ export default function PreflightApp() {
   const [resumeState, setResumeState] = useState<SavedState | undefined>();
   const [recoveryNotice, setRecoveryNotice] = useState(false);
   const copy = COPY[language];
+  const displayNeed = need ? localizeNeed(need, language) : undefined;
+  const displayResult = result
+    ? localizeResolution(result, language)
+    : undefined;
+
+  function changeLanguage(nextLanguage: Language) {
+    if (nextLanguage === language) return;
+    const documentIsUntouched = draftText === draftOriginalText;
+    if (
+      documentIsUntouched &&
+      (phase === "draft" || phase === "file") &&
+      draftText
+    ) {
+      const nextDraftText = localizeFilingDraft(draftText, nextLanguage);
+      setDraftText(nextDraftText);
+      setDraftOriginalText(nextDraftText);
+      if (filingPackage) {
+        setFilingPackage({
+          ...filingPackage,
+          draft: { ...filingPackage.draft, text: nextDraftText },
+          validation: validateDraft(nextDraftText, filingPackage.route.profile),
+        });
+      }
+    }
+    setLanguage(nextLanguage);
+  }
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -1107,6 +1249,7 @@ export default function PreflightApp() {
       setReviewed(saved.reviewed);
       setPaymentConfirmed(saved.paymentConfirmed);
       setAcknowledgement(saved.acknowledgement);
+      setLanguage(saved.language ?? "en");
       setPhase(saved.phase);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -1130,6 +1273,7 @@ export default function PreflightApp() {
             reviewed,
             paymentConfirmed,
             acknowledgement,
+            language,
           } satisfies SessionFilingState,
         } satisfies PersistedEnvelope<SessionFilingState>),
       );
@@ -1146,6 +1290,7 @@ export default function PreflightApp() {
     reviewed,
     paymentConfirmed,
     acknowledgement,
+    language,
   ]);
 
   const updateNeed = (field: keyof InformationNeed, value: string) => {
@@ -1204,15 +1349,27 @@ export default function PreflightApp() {
           route: NORTHERN_RAILWAY_ROUTE,
         })
         .then((prepared) => {
+          const preparedDraftText = localizeFilingDraft(
+            prepared.draft.text,
+            language,
+          );
+          const localizedPackage = {
+            ...prepared,
+            draft: { ...prepared.draft, text: preparedDraftText },
+            validation: validateDraft(
+              preparedDraftText,
+              prepared.route.profile,
+            ),
+          } satisfies ValidatedFilingPackage;
           traceRecorder.record("route.validated", journeyTraceId, {
             component: "filing-route",
             version: prepared.route.profile.version,
             status: "working",
             code: prepared.route.id,
           });
-          setFilingPackage(prepared);
-          setDraftText(prepared.draft.text);
-          setDraftOriginalText(prepared.draft.text);
+          setFilingPackage(localizedPackage);
+          setDraftText(preparedDraftText);
+          setDraftOriginalText(preparedDraftText);
           setFilingError("");
           setPhase("draft");
         })
@@ -1222,12 +1379,12 @@ export default function PreflightApp() {
       return;
     }
     setFilingPackage(undefined);
-    setDraftOriginalText(
-      `Please provide records showing ${normaliseNeedPhrase(need.canonicalNeed)}.\n\nPlease provide the records in electronic form.`,
-    );
-    setDraftText(
-      `Please provide records showing ${normaliseNeedPhrase(need.canonicalNeed)}.\n\nPlease provide the records in electronic form.`,
-    );
+    const generatedDraft =
+      language === "hi"
+        ? `कृपया ${displayNeed?.canonicalNeed ?? need.canonicalNeed} से संबंधित रिकॉर्ड उपलब्ध कराएँ।\n\nरिकॉर्ड इलेक्ट्रॉनिक रूप में उपलब्ध कराएँ।`
+        : `Please provide records showing ${normaliseNeedPhrase(need.canonicalNeed)}.\n\nPlease provide the records in electronic form.`;
+    setDraftOriginalText(generatedDraft);
+    setDraftText(generatedDraft);
     setPhase("draft");
   }
 
@@ -1270,7 +1427,11 @@ export default function PreflightApp() {
       return;
     }
     if (!validation.valid) {
-      setDraftError(validation.errors.join(" "));
+      setDraftError(
+        validation.errors
+          .map((message) => localizeMessage(message, language))
+          .join(" "),
+      );
       return;
     }
     if (need && detectDraftDivergence(need, draftText).diverged) {
@@ -1414,9 +1575,7 @@ export default function PreflightApp() {
           status: "rejected",
           code: "demo-submission-rejected",
         });
-        setFilingError(
-          "The Filing Package must be valid and explicitly confirmed before Demo Submission.",
-        );
+        setFilingError(copy.demoSubmissionFailure);
       });
   }
 
@@ -1463,8 +1622,14 @@ export default function PreflightApp() {
       ) {
         try {
           await navigator.share({
-            title: "RTI Tathya Evidence Brief",
-            text: "Independent research assistant—not an official RTI response.",
+            title:
+              language === "hi"
+                ? "RTI प्रमाण सारांश"
+                : "RTI Tathya Evidence Brief",
+            text:
+              language === "hi"
+                ? "स्वतंत्र शोध सहायक — आधिकारिक RTI उत्तर नहीं।"
+                : "Independent research assistant—not an official RTI response.",
             files: [file],
           });
           setBriefFeedback(copy.briefShared);
@@ -1561,9 +1726,12 @@ export default function PreflightApp() {
         code: "interpretation-unavailable",
       });
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "We couldn’t interpret your request just now. Nothing was submitted.",
+        localizeMessage(
+          caught instanceof Error
+            ? caught.message
+            : "We couldn’t interpret your request just now. Nothing was submitted.",
+          language,
+        ),
       );
     } finally {
       setIsInterpreting(false);
@@ -1576,7 +1744,10 @@ export default function PreflightApp() {
       challengedNeedSignature === needSignature(need)
     ) {
       setError(
-        "Change and reconfirm the Information Need before rechecking this challenged source.",
+        localizeMessage(
+          "Change and reconfirm the Information Need before rechecking this challenged source.",
+          language,
+        ),
       );
       setPhase("confirm");
       return;
@@ -1632,9 +1803,12 @@ export default function PreflightApp() {
         code: "resolution-unavailable",
       });
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "We couldn’t check the prototype snapshot just now.",
+        localizeMessage(
+          caught instanceof Error
+            ? caught.message
+            : "We couldn’t check the prototype snapshot just now.",
+          language,
+        ),
       );
       setPhase("confirm");
     }
@@ -1729,7 +1903,7 @@ export default function PreflightApp() {
         </div>
         <button
           className={`language-toggle language-toggle-${language}`}
-          onClick={() => setLanguage(language === "en" ? "hi" : "en")}
+          onClick={() => changeLanguage(language === "en" ? "hi" : "en")}
           aria-label={`Switch language to ${copy.language}`}
         >
           {copy.language}
@@ -1745,30 +1919,26 @@ export default function PreflightApp() {
           </div>
           {recoveryNotice && (
             <p className="error-message" role="status">
-              Your previous prototype session could not be restored. Start a new
-              Preflight.
+              {copy.recoveryNotice}
             </p>
           )}
           {resumeState && (
-            <aside
-              className="resume-panel"
-              aria-label="Resume previous Preflight"
-            >
-              <strong>Resume previous Preflight</strong>
-              <p>Your saved prototype journey is ready to continue.</p>
+            <aside className="resume-panel" aria-label={copy.resumeTitle}>
+              <strong>{copy.resumeTitle}</strong>
+              <p>{copy.resumeBody}</p>
               <div className="button-row">
                 <button className="action-button" onClick={resumePrevious}>
-                  Resume
+                  {copy.resume}
                 </button>
                 <button className="secondary-button" onClick={reset}>
-                  Start fresh
+                  {copy.startFresh}
                 </button>
               </div>
             </aside>
           )}
           <section
             className="active-plane ask-plane"
-            aria-label="Ask for public information"
+            aria-label={copy.askAria}
             aria-busy={isInterpreting}
           >
             <label htmlFor="need-input">{copy.label}</label>
@@ -1777,7 +1947,7 @@ export default function PreflightApp() {
               value={text}
               onChange={(event) => setText(event.target.value)}
               rows={5}
-              placeholder="For example: How much did my municipality spend on road repairs in 2024-25?"
+              placeholder={copy.placeholder}
             />
             <p className="privacy-note">
               <Icon name="info" /> {copy.privacy}
@@ -1792,9 +1962,7 @@ export default function PreflightApp() {
               className="action-button"
               disabled={!text.trim() || isInterpreting}
               onClick={interpret}
-              aria-label={
-                isInterpreting ? "Interpreting your need" : copy.submit
-              }
+              aria-label={isInterpreting ? copy.interpreting : copy.submit}
             >
               {copy.submit}
             </button>
@@ -1809,9 +1977,18 @@ export default function PreflightApp() {
                 <button
                   key={scenario.id}
                   className="scenario"
-                  onClick={() => setText(scenario.prompt)}
+                  aria-label={
+                    language === "hi" ? scenario.hiLabel : scenario.label
+                  }
+                  onClick={() =>
+                    setText(
+                      language === "hi" ? scenario.hiPrompt : scenario.prompt,
+                    )
+                  }
                 >
-                  <span>{scenario.prompt}</span>
+                  <span>
+                    {language === "hi" ? scenario.hiPrompt : scenario.prompt}
+                  </span>
                   <Icon name="external" />
                 </button>
               ))}
@@ -1879,7 +2056,7 @@ export default function PreflightApp() {
             <p className="card-kicker">{need.originalText}</p>
             <Field
               label={copy.measure}
-              value={need.measure}
+              value={displayNeed?.measure ?? need.measure}
               onChange={(value) => updateNeed("measure", value)}
             />
             <div className="field-grid">
@@ -1906,12 +2083,12 @@ export default function PreflightApp() {
             </div>
             <Field
               label={copy.breakdown}
-              value={need.breakdown}
+              value={displayNeed?.breakdown ?? need.breakdown}
               onChange={(value) => updateNeed("breakdown", value)}
             />
             <Field
               label={copy.holder}
-              value={need.informationHolder}
+              value={displayNeed?.informationHolder ?? need.informationHolder}
               onChange={(value) => updateNeed("informationHolder", value)}
             />
             <label className="field">
@@ -1934,10 +2111,7 @@ export default function PreflightApp() {
               <div className="clarification status-partial" key={clarification}>
                 <strong>{copy.clarification}</strong>
                 <p>{clarification}</p>
-                <p className="supporting-copy">
-                  Answer using the fields above, or retain this one detail as
-                  unknown.
-                </p>
+                <p className="supporting-copy">{copy.unknownClarification}</p>
                 <button
                   className="quiet-button"
                   onClick={() =>
@@ -1996,15 +2170,11 @@ export default function PreflightApp() {
           <p className="lede">{copy.searchingDetail}</p>
           <div className="progress-list">
             {(need?.scenario === "ncrb-property"
-              ? [
-                  "Confirmed Information Need",
-                  "Checked NCRB Table 20A.1 in the prototype Evidence Snapshot",
-                  "Applied deterministic filters and validated grounding",
-                ]
+              ? [copy.progressNeed, copy.progressNcrb, copy.progressNcrbDone]
               : [
-                  "Confirmed Information Need",
-                  "Checked registered Evidence Snapshot capabilities",
-                  "Prepared the supported result state",
+                  copy.progressNeed,
+                  copy.progressCapabilities,
+                  copy.progressResult,
                 ]
             ).map((stage, index) => (
               <p className={index < 2 ? "done" : "active"} key={stage}>
@@ -2040,21 +2210,9 @@ export default function PreflightApp() {
             <p className="research-notice" role="status">
               <Icon name="info" /> {copy.researchNotice}
             </p>
-            <h2>
-              {result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
-                ? RESULT_STAGE_COPY[language].outsideHeadline
-                : result.headline}
-            </h2>
-            <p className="result-meaning">
-              {result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
-                ? RESULT_STAGE_COPY[language].outsideMeaning
-                : result.meaning}
-            </p>
-            <p className="evidence-status">
-              {result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
-                ? RESULT_STAGE_COPY[language].outsideEvidenceStatus
-                : result.evidenceStatus}
-            </p>
+            <h2>{displayResult?.headline}</h2>
+            <p className="result-meaning">{displayResult?.meaning}</p>
+            <p className="evidence-status">{displayResult?.evidenceStatus}</p>
             {challengedEvidenceId && (
               <p className="error-message" role="status">
                 <span aria-hidden="true">!</span>
@@ -2064,7 +2222,7 @@ export default function PreflightApp() {
             {result.evidence.length > 0 && (
               <div className="evidence-list" aria-label={copy.evidence}>
                 <h3>{copy.evidence}</h3>
-                {result.evidence.map((item) => (
+                {displayResult?.evidence.map((item) => (
                   <article className="evidence-card" key={item.id}>
                     <p className="evidence-type">
                       {item.sourceType === "official_dataset"
@@ -2089,12 +2247,17 @@ export default function PreflightApp() {
                         <dt>{copy.applicablePeriod}</dt>
                         <dd>{item.applicablePeriod}</dd>
                       </div>
+                      <div>
+                        <dt>{copy.locatedValues}</dt>
+                        <dd>
+                          {item.grounding.length > 0
+                            ? copy.immutableReferences(item.grounding.length)
+                            : copy.noPersonalRecord}
+                        </dd>
+                      </div>
                     </dl>
                     {item.url ? (
-                      <ExternalLink
-                        className="action-button action-link official-source-link"
-                        href={item.url}
-                      >
+                      <ExternalLink href={item.url} language={language}>
                         {item.sourceType === "official_service_route"
                           ? copy.openRoute
                           : copy.openSource}
@@ -2105,17 +2268,18 @@ export default function PreflightApp() {
                       </p>
                     )}
                     {item.sourceType === "official_service_route" &&
-                      result.serviceRoute && (
+                      displayResult?.serviceRoute && (
                         <div className="route-metadata">
                           <p>
-                            {result.serviceRoute.purpose} · {copy.verifiedWord}{" "}
-                            {result.serviceRoute.verifiedAt}
+                            {displayResult.serviceRoute.purpose} ·{" "}
+                            {copy.verifiedWord}{" "}
+                            {displayResult.serviceRoute.verifiedAt}
                           </p>
                           <ul>
-                            {result.serviceRoute.primarySourceUrls.map(
+                            {displayResult.serviceRoute.primarySourceUrls.map(
                               (url) => (
                                 <li key={url}>
-                                  <ExternalLink href={url}>
+                                  <ExternalLink href={url} language={language}>
                                     {copy.officialSource}
                                   </ExternalLink>
                                 </li>
@@ -2153,7 +2317,6 @@ export default function PreflightApp() {
                           </ExternalLink>
                         )}
                       </details>
-                    )}
                   </article>
                 ))}
               </div>
@@ -2162,7 +2325,7 @@ export default function PreflightApp() {
               <>
                 <div className="calculation-strip">
                   <strong>{copy.calculation}</strong>
-                  <span>{result.calculation?.operation}</span>
+                  <span>{displayResult?.calculation?.operation}</span>
                   <span>
                     {result.rows.length} {copy.matching}
                   </span>
@@ -2220,9 +2383,11 @@ export default function PreflightApp() {
                     >
                       <summary>{copy.inspectRow(row.geography)}</summary>
                       <p>
-                        {row.stolen2021} → {row.stolen2023} crore; change{" "}
-                        {row.stolenDelta}. Recovery {row.recovery2021}% →{" "}
-                        {row.recovery2023}%; change {row.recoveryDelta}.
+                        {row.stolen2021} → {row.stolen2023} {copy.crore};{" "}
+                        {copy.changeLabel} {row.stolenDelta}.{" "}
+                        {copy.recoveryLabel} {row.recovery2021}% →{" "}
+                        {row.recovery2023}%; {copy.changeLabel}{" "}
+                        {row.recoveryDelta}.
                       </p>
                       <ul>
                         {row.lineage.map((reference, index) => (
@@ -2241,41 +2406,35 @@ export default function PreflightApp() {
                 </div>
                 <details className="calculation-details">
                   <summary>{copy.viewPlan}</summary>
-                  <p>{result.calculation?.operation}</p>
+                  <p>{displayResult?.calculation?.operation}</p>
                   <ul>
-                    {result.calculation?.filters.map((filter) => (
+                    {displayResult?.calculation?.filters.map((filter) => (
                       <li key={filter}>{filter}</li>
                     ))}
                   </ul>
                   {result.calculationMetadata && (
                     <p className="audit-hashes">
-                      Plan {result.calculationMetadata.planHash.slice(0, 12)} ·
-                      Engine {result.calculationMetadata.engineVersion} · Policy{" "}
-                      {result.calculationMetadata.policyVersion}
+                      {copy.plan}{" "}
+                      {result.calculationMetadata.planHash.slice(0, 12)} ·
+                      {copy.engine} {result.calculationMetadata.engineVersion} ·{" "}
+                      {copy.policy} {result.calculationMetadata.policyVersion}
                     </p>
                   )}
                 </details>
-                <p className="caveat">{result.calculation?.caveat}</p>
+                <p className="caveat">{displayResult?.calculation?.caveat}</p>
               </>
             )}
             {result.gaps.length > 0 && (
               <div className="gap-block">
                 <strong>{copy.unresolved}</strong>
-                {(result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
-                  ? [RESULT_STAGE_COPY[language].outsideGap]
-                  : result.gaps
-                ).map((gap) => (
+                {displayResult?.gaps.map((gap) => (
                   <p key={gap}>{gap}</p>
                 ))}
               </div>
             )}
             <details className="scope" open={result.gaps.length > 0}>
               <summary>{copy.scope}</summary>
-              <p>
-                {result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
-                  ? RESULT_STAGE_COPY[language].outsideScope
-                  : result.searchScope}
-              </p>
+              <p>{displayResult?.searchScope}</p>
             </details>
             {need &&
               need.scenario === "ncrb-property" &&
@@ -2376,18 +2535,22 @@ export default function PreflightApp() {
                 <dt>{copy.to}</dt>
                 <dd>
                   {filingPackage?.holder.canonicalName ??
+                    displayNeed?.informationHolder ??
                     need.informationHolder}
                 </dd>
               </div>
               <div>
                 <dt>{copy.request}</dt>
-                <dd>{need.canonicalNeed}</dd>
+                <dd>{displayNeed?.canonicalNeed ?? need.canonicalNeed}</dd>
               </div>
               <div>
                 <dt>{copy.route}</dt>
                 <dd>
                   {filingPackage ? (
-                    <ExternalLink href={filingPackage.route.officialUrl}>
+                    <ExternalLink
+                      href={filingPackage.route.officialUrl}
+                      language={language}
+                    >
                       {
                         filingPackage.route.authority.portalNames[
                           filingPackage.route.id
@@ -2447,7 +2610,9 @@ export default function PreflightApp() {
             {draftValidation()?.valid === false && (
               <p className="error-message" role="alert">
                 <span aria-hidden="true">!</span>
-                {draftValidation()?.errors.join(" ")}
+                {draftValidation()
+                  ?.errors.map((message) => localizeMessage(message, language))
+                  .join(" ")}
               </p>
             )}
             {draftError && (
@@ -2580,7 +2745,11 @@ export default function PreflightApp() {
                   onClick={() => {
                     const validation = validateDemoStep("otp", { otp });
                     if (!validation.valid) {
-                      setFilingError(validation.errors.join(" "));
+                      setFilingError(
+                        validation.errors
+                          .map((message) => localizeMessage(message, language))
+                          .join(" "),
+                      );
                       return;
                     }
                     setFilingError("");
@@ -2624,7 +2793,11 @@ export default function PreflightApp() {
                       profile,
                     });
                     if (!validation.valid) {
-                      setFilingError(validation.errors.join(" "));
+                      setFilingError(
+                        validation.errors
+                          .map((message) => localizeMessage(message, language))
+                          .join(" "),
+                      );
                       return;
                     }
                     setFilingError("");
@@ -2678,7 +2851,11 @@ export default function PreflightApp() {
                       confirmed: reviewed,
                     });
                     if (!validation.valid) {
-                      setFilingError(validation.errors.join(" "));
+                      setFilingError(
+                        validation.errors
+                          .map((message) => localizeMessage(message, language))
+                          .join(" "),
+                      );
                       return;
                     }
                     setFilingError("");
@@ -2766,7 +2943,9 @@ export default function PreflightApp() {
                 </div>
                 <div>
                   <dt>{copy.mockFee}</dt>
-                  <dd>₹{acknowledgement.fee.amountInr} · Demo UPI</dd>
+                  <dd>
+                    ₹{acknowledgement.fee.amountInr} · {copy.demoUpi}
+                  </dd>
                 </div>
                 <div>
                   <dt>{copy.fictionalTime}</dt>
@@ -2801,7 +2980,11 @@ export default function PreflightApp() {
         </button>
       </footer>
       {detailsOpen && (
-        <Details copy={copy} onClose={() => setDetailsOpen(false)} />
+        <Details
+          copy={copy}
+          language={language}
+          onClose={() => setDetailsOpen(false)}
+        />
       )}
       {challengeCandidateId && challengedSourceTitle && (
         <CitationChallengeDialog

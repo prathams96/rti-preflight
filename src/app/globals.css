@@ -1,6 +1,7 @@
 :root {
   color-scheme: light;
-  font-family: "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif;
+  font-family:
+    var(--font-devanagari), "Noto Sans Devanagari", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 
   /* Canonical drafting-table tokens. */
