@@ -60,6 +60,7 @@ import {
   isUnknownClarification,
 } from "./localization";
 import { isFilingDemoReady } from "./filing-flow";
+import { ResultTable } from "./result-table";
 
 export type Phase =
   | "start"
@@ -236,15 +237,31 @@ function isEvidenceItem(value: unknown): boolean {
 function isDerivedRow(value: unknown): boolean {
   if (!isObject(value)) return false;
   const calculationMetadata = value.calculationMetadata;
+  const legacyFields = [
+    "stolen2021",
+    "stolen2023",
+    "stolenDelta",
+    "recovery2021",
+    "recovery2023",
+    "recoveryDelta",
+  ];
+  const hasLegacyFields = legacyFields.every((key) =>
+    isNonEmptyString(value[key]),
+  );
+  const hasColumns =
+    Array.isArray(value.columns) &&
+    value.columns.length > 0 &&
+    value.columns.every(
+      (column) =>
+        isObject(column) &&
+        isNonEmptyString(column.key) &&
+        isNonEmptyString(column.label) &&
+        isNonEmptyString(column.value),
+    );
   return (
     isNonEmptyString(value.geography) &&
-    isNonEmptyString(value.stolen2021) &&
-    isNonEmptyString(value.stolen2023) &&
-    isNonEmptyString(value.stolenDelta) &&
-    isNonEmptyString(value.recovery2021) &&
-    isNonEmptyString(value.recovery2023) &&
-    isNonEmptyString(value.recoveryDelta) &&
-    value.unit === "INR crore" &&
+    (hasLegacyFields || hasColumns) &&
+    (value.unit === undefined || value.unit === "INR crore") &&
     Array.isArray(value.lineage) &&
     value.lineage.every(isGroundingReference) &&
     (calculationMetadata === undefined ||
@@ -258,6 +275,49 @@ function isDerivedRow(value: unknown): boolean {
           "policyHash",
         ].every((key) => isNonEmptyString(calculationMetadata[key]))))
   );
+}
+
+function isResultTable(value: unknown): boolean {
+  if (
+    !isObject(value) ||
+    !Array.isArray(value.columns) ||
+    !Array.isArray(value.rows)
+  )
+    return false;
+  const validColumns =
+    value.columns.length > 0 &&
+    value.columns.every(
+      (column) =>
+        isObject(column) &&
+        isNonEmptyString(column.key) &&
+        isNonEmptyString(column.label) &&
+        isOneOf(column.format, [
+          "text",
+          "number",
+          "currency",
+          "percentage",
+          "comparison",
+          "delta",
+        ] as const),
+    );
+  const columnKeys = new Set(
+    value.columns
+      .filter(isObject)
+      .map((column) => column.key)
+      .filter((key): key is string => typeof key === "string"),
+  );
+  const validRows = value.rows.every((row) => {
+    if (!isObject(row) || !isNonEmptyString(row.key)) return false;
+    const values = row.values;
+    if (!isObject(values)) return false;
+    return [...columnKeys].every((key) => {
+      const cell = values[key];
+      return (
+        cell === null || typeof cell === "string" || typeof cell === "number"
+      );
+    });
+  });
+  return validColumns && validRows;
 }
 
 function isExecutionReceipt(value: unknown): boolean {
@@ -283,6 +343,7 @@ function isRenderableResolution(value: unknown): value is RenderableResolution {
   const calculation = value.calculation;
   const coverageManifest = value.coverageManifest;
   const researchFinding = value.researchFinding;
+  const resultTable = value.resultTable;
   const validCalculation =
     calculation === undefined ||
     (isObject(calculation) &&
@@ -307,6 +368,8 @@ function isRenderableResolution(value: unknown): value is RenderableResolution {
       researchFinding.evidence.every(isEvidenceItem) &&
       Array.isArray(researchFinding.rows) &&
       researchFinding.rows.every(isDerivedRow));
+  const validResultTable =
+    resultTable === undefined || isResultTable(resultTable);
   const validServiceRoute =
     value.serviceRoute === undefined ||
     (isObject(value.serviceRoute) &&
@@ -334,6 +397,7 @@ function isRenderableResolution(value: unknown): value is RenderableResolution {
       isExecutionReceipt(value.executionReceipt)) &&
     validCoverageManifest &&
     validResearchFinding &&
+    validResultTable &&
     validServiceRoute &&
     (value.formalResponseReason === undefined ||
       isNonEmptyString(value.formalResponseReason)) &&
@@ -593,6 +657,7 @@ export const COPY = {
     unsure: "I’m not sure",
     calculation: "Calculation",
     matching: "matching rows",
+    emptyResult: "No States/UTs matched these conditions.",
     unresolved: "What remains unresolved",
     whatFound: "What we found",
     whatMissing: "What is still missing",
@@ -608,10 +673,6 @@ export const COPY = {
     officialSource: "Official source",
     pinnedCsv: "Open pinned CSV",
     tableCaption: "States and Union Territories matching the NCRB conditions",
-    stateColumn: "State/UT",
-    stolenColumn: "Stolen 2021 → 2023",
-    changeColumn: "Change",
-    recoveryColumn: "Recovery 2021 → 2023",
     inspectEvidence: "View source details",
     inspectRow: (geography: string) =>
       `View ${geography} figures and source cells`,
@@ -821,9 +882,6 @@ export const COPY = {
       "Answer using the fields above, or retain this one detail as unknown.",
     rowDetail: (row: string, values: string) =>
       `View ${row} figures and source cells: ${values}`,
-    changeLabel: "change",
-    recoveryLabel: "Recovery",
-    crore: "crore",
     plan: "Calculation plan",
     engine: "Calculation method",
     policy: "Checking rules",
@@ -895,6 +953,7 @@ export const COPY = {
     unsure: "मैं निश्चित नहीं हूँ",
     calculation: "गणना",
     matching: "मिलती पंक्तियाँ",
+    emptyResult: "इन शर्तों से कोई राज्य/केंद्र शासित प्रदेश मेल नहीं खाया।",
     unresolved: "क्या अभी अनसुलझा है",
     whatFound: "हमें क्या मिला",
     whatMissing: "क्या अभी बाकी है",
@@ -910,10 +969,6 @@ export const COPY = {
     officialSource: "आधिकारिक स्रोत खोलें",
     pinnedCsv: "पिन किया गया CSV खोलें",
     tableCaption: "NCRB शर्तों से मेल खाने वाले राज्य और केंद्र शासित प्रदेश",
-    stateColumn: "राज्य/केंद्र शासित प्रदेश",
-    stolenColumn: "चोरी 2021 → 2023",
-    changeColumn: "बदलाव",
-    recoveryColumn: "बरामदगी 2021 → 2023",
     inspectEvidence: "स्रोत का विवरण देखें",
     inspectRow: (geography: string) =>
       `${geography} के आँकड़े और स्रोत सेल देखें`,
@@ -1120,9 +1175,6 @@ export const COPY = {
       "ऊपर दिए फ़ील्ड से उत्तर दें या इस विवरण को अज्ञात रहने दें।",
     rowDetail: (row: string, values: string) =>
       `${row} के मान और स्रोत सेल देखें: ${values}`,
-    changeLabel: "बदलाव",
-    recoveryLabel: "बरामदगी",
-    crore: "करोड़",
     plan: "गणना योजना",
     engine: "गणना का तरीका",
     policy: "जाँच के नियम",
@@ -2032,6 +2084,7 @@ export default function PreflightApp() {
   const displayResult = result
     ? applyCitizenResultCopy(localizeResolution(result, language), language)
     : undefined;
+  const displayTable = displayResult?.resultTable;
   const displayProfile = localizeFilingProfile(profile, language);
   const displayAcknowledgement = acknowledgement
     ? {
@@ -3434,89 +3487,54 @@ export default function PreflightApp() {
                 ))}
               </div>
             )}
-            {result.rows.length > 0 && (
+            {displayTable && displayResult.calculation && (
               <>
                 <div className="calculation-strip">
                   <strong>{copy.calculation}</strong>
                   <span>{displayResult?.calculation?.operation}</span>
                   <span>
-                    {result.rows.length} {copy.matching}
+                    {displayTable.rows.length} {copy.matching}
                   </span>
                 </div>
                 <div className="table-wrap">
-                  <table>
-                    <caption className="sr-only">{copy.tableCaption}</caption>
-                    <thead>
-                      <tr>
-                        <th scope="col">{copy.stateColumn}</th>
-                        <th scope="col">{copy.stolenColumn}</th>
-                        <th scope="col">{copy.changeColumn}</th>
-                        <th scope="col">{copy.recoveryColumn}</th>
-                        <th scope="col">{copy.changeColumn}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.rows.map((row) => (
-                        <tr
-                          key={row.geography}
-                          data-testid={`result-row-${row.geography}`}
-                        >
-                          <th scope="row">{row.geography}</th>
-                          <td data-label={copy.stolenColumn}>
-                            ₹{row.stolen2021} → ₹{row.stolen2023} {copy.crore}
-                          </td>
-                          <td
-                            data-label={copy.changeColumn}
-                            className="numeric"
-                          >
-                            {row.stolenDelta}
-                          </td>
-                          <td data-label={copy.recoveryColumn}>
-                            {row.recovery2021}% → {row.recovery2023}%
-                          </td>
-                          <td
-                            data-label={copy.changeColumn}
-                            className="numeric"
-                          >
-                            {row.recoveryDelta}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <ResultTable
+                    table={displayTable}
+                    caption={copy.tableCaption}
+                    emptyMessage={copy.emptyResult}
+                  />
                 </div>
-                <div
-                  className="row-inspection-list"
-                  aria-label={copy.inspectEvidence}
-                >
-                  {result.rows.map((row) => (
-                    <details
-                      key={`inspect-${row.geography}`}
-                      className="row-inspection"
-                    >
-                      <summary>{copy.inspectRow(row.geography)}</summary>
-                      <p>
-                        {row.stolen2021} → {row.stolen2023} {copy.crore};{" "}
-                        {copy.changeLabel} {row.stolenDelta}.{" "}
-                        {copy.recoveryLabel} {row.recovery2021}% →{" "}
-                        {row.recovery2023}%; {copy.changeLabel}{" "}
-                        {row.recoveryDelta}.
-                      </p>
-                      <ul>
-                        {row.lineage.map((reference, index) => (
-                          <li key={`${row.geography}-${index}`}>
-                            <code>
-                              {reference.locator.kind === "cell"
-                                ? `${reference.locator.rowKey} · ${reference.locator.colKey}`
-                                : reference.locator.pointer}
-                            </code>
-                            : {reference.locatedContent}
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  ))}
-                </div>
+                {result.rows.length > 0 && (
+                  <div
+                    className="row-inspection-list"
+                    aria-label={copy.inspectEvidence}
+                  >
+                    {result.rows.map((row) => (
+                      <details
+                        key={`inspect-${row.geography}`}
+                        className="row-inspection"
+                      >
+                        <summary>{copy.inspectRow(row.geography)}</summary>
+                        <p>
+                          {row.columns
+                            .map((column) => `${column.label}: ${column.value}`)
+                            .join("; ")}
+                        </p>
+                        <ul>
+                          {row.lineage.map((reference, index) => (
+                            <li key={`${row.geography}-${index}`}>
+                              <code>
+                                {reference.locator.kind === "cell"
+                                  ? `${reference.locator.rowKey} · ${reference.locator.colKey}`
+                                  : reference.locator.pointer}
+                              </code>
+                              : {reference.locatedContent}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    ))}
+                  </div>
+                )}
                 <details
                   className="calculation-details"
                   id="calculation-details"
@@ -3572,21 +3590,23 @@ export default function PreflightApp() {
               <summary>{copy.scope}</summary>
               <p>{displayResult?.searchScope}</p>
             </details>
-            {need &&
-              need.scenario === "ncrb-property" &&
-              result.executionReceipt && (
-                <p className="supporting-copy">
-                  {copy.provenance(
-                    result.rows.length * 5,
-                    new Date(
-                      result.executionReceipt.executedAt,
-                    ).toLocaleDateString(
-                      language === "hi" ? "hi-IN" : "en-IN",
-                      { day: "numeric", month: "short", year: "numeric" },
-                    ),
-                  )}
-                </p>
-              )}
+            {result.executionReceipt && displayTable && (
+              <p className="supporting-copy">
+                {copy.provenance(
+                  result.rows.reduce(
+                    (count, row) => count + row.lineage.length,
+                    0,
+                  ),
+                  new Date(
+                    result.executionReceipt.executedAt,
+                  ).toLocaleDateString(language === "hi" ? "hi-IN" : "en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  }),
+                )}
+              </p>
+            )}
             <div className="result-actions">
               {displayOutcome === "SOURCE_RESOLVED" &&
                 (displayResult?.evidence[0]?.url ? (

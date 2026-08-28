@@ -22,7 +22,8 @@ export const OPENAI_REASONING = { effort: "low" as const };
  */
 export const OPENAI_TIMEOUT_MS = 60_000;
 
-export type ProviderEndpointCategory = "interpretation" | "narration" | "draft";
+export type ProviderEndpointCategory =
+  "interpretation" | "narration" | "draft" | "plan";
 
 export type ProviderDiagnostic = {
   endpoint: ProviderEndpointCategory;

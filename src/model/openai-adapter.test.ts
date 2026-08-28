@@ -414,4 +414,97 @@ describe("structured interpretation mapping", () => {
       "Road repair expenditure in my municipality",
     );
   });
+
+  it("does not reinterpret free text when the model omits analysisIntent", () => {
+    const result = modelNeedsToInterpretation({
+      originalText:
+        "Identify States/UTs where stolen declined and recovery increased between 2021 and 2023.",
+      redactedText:
+        "Identify States/UTs where stolen declined and recovery increased between 2021 and 2023.",
+      traceId: "trace-no-analysis-intent",
+      needs: [
+        {
+          canonicalNeed: "NCRB property comparison",
+          measure: "Property stolen and recovery percentage",
+          geography: "All States/UTs",
+          period: "2021 versus 2023",
+          breakdown: "State / UT",
+          informationHolder: "National Crime Records Bureau",
+          resolutionPreference: "published",
+          unresolvedClarifications: [],
+          analysisIntent: null,
+          display: {
+            canonicalNeed: "NCRB property comparison",
+            measure: "Property stolen and recovery percentage",
+            geography: "All States/UTs",
+            period: "2021 versus 2023",
+            breakdown: "State / UT",
+            informationHolder: "National Crime Records Bureau",
+            unresolvedClarifications: [],
+          },
+        },
+      ],
+    });
+
+    expect(result.needs[0].analysisIntent).toBeUndefined();
+    expect(result.needs[0].canonicalNeed).toBe("NCRB property comparison");
+  });
+
+  it("builds the canonical analytical need from model intent directions", () => {
+    const result = modelNeedsToInterpretation({
+      originalText:
+        "Identify States/UTs where property stolen declined and recovery percentage increased between 2021 and 2023.",
+      redactedText:
+        "Identify States/UTs where property stolen declined and recovery percentage increased between 2021 and 2023.",
+      traceId: "trace-intent-canonical",
+      needs: [
+        {
+          canonicalNeed: "A provider sentence with the wrong direction",
+          measure: "A provider measure",
+          geography: "All States/UTs",
+          period: "2021 versus 2023",
+          breakdown: "State / UT",
+          informationHolder: "National Crime Records Bureau",
+          resolutionPreference: "published",
+          unresolvedClarifications: [],
+          analysisIntent: {
+            predicates: [
+              {
+                measure: "value of property stolen",
+                comparison: "decrease",
+                fromPeriod: "2021",
+                toPeriod: "2023",
+              },
+              {
+                measure: "percentage recovery of stolen property",
+                comparison: "increase",
+                fromPeriod: "2021",
+                toPeriod: "2023",
+              },
+            ],
+            logic: "and",
+            ranking: null,
+          },
+          display: {
+            canonicalNeed:
+              "Identify individual States/UTs where reported value of property stolen declined AND reported percentage recovery of stolen property increased between 2021 and 2023.",
+            measure: "Value of property stolen and recovery percentage",
+            geography: "All States/UTs",
+            period: "2021 versus 2023",
+            breakdown: "State / UT",
+            informationHolder: "National Crime Records Bureau",
+            unresolvedClarifications: [],
+          },
+        },
+      ],
+    });
+
+    expect(result.needs[0].canonicalNeed).toContain(
+      "value of property stolen declined",
+    );
+    expect(result.needs[0].canonicalNeed).toContain(
+      "percentage recovery of stolen property increased",
+    );
+    expect(result.needs[0].analysisIntent?.ranking).toBeUndefined();
+  });
 });

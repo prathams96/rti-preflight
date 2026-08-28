@@ -15,6 +15,7 @@ export type InformationNeed = {
   resolutionPreference: ResolutionPreference;
   unresolvedClarifications: string[];
   scenario: ScenarioId;
+  analysisIntent?: AnalysisIntent;
   /** The citizen explicitly asked for a new RTI draft or filing journey. */
   draftingIntent?: boolean;
   recordSubject?: "own" | "another" | "unspecified";
@@ -37,6 +38,23 @@ export type ScenarioId =
   | "cpcb-conflict"
   | "railway-filing"
   | "unsupported";
+
+export type AnalysisPredicate = {
+  measure: string;
+  comparison: "increase" | "decrease";
+  fromPeriod: string;
+  toPeriod: string;
+};
+
+export type AnalysisIntent = {
+  predicates: AnalysisPredicate[];
+  logic: "and" | "or";
+  ranking?: {
+    measure: string;
+    direction: "asc" | "desc";
+    limit: number;
+  };
+};
 
 export type NeedInterpretation = {
   originalText: string;
@@ -97,15 +115,42 @@ export type EvidenceItem = {
 
 export type DerivedRow = {
   geography: string;
-  stolen2021: string;
-  stolen2023: string;
-  stolenDelta: string;
-  recovery2021: string;
-  recovery2023: string;
-  recoveryDelta: string;
-  unit: "INR crore";
+  columns: DerivedColumn[];
+  stolen2021?: string;
+  stolen2023?: string;
+  stolenDelta?: string;
+  recovery2021?: string;
+  recovery2023?: string;
+  recoveryDelta?: string;
+  unit?: "INR crore";
   lineage: GroundingReference[];
   calculationMetadata?: CalculationMetadata;
+};
+
+export type DerivedColumn = {
+  key: string;
+  label: string;
+  value: string;
+};
+
+export type ResultColumnFormat =
+  "text" | "number" | "currency" | "percentage" | "comparison" | "delta";
+
+export type ResultColumn = {
+  key: string;
+  label: string;
+  format: ResultColumnFormat;
+};
+
+export type ResultTableRow = {
+  key: string;
+  values: Record<string, string | number | null>;
+};
+
+/** Presentation-safe output produced after validated CalcPlan execution. */
+export type TabularResult = {
+  columns: ResultColumn[];
+  rows: ResultTableRow[];
 };
 
 export type CalculationMetadata = {
@@ -139,7 +184,12 @@ export type RenderableResolution = {
   evidenceStatus: string;
   evidence: EvidenceItem[];
   rows: DerivedRow[];
+  resultTable?: TabularResult;
   gaps: string[];
+  planningFailure?: {
+    stage: "provider" | "parse" | "validation" | "execution";
+    code: string;
+  };
   searchScope: string;
   recommendedAction: string;
   calculation?: {

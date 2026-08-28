@@ -3,6 +3,7 @@ import { RTIPreflightModule } from "../../../preflight/module";
 import { DeterministicInterpretationAdapter } from "../../../model/fake-adapter";
 import { OpenAIInterpretationAdapter } from "../../../model/openai-adapter.server";
 import { normalizeTraceId } from "../../../observability";
+import { isExactScenarioPrompt } from "../../../content/scenarios";
 
 export const runtime = "nodejs";
 
@@ -44,8 +45,18 @@ export async function POST(request: Request) {
           new OpenAIInterpretationAdapter(),
         ).interpret({ text: body.text, traceId, language });
       } catch {
-        // Provider degradation is recoverable: retain the citizen wording and
-        // use the same redacting, deterministic adapter used offline.
+        // The deterministic parser is reserved for the explicit seeded demo
+        // fixture. Arbitrary production free text must not be reparsed after
+        // model failure because guessed semantics are unsafe.
+        if (!isExactScenarioPrompt(body.text))
+          return NextResponse.json(
+            {
+              code: "INTERPRETATION_UNAVAILABLE",
+              message:
+                "We couldn’t interpret your request just now. Nothing was submitted.",
+            },
+            { status: 503 },
+          );
         interpretation = await new RTIPreflightModule(deterministic).interpret({
           text: body.text,
           language,

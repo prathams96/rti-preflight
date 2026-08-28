@@ -55,7 +55,7 @@ describe("release gates", () => {
       snapshotHash:
         "0298344d08b76fa1edfafcb796fe940f31bfa0f0520ddb215f88ae9523f10b37",
       capabilityManifestHash:
-        "f5fe16d4dc4d3a8b75a184fdc146e1ec2aa275e38254b6fab68b0eed3667ef0a",
+        "9e1969dcae001d1529a756d694bf2cd6f8cb29da26b1d2d2559783b9528490b7",
       checkedResourceIds: ["ncrb-property-table-20a"],
     });
     expect(snapshot.source.sourceBlobHash).toBe(NCRB_SOURCE_BLOB_HASH);

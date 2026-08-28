@@ -100,6 +100,15 @@ describe("Hindi journey localization", () => {
     expect(hindiResult.meaning).toContain("NCRB");
     expect(hindiResult.evidence[0].extract).toContain("आधिकारिक तालिका");
     expect(hindiResult.calculation?.filters[0]).toContain("चोरी की संपत्ति");
+    expect(
+      hindiResult.resultTable?.columns.map((column) => column.label),
+    ).toEqual([
+      "राज्य/केंद्र शासित प्रदेश",
+      "चोरी 2021 → 2023",
+      "बदलाव",
+      "बरामदगी 2021 → 2023",
+      "बदलाव",
+    ]);
 
     const challengedResult = localizeResolution(
       {

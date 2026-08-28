@@ -10,6 +10,7 @@ export type AggregateFunction =
 
 export type RegisteredColumn = {
   key: string;
+  displayLabel?: string;
   kind: ColumnKind;
   dtype: "text" | "decimal";
   unit: ColumnUnit;
@@ -32,6 +33,18 @@ export type RegisteredTable = {
   rows: readonly RegisteredRow[];
   aggregateRowKeys?: readonly string[];
   allowedOperations?: readonly string[];
+  measures?: readonly RegisteredMeasure[];
+};
+
+export type RegisteredMeasure = {
+  /** Stable identity used for generated columns; never derived from labels. */
+  key: string;
+  name: string;
+  aliases?: readonly string[];
+  displayLabel?: string;
+  comparisonLabel?: string;
+  periodColumns: Readonly<Record<string, string>>;
+  unit: ColumnUnit;
 };
 
 export type ValueRef = { column: string };
@@ -360,7 +373,8 @@ export function validatePlan(
       getColumn(columns, step.column);
       if (
         step.values.length === 0 ||
-        aggregateKeys.some((key) => !step.values.includes(key))
+        aggregateKeys.some((key) => !step.values.includes(key)) ||
+        step.values.some((value) => !aggregateKeys.includes(value))
       )
         throw new Error("CALC_AGGREGATE_EXCLUSION_INCOMPLETE");
       aggregateExcluded = true;

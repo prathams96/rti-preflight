@@ -1,4 +1,5 @@
 import type {
+  AnalysisIntent,
   Clarification,
   InformationNeed,
   ScenarioId,
@@ -94,6 +95,179 @@ export const CPCB_CONFLICT_DECISION = {
 
 const DEFAULT_PREFERENCE = "unsure" as const;
 
+const NCRB_MEASURES = {
+  stolen: "value of property stolen",
+  recovery: "percentage recovery of stolen property",
+} as const;
+
+function exactScenarioForPrompt(text: string): ScenarioId | undefined {
+  const normalized = text.trim().toLocaleLowerCase();
+  return SCENARIO_PROMPTS.find(
+    (scenario) =>
+      normalized === scenario.prompt.toLocaleLowerCase() ||
+      normalized === scenario.hiPrompt.toLocaleLowerCase(),
+  )?.id;
+}
+
+export function isExactScenarioPrompt(text: string): boolean {
+  return exactScenarioForPrompt(text) !== undefined;
+}
+
+export function isExactNcrbSeededPrompt(text: string): boolean {
+  const normalized = text.trim().toLocaleLowerCase();
+  return (
+    normalized === SCENARIO_PROMPTS[0].prompt.toLocaleLowerCase() ||
+    normalized === SCENARIO_PROMPTS[0].hiPrompt.toLocaleLowerCase()
+  );
+}
+
+export function canonicalNeedFromAnalysisIntent(
+  intent: AnalysisIntent,
+): string {
+  const firstPeriod = intent.predicates[0];
+  const sharedPeriod = intent.predicates.every(
+    (predicate) =>
+      predicate.fromPeriod === firstPeriod.fromPeriod &&
+      predicate.toPeriod === firstPeriod.toPeriod,
+  );
+  const conditions = intent.predicates.map(
+    (predicate) =>
+      `reported ${predicate.measure} ${predicate.comparison === "increase" ? "increased" : "declined"}${sharedPeriod ? "" : ` between ${predicate.fromPeriod} and ${predicate.toPeriod}`}`,
+  );
+  const period = sharedPeriod
+    ? ` between ${firstPeriod.fromPeriod} and ${firstPeriod.toPeriod}`
+    : "";
+  const ranking = intent.ranking
+    ? ` Return the ${intent.ranking.limit} States/UTs ranked by ${intent.ranking.measure} change in ${intent.ranking.direction === "desc" ? "descending" : "ascending"} order.`
+    : "";
+  return `Identify individual States/UTs where ${conditions.join(` ${intent.logic.toUpperCase()} `)}${period}.${ranking}`;
+}
+
+function ncrbYears(text: string): string[] {
+  return [
+    ...new Set([...text.matchAll(/\b(20\d{2})\b/g)].map((match) => match[1])),
+  ].sort();
+}
+
+function comparisonFor(text: string): "increase" | "decrease" | undefined {
+  if (
+    /\b(increase|increased|increasing|up|rise|rose|higher|grew|growth)\b/i.test(
+      text,
+    ) ||
+    /बढ़|वृद्धि/u.test(text)
+  )
+    return "increase";
+  if (
+    /\b(decrease|decreased|decreasing|decline|declined|down|lower|fell|fall)\b/i.test(
+      text,
+    ) ||
+    /घट|गिर|कम/u.test(text)
+  )
+    return "decrease";
+  return undefined;
+}
+
+function recoveryComparisonFor(
+  text: string,
+): "increase" | "decrease" | undefined {
+  const normalized = text.toLocaleLowerCase();
+  const recoveryIndex = Math.max(
+    normalized.indexOf("recover"),
+    Math.max(text.indexOf("बरामदगी"), text.indexOf("बरामद")),
+  );
+  if (recoveryIndex < 0) return comparisonFor(text);
+  const separators = [
+    "but",
+    "or",
+    "and",
+    "however",
+    "instead",
+    "पर",
+    "लेकिन",
+    "या",
+    "और",
+  ];
+  const clauseStart = Math.max(
+    ...separators.map((separator) =>
+      normalized.lastIndexOf(separator, recoveryIndex - 1),
+    ),
+  );
+  return comparisonFor(text.slice(clauseStart >= 0 ? clauseStart : 0));
+}
+
+function stolenComparisonFor(
+  text: string,
+): "increase" | "decrease" | undefined {
+  const normalized = text.toLocaleLowerCase();
+  const recoveryIndex = Math.max(
+    normalized.indexOf("recover"),
+    Math.max(text.indexOf("बरामदगी"), text.indexOf("बरामद")),
+  );
+  return comparisonFor(
+    recoveryIndex >= 0 ? text.slice(0, recoveryIndex) : text,
+  );
+}
+
+/** Offline/test fixture parser; model-backed interpretation never calls this. */
+export function deterministicNcrbFixtureIntent(
+  text: string,
+): AnalysisIntent | undefined {
+  const [fromPeriod, toPeriod] = ncrbYears(text);
+  if (!fromPeriod || !toPeriod) return undefined;
+  const predicateCandidates: Array<
+    | {
+        measure: string;
+        comparison: "increase" | "decrease" | undefined;
+        fromPeriod: string;
+        toPeriod: string;
+      }
+    | undefined
+  > = [
+    /property stolen|stolen property/i.test(text) ||
+    /चोरी.*संपत्ति|संपत्ति.*चोरी/u.test(text)
+      ? {
+          measure: NCRB_MEASURES.stolen,
+          comparison: stolenComparisonFor(text),
+          fromPeriod,
+          toPeriod,
+        }
+      : undefined,
+    /recovery|recovered|बरामदगी|बरामद/u.test(text)
+      ? {
+          measure: NCRB_MEASURES.recovery,
+          comparison: recoveryComparisonFor(text),
+          fromPeriod,
+          toPeriod,
+        }
+      : undefined,
+  ];
+  const predicates = predicateCandidates
+    .filter((predicate) => predicate?.comparison !== undefined)
+    .map((predicate) => ({
+      ...predicate!,
+      comparison: predicate!.comparison!,
+    }));
+  if (predicates.length === 0) return undefined;
+  const rankingMatch = text.match(/\b(?:top|which)\s+(\d+)\b/i);
+  const rankingMeasure = predicates.find(
+    (predicate) => predicate.measure === NCRB_MEASURES.stolen,
+  )?.measure;
+  const ranking =
+    rankingMeasure &&
+    (/\b(largest|biggest|highest)\b/i.test(text) || rankingMatch)
+      ? {
+          measure: rankingMeasure,
+          direction: "desc" as const,
+          limit: Number(rankingMatch?.[1] ?? 5),
+        }
+      : undefined;
+  return {
+    predicates,
+    logic: predicates.length > 1 && /\bor\b|either/i.test(text) ? "or" : "and",
+    ...(ranking ? { ranking } : {}),
+  };
+}
+
 const ENGLISH_DRAFTING_ACTION =
   "(?:prepare|draft|write|file|submit|make|create)";
 const HINDI_DRAFTING_ACTION =
@@ -174,6 +348,8 @@ export function scenarioForModelNeed(
 }
 
 export function scenarioForText(text: string): ScenarioId {
+  const exactScenario = exactScenarioForPrompt(text);
+  if (exactScenario) return exactScenario;
   const normalized = text.toLocaleLowerCase();
   // An explicit drafting goal must not be mistaken for the synthetic
   // previous-response example just because both mention an earlier RTI.
@@ -183,8 +359,12 @@ export function scenarioForText(text: string): ScenarioId {
   )
     return "unsupported";
   if (
-    (normalized.includes("property") && normalized.includes("stolen")) ||
-    (text.includes("चोरी") && text.includes("संपत्ति"))
+    (normalized.includes("property") &&
+      (normalized.includes("stolen") || normalized.includes("recover"))) ||
+    normalized.includes("recovery") ||
+    normalized.includes("recovered") ||
+    (text.includes("संपत्ति") &&
+      (text.includes("चोरी") || text.includes("बरामद")))
   )
     return "ncrb-property";
   if (
@@ -237,18 +417,38 @@ function needForScenario(
   };
 
   switch (id) {
-    case "ncrb-property":
+    case "ncrb-property": {
+      const analysisIntent = deterministicNcrbFixtureIntent(text);
+      const predicates = analysisIntent?.predicates ?? [];
+      const seeded = isExactNcrbSeededPrompt(text);
       return {
         ...common,
-        canonicalNeed:
-          "Identify individual States/UTs where reported property stolen increased and recovery percentage declined between 2021 and 2023.",
-        measure: "Value of property stolen and percentage recovered",
+        canonicalNeed: seeded
+          ? "Identify individual States/UTs where reported property stolen increased and recovery percentage declined between 2021 and 2023."
+          : predicates.length === 2
+            ? canonicalNeedFromAnalysisIntent(analysisIntent!)
+            : predicates.length === 1
+              ? canonicalNeedFromAnalysisIntent(analysisIntent!)
+              : text.trim(),
+        measure:
+          (seeded
+            ? "Value of property stolen and percentage recovered"
+            : analysisIntent
+              ? predicates
+                  .map((predicate) => predicate.measure)
+                  .join(` ${analysisIntent.logic.toUpperCase()} `)
+              : "") || "Property data",
         geography: "All States/UTs",
-        period: "2021 versus 2023",
+        period:
+          predicates.length > 0
+            ? `${predicates[0].fromPeriod} versus ${predicates[0].toPeriod}`
+            : "Not specified",
         breakdown: "State / UT",
         informationHolder: "National Crime Records Bureau",
         informationHolderStatus: "verified",
+        ...(analysisIntent ? { analysisIntent } : {}),
       };
+    }
     case "railway-filing":
       return {
         ...common,

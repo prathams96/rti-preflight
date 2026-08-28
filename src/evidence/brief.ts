@@ -7,6 +7,7 @@ import type {
   InformationNeed,
   Language,
   RenderableResolution,
+  TabularResult,
 } from "../domain/types";
 import { redactSensitiveIdentifiers } from "../model/redaction";
 
@@ -46,6 +47,7 @@ export type EvidenceBrief = {
     evidenceStatus: string;
     evidence: EvidenceItem[];
     rows: DerivedRow[];
+    resultTable?: TabularResult;
     gaps: string[];
     searchScope: string;
     recommendedAction: string;
@@ -130,17 +132,47 @@ function publicGrounding(reference: GroundingReference): GroundingReference {
 function publicRow(row: DerivedRow): DerivedRow {
   return {
     geography: row.geography,
-    stolen2021: row.stolen2021,
-    stolen2023: row.stolen2023,
-    stolenDelta: row.stolenDelta,
-    recovery2021: row.recovery2021,
-    recovery2023: row.recovery2023,
-    recoveryDelta: row.recoveryDelta,
-    unit: row.unit,
+    columns: row.columns.map((column) => ({
+      key: column.key,
+      label: safeText(column.label),
+      value: safeText(column.value),
+    })),
+    ...(row.stolen2021 === undefined ? {} : { stolen2021: row.stolen2021 }),
+    ...(row.stolen2023 === undefined ? {} : { stolen2023: row.stolen2023 }),
+    ...(row.stolenDelta === undefined ? {} : { stolenDelta: row.stolenDelta }),
+    ...(row.recovery2021 === undefined
+      ? {}
+      : { recovery2021: row.recovery2021 }),
+    ...(row.recovery2023 === undefined
+      ? {}
+      : { recovery2023: row.recovery2023 }),
+    ...(row.recoveryDelta === undefined
+      ? {}
+      : { recoveryDelta: row.recoveryDelta }),
+    ...(row.unit === undefined ? {} : { unit: row.unit }),
     lineage: row.lineage.map(publicGrounding),
     ...(row.calculationMetadata === undefined
       ? {}
       : { calculationMetadata: clone(row.calculationMetadata) }),
+  };
+}
+
+function publicResultTable(table: TabularResult): TabularResult {
+  return {
+    columns: table.columns.map((column) => ({
+      key: column.key,
+      label: safeText(column.label),
+      format: column.format,
+    })),
+    rows: table.rows.map((row) => ({
+      key: row.key,
+      values: Object.fromEntries(
+        Object.entries(row.values).map(([key, value]) => [
+          key,
+          typeof value === "string" ? safeText(value) : value,
+        ]),
+      ),
+    })),
   };
 }
 
@@ -193,6 +225,9 @@ function publicResult(result: RenderableResolution): EvidenceBrief["result"] {
     evidenceStatus: safeText(result.evidenceStatus),
     evidence: result.evidence.map(publicEvidence),
     rows: result.rows.map(publicRow),
+    ...(result.resultTable === undefined
+      ? {}
+      : { resultTable: publicResultTable(result.resultTable) }),
     gaps: result.gaps.map(safeText),
     searchScope: safeText(result.searchScope),
     recommendedAction: safeText(result.recommendedAction),

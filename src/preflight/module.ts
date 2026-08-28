@@ -7,7 +7,9 @@ import type {
   EvidenceItem,
   InformationNeed,
   NeedInterpretation,
+  ResultColumn,
   RenderableResolution,
+  TabularResult,
   Language,
 } from "../domain/types";
 import {
@@ -23,8 +25,17 @@ import {
 import type { InterpretationAdapter } from "../model/adapter";
 import { redactSensitiveIdentifiers } from "../model/redaction";
 import { DeterministicInterpretationAdapter } from "../model/fake-adapter";
+import { DeterministicPlanAdapter } from "../model/fake-plan-adapter";
+import { measureBinding, type PlanAdapter } from "../model/plan-adapter";
+import { OpenAICalcPlanAdapter } from "../model/openai-plan-adapter.server";
 import { normalizeTraceId } from "../observability";
-import { executeNcrbPlan } from "../calc/ncrb-plan";
+import {
+  executePlan,
+  type CalcPlan,
+  type RegisteredMeasure,
+  type RegisteredTable,
+} from "../calc/registered-table";
+import { matchRegisteredTable, validatePlanForNeed } from "./calc-planning";
 import { classifyOutcome } from "./classifier";
 import { informationNeedEditErrors } from "./need-validation";
 import {
@@ -134,6 +145,38 @@ function signed(value: string): string {
   return `${value.startsWith("-") ? "−" : "+"}${value.replace(/^-/, "")}`;
 }
 
+function displayColumn(
+  key: string,
+  value: string,
+  table: RegisteredTable,
+  plan: CalcPlan,
+): { key: string; label: string; value: string } {
+  const column = table.columns.find((candidate) => candidate.key === key);
+  const derive = plan.steps.find(
+    (step): step is Extract<CalcPlan["steps"][number], { kind: "derive" }> =>
+      step.kind === "derive" && step.column === key,
+  );
+  if (derive) {
+    const source = table.columns.find(
+      (candidate) => candidate.key === derive.left.column,
+    );
+    return {
+      key,
+      label: "Change",
+      value: `${signed(value)}${source?.unit === "%" ? " pp" : ""}`,
+    };
+  }
+  if (column?.unit === "INR crore")
+    return { key, label: column.displayLabel ?? key, value: `₹${value} crore` };
+  if (column?.unit === "%")
+    return { key, label: column.displayLabel ?? key, value: `${value}%` };
+  return {
+    key,
+    label: column?.displayLabel ?? key.replaceAll("_", " "),
+    value,
+  };
+}
+
 function uniqueLineage(row: {
   lineage: Record<string, import("../domain/types").GroundingReference[]>;
 }): import("../domain/types").GroundingReference[] {
@@ -148,35 +191,172 @@ function uniqueLineage(row: {
     });
 }
 
-function derivedNcrbResolution(
+function titleCase(value: string): string {
+  return value.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function measureValue(
+  value: string | null,
+  unit: RegisteredMeasure["unit"],
+): string | null {
+  if (value === null) return null;
+  if (unit === "INR crore") return `₹${value} crore`;
+  if (unit === "%") return `${value}%`;
+  return value;
+}
+
+function comparisonValue(
+  fromValue: string | null,
+  toValue: string | null,
+  unit: RegisteredMeasure["unit"],
+): string | null {
+  const from = measureValue(fromValue, unit);
+  const to = measureValue(toValue, unit);
+  return from === null || to === null ? null : `${from} → ${to}`;
+}
+
+function deltaValue(
+  value: string | null,
+  unit: RegisteredMeasure["unit"],
+): string | null {
+  if (value === null) return null;
+  return `${signed(value)}${unit === "%" ? " pp" : ""}`;
+}
+
+function resultTableForExecution(
+  plan: CalcPlan,
+  table: RegisteredTable,
+  rows: ReturnType<typeof executePlan>["rows"],
+  need: InformationNeed,
+): TabularResult {
+  const geographyKey = plan.output[0];
+  const geographyColumn = table.columns.find(
+    (column) => column.key === geographyKey,
+  );
+  if (!geographyColumn) throw new Error("PLAN_GEOGRAPHY_COLUMN_MISSING");
+
+  const views = need.analysisIntent!.predicates.map((predicate) => {
+    const measure = measureBinding(table, predicate.measure);
+    const fromColumn = measure?.periodColumns[predicate.fromPeriod];
+    const toColumn = measure?.periodColumns[predicate.toPeriod];
+    const deltaStep = plan.steps.find(
+      (step): step is Extract<CalcPlan["steps"][number], { kind: "derive" }> =>
+        step.kind === "derive" &&
+        step.operation === "delta" &&
+        step.left.column === toColumn &&
+        step.right?.column === fromColumn,
+    );
+    if (!measure || !fromColumn || !toColumn || !deltaStep)
+      throw new Error("PLAN_PRESENTATION_SCHEMA_MISSING");
+    const label = measure.displayLabel ?? titleCase(measure.name);
+    return {
+      measure,
+      fromColumn,
+      toColumn,
+      deltaColumn: deltaStep.column,
+      comparisonColumn: `${deltaStep.column}_comparison`,
+      columns: [
+        {
+          key: `${deltaStep.column}_comparison`,
+          label: `${label} ${predicate.fromPeriod} → ${predicate.toPeriod}`,
+          format: "comparison" as const,
+        },
+        { key: deltaStep.column, label: "Change", format: "delta" as const },
+      ] satisfies ResultColumn[],
+    };
+  });
+
+  return {
+    columns: [
+      {
+        key: geographyKey,
+        label: geographyColumn.displayLabel ?? titleCase(geographyKey),
+        format: "text",
+      },
+      ...views.flatMap((view) => view.columns),
+    ],
+    rows: rows.map((row) => ({
+      key: row.rowKey,
+      values: {
+        [geographyKey]: row.values[geographyKey],
+        ...Object.fromEntries(
+          views.flatMap((view) => [
+            [
+              view.comparisonColumn,
+              comparisonValue(
+                row.values[view.fromColumn],
+                row.values[view.toColumn],
+                view.measure.unit,
+              ),
+            ],
+            [
+              view.deltaColumn,
+              deltaValue(row.values[view.deltaColumn], view.measure.unit),
+            ],
+          ]),
+        ),
+      },
+    })),
+  };
+}
+
+function derivedTableResolution(
   need: InformationNeed,
   source: Snapshot,
   traceId: string,
+  plan: CalcPlan,
+  table: RegisteredTable,
 ): RenderableResolution {
-  const execution = executeNcrbPlan(source);
+  const execution = executePlan(plan, table);
   const metadata = execution.metadata;
+  const resultTable = resultTableForExecution(
+    plan,
+    table,
+    execution.rows,
+    need,
+  );
   const rows = execution.rows.map((row) => ({
-    geography: row.values.state!,
-    stolen2021: row.values.stolen_2021!,
-    stolen2023: row.values.stolen_2023!,
-    stolenDelta: signed(row.values.stolen_delta!),
-    recovery2021: row.values.recovery_2021!,
-    recovery2023: row.values.recovery_2023!,
-    recoveryDelta: `${signed(row.values.recovery_delta!)} pp`,
-    unit: "INR crore" as const,
+    geography: row.values[plan.output[0]]!,
+    columns: plan.output
+      .filter((column) => column !== plan.output[0])
+      .map((column) => displayColumn(column, row.values[column]!, table, plan)),
+    ...(row.values.stolen_2021 ? { stolen2021: row.values.stolen_2021 } : {}),
+    ...(row.values.stolen_2023 ? { stolen2023: row.values.stolen_2023 } : {}),
+    ...(row.values.stolen_delta
+      ? { stolenDelta: signed(row.values.stolen_delta) }
+      : {}),
+    ...(row.values.recovery_2021
+      ? { recovery2021: row.values.recovery_2021 }
+      : {}),
+    ...(row.values.recovery_2023
+      ? { recovery2023: row.values.recovery_2023 }
+      : {}),
+    ...(row.values.recovery_delta
+      ? { recoveryDelta: `${signed(row.values.recovery_delta)} pp` }
+      : {}),
+    ...(row.values.stolen_2021 ? { unit: "INR crore" as const } : {}),
     lineage: uniqueLineage(row),
     calculationMetadata: metadata,
   }));
+  const intent = need.analysisIntent!;
+  const filters = intent.predicates.map((predicate) => {
+    const label =
+      measureBinding(table, predicate.measure)?.comparisonLabel ??
+      predicate.measure;
+    return `${predicate.toPeriod} ${label} ${predicate.comparison === "increase" ? ">" : "<"} ${predicate.fromPeriod} ${label}`;
+  });
+  const operation = `Compare ${intent.predicates
+    .map((predicate) => predicate.measure)
+    .join(` ${intent.logic.toUpperCase()} `)} for each individual State/UT.`;
   const evidenceGroundings = rows.flatMap((row) => row.lineage);
   const base: RenderableResolution = {
     outcome: classifyOutcome({
       need: { resolutionPreference: "published" },
-      execution: "CONFORMING",
-      derivedFinding: true,
+      execution: rows.length > 0 ? "CONFORMING" : "IN_SCOPE_EMPTY",
+      derivedFinding: rows.length > 0,
     }),
     headline: "We found an answer using official government data",
-    meaning:
-      "The answer below was calculated from published NCRB figures for 2021 and 2023.",
+    meaning: `The answer below was calculated from published NCRB figures for ${intent.predicates[0].fromPeriod} and ${intent.predicates[0].toPeriod}.`,
     evidenceStatus: "Calculated from official data",
     evidence: [
       {
@@ -195,17 +375,16 @@ function derivedNcrbResolution(
       },
     ],
     rows,
+    resultTable,
     gaps: execution.gaps,
     searchScope:
-      "This prototype checks a limited set of saved government sources. It is not searching government systems live. For this check, we looked at NCRB Table 20A.1 for 2021–2023 and left out three total rows.",
+      "This prototype checks a limited set of saved government sources. It is not searching government systems live. For this check, we looked at the registered NCRB Table 20A.1 and left out three total rows.",
     recommendedAction:
       "Review how this was calculated, or prepare an RTI if you still want a written reply.",
     calculation: {
-      operation:
-        "Compare 2021 and 2023 stolen values and recovery percentages for each individual State/UT.",
+      operation: operation,
       filters: [
-        "2023 stolen value > 2021 stolen value",
-        "2023 recovery percentage < 2021 recovery percentage",
+        ...filters,
         "exclude declared aggregate rows before comparison",
       ],
       caveat:
@@ -228,6 +407,51 @@ function derivedNcrbResolution(
         "You chose a written response from a government authority.",
       )
     : base;
+}
+
+function planningFailureResolution(
+  need: InformationNeed,
+  traceId: string,
+  stage: "provider" | "parse" | "validation" | "execution",
+  code: string,
+): RenderableResolution {
+  const base: RenderableResolution = {
+    outcome: "NO_RELIABLE_FINDING",
+    headline:
+      "The registered source was found, but calculation planning was unavailable.",
+    meaning:
+      "No calculation was executed because the proposed plan was unavailable or did not match the confirmed Information Need.",
+    evidenceStatus:
+      "Calculation planning unavailable—not a source coverage failure",
+    evidence: [],
+    rows: [],
+    gaps: [`The registered NCRB table was not queried: ${code}.`],
+    planningFailure: { stage, code },
+    searchScope:
+      "The Capability Manifest matched the registered NCRB table, but the calculation plan did not reach deterministic execution.",
+    recommendedAction:
+      "Try the calculation again or prepare a focused Filing Draft.",
+    traceId,
+  };
+  return need.resolutionPreference === "formal"
+    ? formalResponse(
+        base,
+        "You chose a written response from a government authority.",
+      )
+    : base;
+}
+
+function planningFailureStage(
+  code: string,
+): "provider" | "parse" | "validation" {
+  if (code.includes("PARSE") || code.includes("REFUSED")) return "parse";
+  if (
+    code === "PLAN_INPUT_MISSING_ANALYSIS_INTENT" ||
+    code === "PLAN_MEASURE_PERIOD_UNSUPPORTED" ||
+    code === "PLAN_GEOGRAPHY_COLUMN_MISSING"
+  )
+    return "validation";
+  return "provider";
 }
 
 function noFindingResolution(
@@ -393,21 +617,55 @@ function epfoResolution(
   };
 }
 
-function resolveNeed(
+async function resolveNeed(
   need: InformationNeed,
   source: Snapshot,
   traceId: string,
-): RenderableResolution {
-  if (
-    need.scenario === "ncrb-property" &&
-    need.informationHolder === "National Crime Records Bureau" &&
-    /property stolen/i.test(need.measure) &&
-    /recovery|percentage/i.test(need.measure) &&
-    need.geography.toLocaleLowerCase().includes("states") &&
-    need.period.includes("2021") &&
-    need.period.includes("2023")
-  )
-    return derivedNcrbResolution(need, source, traceId);
+  planAdapter: PlanAdapter,
+): Promise<RenderableResolution> {
+  const candidate = matchRegisteredTable(need, source);
+  if (candidate) {
+    let plan: CalcPlan;
+    try {
+      plan = await planAdapter.plan(candidate);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "PLAN_PROVIDER_FAILED";
+      const code = message.split(":")[0];
+      return planningFailureResolution(
+        need,
+        traceId,
+        planningFailureStage(code),
+        code,
+      );
+    }
+    try {
+      validatePlanForNeed(plan, candidate);
+    } catch (error) {
+      return planningFailureResolution(
+        need,
+        traceId,
+        "validation",
+        error instanceof Error ? error.message : "PLAN_VALIDATION_FAILED",
+      );
+    }
+    try {
+      return derivedTableResolution(
+        need,
+        source,
+        traceId,
+        plan,
+        candidate.table,
+      );
+    } catch (error) {
+      return planningFailureResolution(
+        need,
+        traceId,
+        "execution",
+        error instanceof Error ? error.message : "PLAN_EXECUTION_FAILED",
+      );
+    }
+  }
   if (need.scenario === "railway-filing")
     return noFindingResolution(need, source, traceId);
   if (need.scenario === "epfo-status") return epfoResolution(need, traceId);
@@ -447,6 +705,9 @@ function resolveNeed(
 export class RTIPreflightModule implements PreflightModule {
   constructor(
     private readonly adapter: InterpretationAdapter = new DeterministicInterpretationAdapter(),
+    private readonly planAdapter: PlanAdapter = process.env.OPENAI_API_KEY
+      ? new OpenAICalcPlanAdapter()
+      : new DeterministicPlanAdapter(),
   ) {}
   interpret(input: {
     text: string;
@@ -464,11 +725,12 @@ export class RTIPreflightModule implements PreflightModule {
     if (!validNeed(input.need)) throw new Error("INVALID_NEED");
     validateSnapshot(input.snapshot);
     const result = {
-      ...resolveNeed(
+      ...(await resolveNeed(
         input.need,
         input.snapshot,
         normalizeTraceId(input.traceId),
-      ),
+        this.planAdapter,
+      )),
       narration: "deterministic" as const,
     };
     if (!process.env.OPENAI_API_KEY) return result;

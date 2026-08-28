@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CPCB_CONFLICT_DECISION,
   SCENARIO_PROMPTS,
+  canonicalNeedFromAnalysisIntent,
   hasExplicitDraftingIntent,
   interpretWithFixture,
   scenarioForText,
@@ -47,6 +48,24 @@ describe("seeded scenario boundaries", () => {
       expect(source.authority).toBe("Central Pollution Control Board");
       expect(source.applicability).toMatch(/not comparable|no compatible/i);
     }
+  });
+
+  it("only applies the canonical hero sentence to the exact seeded prompt", () => {
+    const exact = interpretWithFixture(SCENARIO_PROMPTS[0].prompt)[0];
+    expect(exact.canonicalNeed).toBe(
+      "Identify individual States/UTs where reported property stolen increased and recovery percentage declined between 2021 and 2023.",
+    );
+
+    const near = interpretWithFixture(
+      "Identify States/UTs where property stolen declined and recovery percentage increased between 2021 and 2023.",
+    )[0];
+    expect(near.canonicalNeed).toContain("value of property stolen declined");
+    expect(near.canonicalNeed).toContain(
+      "percentage recovery of stolen property increased between 2021 and 2023",
+    );
+    expect(near.canonicalNeed).not.toContain(
+      "property stolen increased and recovery percentage declined",
+    );
   });
 
   it("detects explicit drafting intent in English, Hindi, and mixed script", () => {
@@ -123,5 +142,101 @@ describe("seeded scenario boundaries", () => {
         draftingIntent: false,
       }),
     ).toBe(false);
+  });
+
+  it.each([
+    ["stolen increased AND recovery declined", "increase", "decrease", "and"],
+    ["stolen declined AND recovery increased", "decrease", "increase", "and"],
+    ["stolen declined OR recovery increased", "decrease", "increase", "or"],
+  ])(
+    "preserves semantic directions for %s",
+    (phrase, stolen, recovery, logic) => {
+      const need = interpretWithFixture(
+        `Identify States/UTs where property stolen ${stolen === "increase" ? "increased" : "declined"} ${logic === "or" ? "or" : "and"} recovery percentage ${recovery === "increase" ? "increased" : "declined"} between 2021 and 2023.`,
+      )[0];
+      expect(need.analysisIntent).toMatchObject({ logic });
+      expect(need.analysisIntent?.predicates).toEqual([
+        expect.objectContaining({
+          measure: "value of property stolen",
+          comparison: stolen,
+        }),
+        expect.objectContaining({
+          measure: "percentage recovery of stolen property",
+          comparison: recovery,
+        }),
+      ]);
+      expect(need.canonicalNeed).toContain(
+        `value of property stolen ${stolen === "increase" ? "increased" : "declined"}`,
+      );
+      expect(need.canonicalNeed).toContain(
+        `percentage recovery of stolen property ${recovery === "increase" ? "increased" : "declined"}`,
+      );
+    },
+  );
+
+  it("preserves descending ranking measure, limit, and periods in canonical text", () => {
+    const canonical = canonicalNeedFromAnalysisIntent({
+      predicates: [
+        {
+          measure: "value of property stolen",
+          comparison: "increase",
+          fromPeriod: "2021",
+          toPeriod: "2023",
+        },
+      ],
+      logic: "and",
+      ranking: {
+        measure: "value of property stolen",
+        direction: "desc",
+        limit: 5,
+      },
+    });
+
+    expect(canonical).toContain("5");
+    expect(canonical).toContain("value of property stolen");
+    expect(canonical).toContain("2021");
+    expect(canonical).toContain("2023");
+    expect(canonical).toMatch(/descending/i);
+  });
+
+  it("preserves ascending ranking limits without inventing top semantics", () => {
+    const canonical = canonicalNeedFromAnalysisIntent({
+      predicates: [
+        {
+          measure: "percentage recovery of stolen property",
+          comparison: "decrease",
+          fromPeriod: "2021",
+          toPeriod: "2023",
+        },
+      ],
+      logic: "and",
+      ranking: {
+        measure: "percentage recovery of stolen property",
+        direction: "asc",
+        limit: 3,
+      },
+    });
+
+    expect(canonical).toContain("3");
+    expect(canonical).toContain("percentage recovery of stolen property");
+    expect(canonical).toMatch(/ascending/i);
+    expect(canonical).not.toMatch(/top|largest/i);
+  });
+
+  it("does not invent ranking semantics when ranking is absent", () => {
+    const canonical = canonicalNeedFromAnalysisIntent({
+      predicates: [
+        {
+          measure: "value of property stolen",
+          comparison: "increase",
+          fromPeriod: "2021",
+          toPeriod: "2023",
+        },
+      ],
+      logic: "and",
+    });
+
+    expect(canonical).not.toMatch(/rank|top|bottom|ascending|descending/i);
+    expect(canonical).not.toContain("5");
   });
 });
