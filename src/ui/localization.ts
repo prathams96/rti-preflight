@@ -326,6 +326,15 @@ export function localizeText(text: string, language: Language): string {
   return translateText(text, language);
 }
 
+function localizeResultColumnLabel(label: string, language: Language): string {
+  if (language === "en") return label;
+  if (label === "State/UT") return "राज्य/केंद्र शासित प्रदेश";
+  if (label === "Change") return "बदलाव";
+  const comparison = label.match(/^(Stolen|Recovery) (\d{4} → \d{4})$/);
+  if (!comparison) return label;
+  return `${comparison[1] === "Stolen" ? "चोरी" : "बरामदगी"} ${comparison[2]}`;
+}
+
 const REVERSE_NEED_TEXT = Object.fromEntries(
   Object.entries(NEED_TEXT).map(([english, hindi]) => [hindi, english]),
 );
@@ -542,6 +551,15 @@ export function localizeResolution(
           caveat: translateText(result.calculation.caveat, language),
         }
       : result.calculation,
+    resultTable: result.resultTable
+      ? {
+          ...result.resultTable,
+          columns: result.resultTable.columns.map((column) => ({
+            ...column,
+            label: localizeResultColumnLabel(column.label, language),
+          })),
+        }
+      : result.resultTable,
     serviceRoute: result.serviceRoute
       ? {
           ...result.serviceRoute,

@@ -7,7 +7,9 @@ import type {
   EvidenceItem,
   InformationNeed,
   NeedInterpretation,
+  ResultColumn,
   RenderableResolution,
+  TabularResult,
   Language,
 } from "../domain/types";
 import {
@@ -24,12 +26,13 @@ import type { InterpretationAdapter } from "../model/adapter";
 import { redactSensitiveIdentifiers } from "../model/redaction";
 import { DeterministicInterpretationAdapter } from "../model/fake-adapter";
 import { DeterministicPlanAdapter } from "../model/fake-plan-adapter";
-import type { PlanAdapter } from "../model/plan-adapter";
+import { measureBinding, type PlanAdapter } from "../model/plan-adapter";
 import { OpenAICalcPlanAdapter } from "../model/openai-plan-adapter.server";
 import { normalizeTraceId } from "../observability";
 import {
   executePlan,
   type CalcPlan,
+  type RegisteredMeasure,
   type RegisteredTable,
 } from "../calc/registered-table";
 import { matchRegisteredTable, validatePlanForNeed } from "./calc-planning";
@@ -172,6 +175,115 @@ function uniqueLineage(row: {
     });
 }
 
+function titleCase(value: string): string {
+  return value.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function measureValue(
+  value: string | null,
+  unit: RegisteredMeasure["unit"],
+): string | null {
+  if (value === null) return null;
+  if (unit === "INR crore") return `₹${value} crore`;
+  if (unit === "%") return `${value}%`;
+  return value;
+}
+
+function comparisonValue(
+  fromValue: string | null,
+  toValue: string | null,
+  unit: RegisteredMeasure["unit"],
+): string | null {
+  const from = measureValue(fromValue, unit);
+  const to = measureValue(toValue, unit);
+  return from === null || to === null ? null : `${from} → ${to}`;
+}
+
+function deltaValue(
+  value: string | null,
+  unit: RegisteredMeasure["unit"],
+): string | null {
+  if (value === null) return null;
+  return `${signed(value)}${unit === "%" ? " pp" : ""}`;
+}
+
+function resultTableForExecution(
+  plan: CalcPlan,
+  table: RegisteredTable,
+  rows: ReturnType<typeof executePlan>["rows"],
+  need: InformationNeed,
+): TabularResult {
+  const geographyKey = plan.output[0];
+  const geographyColumn = table.columns.find(
+    (column) => column.key === geographyKey,
+  );
+  if (!geographyColumn) throw new Error("PLAN_GEOGRAPHY_COLUMN_MISSING");
+
+  const views = need.analysisIntent!.predicates.map((predicate) => {
+    const measure = measureBinding(table, predicate.measure);
+    const fromColumn = measure?.periodColumns[predicate.fromPeriod];
+    const toColumn = measure?.periodColumns[predicate.toPeriod];
+    const deltaStep = plan.steps.find(
+      (step): step is Extract<CalcPlan["steps"][number], { kind: "derive" }> =>
+        step.kind === "derive" &&
+        step.operation === "delta" &&
+        step.left.column === toColumn &&
+        step.right?.column === fromColumn,
+    );
+    if (!measure || !fromColumn || !toColumn || !deltaStep)
+      throw new Error("PLAN_PRESENTATION_SCHEMA_MISSING");
+    const label = measure.displayLabel ?? titleCase(measure.name);
+    return {
+      measure,
+      fromColumn,
+      toColumn,
+      deltaColumn: deltaStep.column,
+      comparisonColumn: `${deltaStep.column}_comparison`,
+      columns: [
+        {
+          key: `${deltaStep.column}_comparison`,
+          label: `${label} ${predicate.fromPeriod} → ${predicate.toPeriod}`,
+          format: "comparison" as const,
+        },
+        { key: deltaStep.column, label: "Change", format: "delta" as const },
+      ] satisfies ResultColumn[],
+    };
+  });
+
+  return {
+    columns: [
+      {
+        key: geographyKey,
+        label: geographyColumn.displayLabel ?? titleCase(geographyKey),
+        format: "text",
+      },
+      ...views.flatMap((view) => view.columns),
+    ],
+    rows: rows.map((row) => ({
+      key: row.rowKey,
+      values: {
+        [geographyKey]: row.values[geographyKey],
+        ...Object.fromEntries(
+          views.flatMap((view) => [
+            [
+              view.comparisonColumn,
+              comparisonValue(
+                row.values[view.fromColumn],
+                row.values[view.toColumn],
+                view.measure.unit,
+              ),
+            ],
+            [
+              view.deltaColumn,
+              deltaValue(row.values[view.deltaColumn], view.measure.unit),
+            ],
+          ]),
+        ),
+      },
+    })),
+  };
+}
+
 function derivedTableResolution(
   need: InformationNeed,
   source: Snapshot,
@@ -181,8 +293,14 @@ function derivedTableResolution(
 ): RenderableResolution {
   const execution = executePlan(plan, table);
   const metadata = execution.metadata;
+  const resultTable = resultTableForExecution(
+    plan,
+    table,
+    execution.rows,
+    need,
+  );
   const rows = execution.rows.map((row) => ({
-    geography: row.values.state!,
+    geography: row.values[plan.output[0]]!,
     columns: plan.output
       .filter((column) => column !== "state")
       .map((column) => displayColumn(column, row.values[column]!)),
@@ -242,6 +360,7 @@ function derivedTableResolution(
       },
     ],
     rows,
+    resultTable,
     gaps: execution.gaps,
     searchScope:
       "This prototype checks a limited set of saved government sources. It is not searching government systems live. For this check, we looked at the registered NCRB Table 20A.1 and left out three total rows.",

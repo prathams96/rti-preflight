@@ -133,6 +133,26 @@ export type DerivedColumn = {
   value: string;
 };
 
+export type ResultColumnFormat =
+  "text" | "number" | "currency" | "percentage" | "comparison" | "delta";
+
+export type ResultColumn = {
+  key: string;
+  label: string;
+  format: ResultColumnFormat;
+};
+
+export type ResultTableRow = {
+  key: string;
+  values: Record<string, string | number | null>;
+};
+
+/** Presentation-safe output produced after validated CalcPlan execution. */
+export type TabularResult = {
+  columns: ResultColumn[];
+  rows: ResultTableRow[];
+};
+
 export type CalculationMetadata = {
   representationHash: string;
   planHash: string;
@@ -164,6 +184,7 @@ export type RenderableResolution = {
   evidenceStatus: string;
   evidence: EvidenceItem[];
   rows: DerivedRow[];
+  resultTable?: TabularResult;
   gaps: string[];
   planningFailure?: {
     stage: "provider" | "parse" | "validation" | "execution";

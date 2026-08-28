@@ -7,6 +7,7 @@ import type {
   InformationNeed,
   Language,
   RenderableResolution,
+  TabularResult,
 } from "../domain/types";
 import { redactSensitiveIdentifiers } from "../model/redaction";
 
@@ -46,6 +47,7 @@ export type EvidenceBrief = {
     evidenceStatus: string;
     evidence: EvidenceItem[];
     rows: DerivedRow[];
+    resultTable?: TabularResult;
     gaps: string[];
     searchScope: string;
     recommendedAction: string;
@@ -155,6 +157,25 @@ function publicRow(row: DerivedRow): DerivedRow {
   };
 }
 
+function publicResultTable(table: TabularResult): TabularResult {
+  return {
+    columns: table.columns.map((column) => ({
+      key: column.key,
+      label: safeText(column.label),
+      format: column.format,
+    })),
+    rows: table.rows.map((row) => ({
+      key: row.key,
+      values: Object.fromEntries(
+        Object.entries(row.values).map(([key, value]) => [
+          key,
+          typeof value === "string" ? safeText(value) : value,
+        ]),
+      ),
+    })),
+  };
+}
+
 function publicReceipt(
   receipt: ExecutionReceipt | undefined,
 ): ExecutionReceipt | undefined {
@@ -204,6 +225,9 @@ function publicResult(result: RenderableResolution): EvidenceBrief["result"] {
     evidenceStatus: safeText(result.evidenceStatus),
     evidence: result.evidence.map(publicEvidence),
     rows: result.rows.map(publicRow),
+    ...(result.resultTable === undefined
+      ? {}
+      : { resultTable: publicResultTable(result.resultTable) }),
     gaps: result.gaps.map(safeText),
     searchScope: safeText(result.searchScope),
     recommendedAction: safeText(result.recommendedAction),

@@ -124,6 +124,34 @@ function comparisonFor(text: string): "increase" | "decrease" | undefined {
   return undefined;
 }
 
+function recoveryComparisonFor(
+  text: string,
+): "increase" | "decrease" | undefined {
+  const normalized = text.toLocaleLowerCase();
+  const recoveryIndex = Math.max(
+    normalized.indexOf("recover"),
+    Math.max(text.indexOf("बरामदगी"), text.indexOf("बरामद")),
+  );
+  if (recoveryIndex < 0) return comparisonFor(text);
+  const separators = [
+    "but",
+    "or",
+    "and",
+    "however",
+    "instead",
+    "पर",
+    "लेकिन",
+    "या",
+    "और",
+  ];
+  const clauseStart = Math.max(
+    ...separators.map((separator) =>
+      normalized.lastIndexOf(separator, recoveryIndex - 1),
+    ),
+  );
+  return comparisonFor(text.slice(clauseStart >= 0 ? clauseStart : 0));
+}
+
 export function ncrbAnalysisIntent(text: string): AnalysisIntent | undefined {
   const [fromPeriod, toPeriod] = ncrbYears(text);
   if (!fromPeriod || !toPeriod) return undefined;
@@ -148,20 +176,7 @@ export function ncrbAnalysisIntent(text: string): AnalysisIntent | undefined {
     /recovery|recovered|बरामदगी|बरामद/u.test(text)
       ? {
           measure: NCRB_MEASURES.recovery,
-          comparison: comparisonFor(
-            /property stolen|stolen property/i.test(text) ||
-              /चोरी.*संपत्ति|संपत्ति.*चोरी/u.test(text)
-              ? text.slice(
-                  Math.max(
-                    0,
-                    Math.max(
-                      text.toLocaleLowerCase().indexOf("recover"),
-                      Math.max(text.indexOf("बरामदगी"), text.indexOf("बरामद")),
-                    ),
-                  ),
-                )
-              : text,
-          ),
+          comparison: recoveryComparisonFor(text),
           fromPeriod,
           toPeriod,
         }
@@ -285,6 +300,8 @@ export function scenarioForText(text: string): ScenarioId {
   if (
     (normalized.includes("property") &&
       (normalized.includes("stolen") || normalized.includes("recover"))) ||
+    normalized.includes("recovery") ||
+    normalized.includes("recovered") ||
     (text.includes("संपत्ति") &&
       (text.includes("चोरी") || text.includes("बरामद")))
   )

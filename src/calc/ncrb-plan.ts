@@ -96,6 +96,7 @@ export const NCRB_PLAN: CalcPlan = {
 export const NCRB_MEASURES: readonly RegisteredMeasure[] = [
   {
     name: "value of property stolen",
+    displayLabel: "Stolen",
     periodColumns: {
       "2021": "stolen_2021",
       "2022": "stolen_2022",
@@ -105,6 +106,7 @@ export const NCRB_MEASURES: readonly RegisteredMeasure[] = [
   },
   {
     name: "percentage recovery of stolen property",
+    displayLabel: "Recovery",
     periodColumns: {
       "2021": "recovery_2021",
       "2022": "recovery_2022",
@@ -117,6 +119,7 @@ export const NCRB_MEASURES: readonly RegisteredMeasure[] = [
 function registeredColumns(): RegisteredTable["columns"] {
   const dimension = (key: string) => ({
     key,
+    displayLabel: "State/UT",
     kind: "dimension" as const,
     dtype: "text" as const,
     unit: "text" as const,

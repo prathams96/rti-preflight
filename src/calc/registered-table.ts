@@ -10,6 +10,7 @@ export type AggregateFunction =
 
 export type RegisteredColumn = {
   key: string;
+  displayLabel?: string;
   kind: ColumnKind;
   dtype: "text" | "decimal";
   unit: ColumnUnit;
@@ -37,6 +38,7 @@ export type RegisteredTable = {
 
 export type RegisteredMeasure = {
   name: string;
+  displayLabel?: string;
   periodColumns: Readonly<Record<string, string>>;
   unit: ColumnUnit;
 };
