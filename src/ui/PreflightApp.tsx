@@ -38,8 +38,11 @@ import {
 import { normaliseNeedPhrase } from "../filing/phrase";
 import { EPFO_CLAIM_STATUS_ROUTE } from "../service/epfo-route";
 import { serializeEvidenceBrief } from "../evidence/brief";
+import {
+  createEvidenceBriefPdf,
+  evidenceBriefPdfFilename,
+} from "../evidence/brief-pdf";
 import { createTraceRecorder, generateTraceId } from "../observability";
-<<<<<<< HEAD
 import { ASK_SCREEN_COPY } from "./start-screen-copy";
 import {
   RESULT_STAGE_COPY,
@@ -232,11 +235,13 @@ const COPY = {
     recoveryColumn: "Recovery 2021 → 2023",
     inspectEvidence: "Inspect evidence details",
     inspectRow: (geography: string) =>
-      `Inspect ${geography} values and source cells`,
-    viewPlan: "Inspect calculation details",
-    saveBrief: "Save/share Evidence Brief",
-    briefSaved: "Evidence Brief downloaded.",
-    briefShared: "Evidence Brief shared.",
+      `Inspect ${geography} operands and source cells`,
+    viewPlan: "View the registered calculation plan",
+    saveBrief: "Download Evidence Brief (PDF)",
+    downloadTechnicalBrief: "Download technical JSON",
+    briefSaved: "Evidence Brief PDF downloaded.",
+    briefShared: "Evidence Brief PDF shared.",
+    technicalBriefSaved: "Technical Evidence Brief JSON downloaded.",
     briefCancelled: "Sharing was cancelled. The result remains available here.",
     briefFailed:
       "We couldn’t save this Evidence Brief. The result remains available here.",
@@ -414,12 +419,15 @@ const COPY = {
     stolenColumn: "चोरी 2021 → 2023",
     changeColumn: "बदलाव",
     recoveryColumn: "बरामदगी 2021 → 2023",
-    inspectEvidence: "प्रमाण का विवरण देखें",
-    inspectRow: (geography: string) => `${geography} के मान और स्रोत सेल देखें`,
-    viewPlan: "गणना का विवरण देखें",
-    saveBrief: "Evidence Brief सहेजें/साझा करें",
-    briefSaved: "Evidence Brief डाउनलोड हो गया।",
-    briefShared: "Evidence Brief साझा हो गया।",
+    inspectEvidence: "पंक्ति के प्रमाण देखें",
+    inspectRow: (geography: string) =>
+      `${geography} के operands और स्रोत सेल देखें`,
+    viewPlan: "पंजीकृत गणना योजना देखें",
+    saveBrief: "Evidence Brief (PDF) डाउनलोड करें",
+    downloadTechnicalBrief: "तकनीकी JSON डाउनलोड करें",
+    briefSaved: "Evidence Brief PDF डाउनलोड हो गया।",
+    briefShared: "Evidence Brief PDF साझा हो गया।",
+    technicalBriefSaved: "तकनीकी Evidence Brief JSON डाउनलोड हो गया।",
     briefCancelled: "साझा करना रद्द किया गया। नतीजा यहाँ उपलब्ध है।",
     briefFailed: "Evidence Brief सहेजा नहीं जा सका। नतीजा यहाँ उपलब्ध है।",
     sourceData: "वास्तविक आधिकारिक सार्वजनिक डेटा",
@@ -1434,17 +1442,21 @@ export default function PreflightApp() {
     if (!need || !result) return;
     setBriefFeedback("");
     try {
-      const serialized = serializeEvidenceBrief({
+      const input = {
         need,
         result,
         searchDate:
           result.executionReceipt?.executedAt.slice(0, 10) ??
           new Date().toISOString().slice(0, 10),
-      });
-      const blob = new Blob([serialized], { type: "application/json" });
-      const file = new File([blob], "rti-tathya-evidence-brief.json", {
-        type: "application/json",
-      });
+      };
+      const blob = createEvidenceBriefPdf(input);
+      const file = new File(
+        [blob],
+        evidenceBriefPdfFilename(input.searchDate),
+        {
+          type: "application/pdf",
+        },
+      );
       if (
         typeof navigator.share === "function" &&
         (!navigator.canShare || navigator.canShare({ files: [file] }))
@@ -1467,13 +1479,40 @@ export default function PreflightApp() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "rti-tathya-evidence-brief.json";
+      link.download = evidenceBriefPdfFilename(input.searchDate);
       link.style.display = "none";
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
       setBriefFeedback(copy.briefSaved);
+    } catch {
+      setBriefFeedback(copy.briefFailed);
+    }
+  }
+
+  function downloadTechnicalEvidenceBrief() {
+    if (!need || !result) return;
+    setBriefFeedback("");
+    try {
+      const serialized = serializeEvidenceBrief({
+        need,
+        result,
+        searchDate:
+          result.executionReceipt?.executedAt.slice(0, 10) ??
+          new Date().toISOString().slice(0, 10),
+      });
+      const blob = new Blob([serialized], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "rti-preflight-evidence-brief.json";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setBriefFeedback(copy.technicalBriefSaved);
     } catch {
       setBriefFeedback(copy.briefFailed);
     }
@@ -2259,6 +2298,12 @@ export default function PreflightApp() {
                 onClick={saveOrShareEvidenceBrief}
               >
                 {copy.saveBrief}
+              </button>
+              <button
+                className="secondary-button"
+                onClick={downloadTechnicalEvidenceBrief}
+              >
+                {copy.downloadTechnicalBrief}
               </button>
               {result.outcome === "OFFICIAL_SERVICE_ROUTE" ? (
                 <ExternalLink
