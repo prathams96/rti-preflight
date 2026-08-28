@@ -6,11 +6,17 @@ import { NORTHERN_RAILWAY_HOLDER, NORTHERN_RAILWAY_ROUTE } from "../filing";
 import { createOfflinePreflightModule } from "../preflight/module";
 import { COPY } from "./PreflightApp";
 import {
+  clarificationQuestion,
   localizeFilingDraft,
+  localizeClarification,
+  localizeDisclosureEntry,
   localizeMessage,
   localizeNeed,
   localizeResolution,
+  localizeText,
+  isUnknownClarification,
 } from "./localization";
+import { DISCLOSURE_LEDGER } from "../disclosure/ledger";
 
 describe("Hindi journey localization", () => {
   it("keeps the Hindi UI dictionary free of accidental English workflow labels", () => {
@@ -95,5 +101,63 @@ describe("Hindi journey localization", () => {
         "hi",
       ),
     ).toContain("प्रोटोटाइप स्नैपशॉट");
+  });
+
+  it("localizes details, route metadata, and ledger copy while preserving names and acronyms", async () => {
+    const localizedLedger = DISCLOSURE_LEDGER.map((entry) =>
+      localizeDisclosureEntry(entry, "hi"),
+    );
+
+    expect(localizedLedger[0]).toMatchObject({
+      label: "NCRB स्रोत और आँकड़े",
+      disclosure: expect.stringContaining("वास्तविक आधिकारिक सार्वजनिक डेटा"),
+    });
+    expect(
+      localizedLedger.every((entry) => entry.label !== "Evidence Snapshot"),
+    ).toBe(true);
+    expect(
+      localizedLedger.every(
+        (entry) =>
+          entry.disclosure !==
+          "Working deterministic adapter; OpenAI is server-only when configured.",
+      ),
+    ).toBe(true);
+    expect(
+      localizeText("3,000-character text limit and overflow guidance", "hi"),
+    ).toBe("3,000 अक्षरों की पाठ सीमा और अधिकता संबंधी निर्देश");
+    expect(localizeText("Check the status of an EPF claim", "hi")).toBe(
+      "EPF दावे की स्थिति जाँचें",
+    );
+    expect(
+      localizeText("Northern Railway-Delhi Division authority listing", "hi"),
+    ).toContain("Northern Railway-Delhi Division");
+
+    const need = interpretWithFixture("What is the status of my EPF claim?")[0];
+    const result = await createOfflinePreflightModule().resolve({
+      need,
+      snapshot,
+      traceId: "localization-route-test",
+    });
+    const hindiResult = localizeResolution(result, "hi");
+
+    expect(hindiResult.serviceRoute?.purpose).toBe("EPF दावे की स्थिति जाँचें");
+    expect(hindiResult.evidence[0].sourceTitle).toBe("EPFO सदस्य पासबुक");
+    expect(hindiResult.evidence[0].publisher).toBe(
+      "कर्मचारी भविष्य निधि संगठन",
+    );
+  });
+
+  it("keeps an accepted unknown clarification visible and localized", () => {
+    const unknown =
+      "Unknown: Which municipal corporation or city, and which financial year should be checked?";
+
+    expect(isUnknownClarification(unknown)).toBe(true);
+    expect(clarificationQuestion(unknown)).toContain(
+      "Which municipal corporation",
+    );
+    expect(localizeClarification(unknown, "hi")).toMatch(
+      /^अज्ञात: .*नगरपालिका.*वित्तीय वर्ष/u,
+    );
+    expect(localizeClarification(unknown, "hi")).not.toContain("Unknown:");
   });
 });

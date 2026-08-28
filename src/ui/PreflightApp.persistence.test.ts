@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { InformationNeed } from "../domain/types";
 import {
   persist,
   readPersistedState,
@@ -55,7 +56,17 @@ describe("Preflight persistence boundaries", () => {
       originalText: "Please provide the confirmed railway records.",
       canonicalNeed:
         "maintenance expenditure for lifts and escalators and contractors at New Delhi Railway Station during FY 2024-25",
-    };
+      measure: "Maintenance expenditure and contractor records",
+      geography: "New Delhi Railway Station",
+      period: "Financial year 2024-25",
+      breakdown: "Contractor",
+      informationHolder: "Northern Railway",
+      informationHolderStatus: "verified",
+      resolutionPreference: "formal",
+      unresolvedClarifications: [],
+      scenario: "railway-filing",
+      draftingIntent: true,
+    } satisfies InformationNeed;
     const filingPackage = await filing.prepare({
       need: confirmedNeed,
       holder: NORTHERN_RAILWAY_HOLDER,
@@ -73,6 +84,7 @@ describe("Preflight persistence boundaries", () => {
       version: 2,
       state: {
         phase: "file",
+        need: confirmedNeed,
         draftText: filingPackage.draft.text,
         package: filingPackage,
         step: "otp",
@@ -90,6 +102,81 @@ describe("Preflight persistence boundaries", () => {
 
     expect(readPersistedState()).toBeUndefined();
     expect(readSessionFilingState()).toEqual(filingEnvelope.state);
+    expect(readSessionFilingState()?.need).toEqual(confirmedNeed);
+
+    sessionStorage.setItem(
+      "rti-preflight-filing-v2",
+      JSON.stringify({
+        ...filingEnvelope,
+        state: {
+          ...filingEnvelope.state,
+          phase: "draft",
+          package: undefined,
+          step: "otp",
+        },
+      }),
+    );
+    expect(readSessionFilingState()).toMatchObject({
+      phase: "draft",
+      need: confirmedNeed,
+    });
+
+    sessionStorage.setItem(
+      "rti-preflight-filing-v2",
+      JSON.stringify({
+        ...filingEnvelope,
+        state: {
+          ...filingEnvelope.state,
+          phase: "acknowledgement",
+          step: "confirmation",
+          acknowledgement: {
+            registrationNumber: "RTI-DEMO-123456",
+            disclosure: "Simulated acknowledgement",
+            holder: NORTHERN_RAILWAY_HOLDER.canonicalName,
+            route: NORTHERN_RAILWAY_ROUTE.authority.canonicalName,
+            submittedDraft: filingPackage.draft.text,
+            fee: { amountInr: 10, method: "demo_upi" },
+            submittedAt: "2026-08-28T00:00:00.000Z",
+          },
+        },
+      }),
+    );
+    expect(readSessionFilingState()).toMatchObject({
+      phase: "acknowledgement",
+      need: confirmedNeed,
+    });
+  });
+
+  it("rejects filing sessions that cannot restore the active Information Need", () => {
+    const localStorage = createStorage();
+    const sessionStorage = createStorage();
+    vi.stubGlobal("window", { localStorage, sessionStorage });
+
+    sessionStorage.setItem(
+      "rti-preflight-filing-v2",
+      JSON.stringify({
+        version: 2,
+        state: {
+          phase: "draft",
+          draftText: "Draft",
+          step: "otp",
+          otp: "",
+          profile: {
+            fullName: "Fictional Applicant",
+            email: "citizen@example.com",
+            address: "1 Demo Lane",
+            state: "Delhi",
+            pinCode: "110001",
+          },
+          reviewed: false,
+          paymentConfirmed: false,
+          language: "en",
+        },
+      }),
+    );
+
+    expect(readSessionFilingState()).toBeUndefined();
+    expect(sessionStorage.getItem("rti-preflight-filing-v2")).toBeNull();
   });
 
   it("discards malformed nested research and filing state", () => {

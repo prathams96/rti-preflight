@@ -37,15 +37,11 @@ import {
 } from "../filing";
 import { normaliseNeedPhrase } from "../filing/phrase";
 import { EPFO_CLAIM_STATUS_ROUTE } from "../service/epfo-route";
-import { serializeEvidenceBrief } from "../evidence/brief";
-import {
-  createEvidenceBriefPdf,
-  evidenceBriefPdfFilename,
-} from "../evidence/brief-pdf";
 import { createTraceRecorder, generateTraceId } from "../observability";
 import { ASK_SCREEN_COPY } from "./start-screen-copy";
 import {
   RESULT_STAGE_COPY,
+  draftReturnPhase,
   resultOutcomeAfterCitationReview,
   resultForCitationReview,
   type CitationReviewState,
@@ -53,9 +49,13 @@ import {
 import { informationNeedEditErrors } from "../preflight/need-validation";
 import {
   localizeFilingDraft,
+  localizeClarification,
+  localizeDisclosureEntry,
   localizeMessage,
   localizeNeed,
   localizeResolution,
+  localizeText,
+  isUnknownClarification,
 } from "./localization";
 
 type Phase =
@@ -80,6 +80,7 @@ type SavedState = {
 
 type SessionFilingState = {
   phase: Extract<Phase, "draft" | "file" | "acknowledgement">;
+  need: InformationNeed;
   draftText: string;
   package?: ValidatedFilingPackage;
   step: DemoStep;
@@ -498,6 +499,7 @@ export const validFilingState = (
     (value.language !== "en" &&
       value.language !== "hi" &&
       value.language !== undefined) ||
+    !isNeed(value.need) ||
     !isOneOf(value.step, [
       "otp",
       "identity",
@@ -756,6 +758,8 @@ export const COPY = {
       `Northern Railway route profile v${version}, verified ${date}.`,
     routeMetadataDetails: (purpose: string, date: string) =>
       `${purpose}; verified ${date}. This is route metadata, not a retrieved personal record.`,
+    unknownRetained:
+      "Kept as unknown; this limitation stays visible in the result and Filing Draft.",
     cpcbDecision: (date: string) =>
       `Decision recorded ${date}; no conflict evidence is registered.`,
   },
@@ -984,8 +988,10 @@ export const COPY = {
     independentDetails: "यह स्वतंत्र शोध सहायक है — आधिकारिक RTI उत्तर नहीं।",
     routeProfileVersion: (version: string, date: string) =>
       `Northern Railway मार्ग प्रोफ़ाइल v${version}, ${date} को सत्यापित।`,
-    routeMetadataDetails: (_purpose: string, date: string) =>
-      `EPFO दावा-स्थिति मार्ग; ${date} को सत्यापित। यह मार्ग मेटाडेटा है, प्राप्त व्यक्तिगत रिकॉर्ड नहीं।`,
+    routeMetadataDetails: (purpose: string, date: string) =>
+      `${localizeText(purpose, "hi")}; ${date} को सत्यापित। यह मार्ग मेटाडेटा है, प्राप्त व्यक्तिगत रिकॉर्ड नहीं।`,
+    unknownRetained:
+      "अज्ञात के रूप में रखा गया; यह सीमा नतीजे और फाइलिंग ड्राफ्ट में दिखाई देती रहेगी।",
     cpcbDecision: (date: string) =>
       `निर्णय ${date} को दर्ज किया गया; कोई विरोधाभास प्रमाण पंजीकृत नहीं है।`,
   },
@@ -1390,12 +1396,15 @@ function Details({
         </div>
         <p>{copy.independentDetails}</p>
         <dl className="details-list">
-          {DISCLOSURE_LEDGER.map((entry) => (
-            <div key={entry.id}>
-              <dt>{entry.label}</dt>
-              <dd>{entry.disclosure}</dd>
-            </div>
-          ))}
+          {DISCLOSURE_LEDGER.map((entry) => {
+            const localizedEntry = localizeDisclosureEntry(entry, language);
+            return (
+              <div key={entry.id}>
+                <dt>{localizedEntry.label}</dt>
+                <dd>{localizedEntry.disclosure}</dd>
+              </div>
+            );
+          })}
         </dl>
         <div className="route-provenance">
           <h3>{copy.verifiedRouteProfile}</h3>
@@ -1409,7 +1418,7 @@ function Details({
             {NORTHERN_RAILWAY_ROUTE.profile.constraintSources?.map(
               (constraint) => (
                 <li key={constraint.id}>
-                  {constraint.label}{" "}
+                  {localizeText(constraint.label, language)}{" "}
                   {constraint.sourceUrls.map((url) => (
                     <ExternalLink href={url} key={url} language={language}>
                       {copy.officialSource}
@@ -1664,6 +1673,8 @@ export default function PreflightApp() {
     const timer = window.setTimeout(() => {
       const saved = readSessionFilingState();
       if (!saved) return;
+      setNeeds([saved.need]);
+      setNeed(saved.need);
       setDraftText(saved.draftText);
       setDraftOriginalText(saved.draftText);
       setFilingPackage(saved.package);
@@ -1682,6 +1693,7 @@ export default function PreflightApp() {
   useEffect(() => {
     if (phase !== "draft" && phase !== "file" && phase !== "acknowledgement")
       return;
+    if (!need) return;
     try {
       window.sessionStorage.setItem(
         FILING_KEY,
@@ -1689,6 +1701,7 @@ export default function PreflightApp() {
           version: 2,
           state: {
             phase,
+            need,
             draftText,
             package: filingPackage,
             step: filingStep,
@@ -1715,6 +1728,7 @@ export default function PreflightApp() {
     paymentConfirmed,
     acknowledgement,
     language,
+    need,
   ]);
 
   const updateNeed = (field: keyof InformationNeed, value: string) => {
@@ -1736,10 +1750,12 @@ export default function PreflightApp() {
     }
     setNeed(next);
   };
-  const unresolvedClarifications =
+  const pendingClarifications =
     need?.unresolvedClarifications.filter(
-      (item) => !item.startsWith("Unknown:"),
+      (item) => !isUnknownClarification(item),
     ) ?? [];
+  const retainedUnknownClarifications =
+    need?.unresolvedClarifications.filter(isUnknownClarification) ?? [];
   function resumePrevious() {
     if (!resumeState) return;
     setPhase(resumeState.phase);
@@ -2038,6 +2054,8 @@ export default function PreflightApp() {
           new Date().toISOString().slice(0, 10),
         language,
       };
+      const { createEvidenceBriefPdf, evidenceBriefPdfFilename } =
+        await import("../evidence/brief-pdf");
       const blob = await createEvidenceBriefPdf(input);
       const file = new File(
         [blob],
@@ -2086,7 +2104,7 @@ export default function PreflightApp() {
     }
   }
 
-  function downloadTechnicalEvidenceBrief() {
+  async function downloadTechnicalEvidenceBrief() {
     if (!need || !result) return;
     setBriefFeedback("");
     try {
@@ -2094,6 +2112,7 @@ export default function PreflightApp() {
         resultForCitationReview(result, citationReview),
         language,
       );
+      const { serializeEvidenceBrief } = await import("../evidence/brief");
       const serialized = serializeEvidenceBrief({
         need: localizeNeed(need, language),
         result: exportResult,
@@ -2279,6 +2298,10 @@ export default function PreflightApp() {
       /* no-op */
     }
     setResumeState(undefined);
+  }
+
+  function returnFromDraft() {
+    setPhase(draftReturnPhase(Boolean(result)));
   }
   const citationReview: CitationReviewState = challengeCandidateId
     ? { status: "awaiting-confirmation", evidenceId: challengeCandidateId }
@@ -2547,10 +2570,10 @@ export default function PreflightApp() {
                 <option value="unsure">{copy.prefUnsure}</option>
               </select>
             </label>
-            {unresolvedClarifications.map((clarification) => (
+            {pendingClarifications.map((clarification) => (
               <div className="clarification status-partial" key={clarification}>
                 <strong>{copy.clarification}</strong>
-                <p>{clarification}</p>
+                <p>{localizeClarification(clarification, language)}</p>
                 <p className="supporting-copy">{copy.unknownClarification}</p>
                 <button
                   className="quiet-button"
@@ -2572,6 +2595,13 @@ export default function PreflightApp() {
                 </button>
               </div>
             ))}
+            {retainedUnknownClarifications.map((clarification) => (
+              <div className="clarification status-partial" key={clarification}>
+                <strong>{copy.clarification}</strong>
+                <p>{localizeClarification(clarification, language)}</p>
+                <p className="supporting-copy">{copy.unknownRetained}</p>
+              </div>
+            ))}
             {error && (
               <p className="error-message" role="alert">
                 <span aria-hidden="true">!</span>
@@ -2588,7 +2618,7 @@ export default function PreflightApp() {
               <button
                 className="action-button"
                 disabled={
-                  unresolvedClarifications.length > 0 ||
+                  pendingClarifications.length > 0 ||
                   informationNeedEditErrors(need).length > 0
                 }
                 onClick={confirmNeed}
@@ -2653,6 +2683,17 @@ export default function PreflightApp() {
             <h2>{displayResult?.headline}</h2>
             <p className="result-meaning">{displayResult?.meaning}</p>
             <p className="evidence-status">{displayResult?.evidenceStatus}</p>
+            {retainedUnknownClarifications.length > 0 && (
+              <div className="clarification status-partial" role="note">
+                <strong>{copy.clarification}</strong>
+                {retainedUnknownClarifications.map((clarification) => (
+                  <p key={clarification}>
+                    {localizeClarification(clarification, language)}
+                  </p>
+                ))}
+                <p className="supporting-copy">{copy.unknownRetained}</p>
+              </div>
+            )}
             {challengedEvidenceId && (
               <p className="error-message" role="status">
                 <span aria-hidden="true">!</span>
@@ -2738,13 +2779,18 @@ export default function PreflightApp() {
                             <dt>{copy.locatedValues}</dt>
                             <dd>
                               {item.grounding.length > 0
-                                ? `${item.grounding.length} immutable references with content hashes`
-                                : "Route metadata; no personal record was retrieved"}
+                                ? copy.immutableReferences(
+                                    item.grounding.length,
+                                  )
+                                : copy.noPersonalRecord}
                             </dd>
                           </div>
                         </dl>
                         {item.alternateUrl && (
-                          <ExternalLink href={item.alternateUrl}>
+                          <ExternalLink
+                            href={item.alternateUrl}
+                            language={language}
+                          >
                             {copy.pinnedCsv}
                           </ExternalLink>
                         )}
@@ -2783,7 +2829,7 @@ export default function PreflightApp() {
                         >
                           <th scope="row">{row.geography}</th>
                           <td data-label={copy.stolenColumn}>
-                            ₹{row.stolen2021} → ₹{row.stolen2023} crore
+                            ₹{row.stolen2021} → ₹{row.stolen2023} {copy.crore}
                           </td>
                           <td
                             data-label={copy.changeColumn}
@@ -2947,8 +2993,8 @@ export default function PreflightApp() {
               <p className="eyebrow">{copy.draftStage}</p>
               <h1 id="draft-title">{copy.draftTitle}</h1>
             </div>
-            <button className="text-button" onClick={() => setPhase("result")}>
-              {copy.returnResult}
+            <button className="text-button" onClick={returnFromDraft}>
+              {result ? copy.returnResult : copy.back}
             </button>
           </div>
           <p className="stage-boundary">{copy.draftIntro}</p>
@@ -3032,6 +3078,17 @@ export default function PreflightApp() {
             <p id="draft-help" className="supporting-copy">
               {copy.draftHelp}
             </p>
+            {retainedUnknownClarifications.length > 0 && (
+              <div className="clarification status-partial" role="note">
+                <strong>{copy.clarification}</strong>
+                {retainedUnknownClarifications.map((clarification) => (
+                  <p key={clarification}>
+                    {localizeClarification(clarification, language)}
+                  </p>
+                ))}
+                <p className="supporting-copy">{copy.unknownRetained}</p>
+              </div>
+            )}
             <p className="supporting-copy">{copy.statutoryTimeline}</p>
             {draftValidation()?.valid === false && (
               <p className="error-message" role="alert">
@@ -3107,6 +3164,9 @@ export default function PreflightApp() {
                 disabled={!filingPackage || draftDiverged || draftIsInvalid}
               >
                 {copy.saveDraft}
+              </button>
+              <button className="secondary-button" onClick={reset}>
+                {copy.restart}
               </button>
             </div>
           </section>
@@ -3326,6 +3386,11 @@ export default function PreflightApp() {
               </div>
             )}
           </section>
+          <div className="result-actions">
+            <button className="secondary-button" onClick={reset}>
+              {copy.restart}
+            </button>
+          </div>
         </section>
       )}
 

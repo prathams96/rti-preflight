@@ -3,6 +3,7 @@ import type {
   Language,
   RenderableResolution,
 } from "../domain/types";
+import type { DisclosureEntry } from "../disclosure/ledger";
 
 const HINDI_TEXT: Record<string, string> = {
   "Calculated from official figures—not directly stated by NCRB.":
@@ -35,6 +36,8 @@ const HINDI_TEXT: Record<string, string> = {
     "यह स्वतंत्र शोध सहायक है — आधिकारिक RTI उत्तर नहीं।",
   "The prototype checked the registered Northern Railway in-scope no-finding fixture and found no supporting records.":
     "प्रोटोटाइप ने पंजीकृत Northern Railway निष्कर्ष-रहित फ़िक्स्चर को जाँचा और कोई सहायक रिकॉर्ड नहीं पाया।",
+  "Which municipal corporation or city, and which financial year should be checked?":
+    "किस नगरपालिका या शहर और किस वित्तीय वर्ष की जाँच की जानी चाहिए?",
   "Review the calculation and save the finding, or prepare an RTI if you still need an official response.":
     "गणना देखें और निष्कर्ष सहेजें, या आधिकारिक उत्तर अभी भी चाहिए तो RTI तैयार करें।",
   "The requested record is not identified as your own; self-service access is not represented for another person’s record.":
@@ -57,6 +60,7 @@ const HINDI_TEXT: Record<string, string> = {
     "आधिकारिक EPFO दावा-स्थिति मार्ग सदस्य के अपने दावे के लिए है। यह प्रोटोटाइप कोई क्रेडेंशियल दर्ज नहीं करता, रिकॉर्ड नहीं खोलता और स्थिति का वादा नहीं करता।",
   "Official service route—not a retrieved finding":
     "आधिकारिक सेवा मार्ग — प्राप्त निष्कर्ष नहीं",
+  "Check the status of an EPF claim": "EPF दावे की स्थिति जाँचें",
   "Use the official EPFO route yourself for your own claim. No account details are requested or transmitted by this prototype.":
     "अपने दावे के लिए आधिकारिक EPFO मार्ग का स्वयं उपयोग करें। यह प्रोटोटाइप खाते का कोई विवरण माँगता या भेजता नहीं है।",
   "The prototype classified this as an own-record service route; it did not retrieve a personal record or send any identifier.":
@@ -86,6 +90,7 @@ const HINDI_TEXT: Record<string, string> = {
   "EPFO Know Your Claim Status": "EPFO अपनी दावा-स्थिति जानें",
   "Employees' Provident Fund Organisation": "कर्मचारी भविष्य निधि संगठन",
   "Current own-record claim status": "वर्तमान अपने रिकॉर्ड के दावे की स्थिति",
+  "EPFO Member Passbook": "EPFO सदस्य पासबुक",
   "Fictional RTI Response Fixture": "काल्पनिक RTI उत्तर फ़िक्स्चर",
   "Synthetic demonstration authority": "सिंथेटिक प्रदर्शन प्राधिकरण",
   "Fictional RTI Response Fixture—not an official response.":
@@ -117,6 +122,35 @@ const HINDI_TEXT: Record<string, string> = {
     "तुलना से पहले घोषित कुल वाली पंक्तियाँ हटाएँ",
   "This identifies a reported data pattern, not a ranking of police performance. NCRB figures are supplied by States/UTs and may reflect differences in reporting and recording. Monetary values are in crore.":
     "यह रिपोर्ट किए गए आँकड़ों का पैटर्न बताता है, पुलिस के प्रदर्शन की रैंकिंग नहीं। NCRB आँकड़े राज्यों/केंद्र शासित प्रदेशों से मिलते हैं और रिपोर्टिंग व रिकॉर्डिंग के अंतर को दर्शा सकते हैं। मौद्रिक मान करोड़ में हैं।",
+  "NCRB source and figures": "NCRB स्रोत और आँकड़े",
+  "Real official public data, pinned to a versioned source copy.":
+    "वास्तविक आधिकारिक सार्वजनिक डेटा, संस्करणित स्रोत प्रति से जोड़ा गया है।",
+  "Evidence Snapshot": "प्रमाण स्नैपशॉट",
+  "Curated, immutable prototype snapshot; not live or exhaustive.":
+    "चुना हुआ, अपरिवर्तनीय प्रोटोटाइप स्नैपशॉट; लाइव या संपूर्ण नहीं।",
+  "Free-text interpretation": "मुक्त-पाठ व्याख्या",
+  "Working deterministic adapter; OpenAI is server-only when configured.":
+    "कार्यशील नियतात्मक अडैप्टर; कॉन्फ़िगर किए जाने पर OpenAI केवल सर्वर पर चलता है।",
+  "Filtering and calculations": "फ़िल्टरिंग और गणनाएँ",
+  "Working deterministic registered-table calculation engine.":
+    "कार्यशील नियतात्मक पंजीकृत-तालिका गणना इंजन।",
+  "Previous RTI response": "पिछला RTI उत्तर",
+  "Synthetic fixture only—not an official response.":
+    "केवल सिंथेटिक फ़िक्स्चर — यह आधिकारिक उत्तर नहीं है।",
+  "OTP, identity, payment, filing": "OTP, पहचान, भुगतान, फाइलिंग",
+  "Simulated demonstration; no government integration.":
+    "अनुकरण किया गया प्रदर्शन; कोई सरकारी एकीकरण नहीं।",
+  "Government integration": "सरकारी एकीकरण",
+  "Absent. No request, payment, or personal information is transmitted.":
+    "अनुपस्थित। कोई अनुरोध, भुगतान या व्यक्तिगत जानकारी भेजी नहीं जाती।",
+  "3,000-character text limit and overflow guidance":
+    "3,000 अक्षरों की पाठ सीमा और अधिकता संबंधी निर्देश",
+  "Northern Railway-Delhi Division authority listing":
+    "Northern Railway-Delhi Division प्राधिकरण सूची",
+  "Northern Railway RTI contact and authority page":
+    "Northern Railway RTI संपर्क और प्राधिकरण पृष्ठ",
+  "The record subject is not clear enough to select an own-record service route.":
+    "अपने रिकॉर्ड का सेवा मार्ग चुनने के लिए रिकॉर्ड का विषय पर्याप्त रूप से स्पष्ट नहीं है।",
   "A citation problem report is awaiting confirmation; the original result remains visible.":
     "उद्धरण की समस्या की रिपोर्ट पुष्टि की प्रतीक्षा में है; मूल नतीजा दिखाई दे रहा है।",
   "This result was downgraded to partially resolved pending source revalidation after a citation problem report.":
@@ -159,6 +193,18 @@ const NEED_TEXT: Record<string, string> = {
   "To be confirmed": "पुष्टि की जानी है",
   Unknown: "अज्ञात",
 };
+
+const UNKNOWN_CLARIFICATION_PREFIX = "Unknown: ";
+
+export function isUnknownClarification(value: string): boolean {
+  return value.startsWith(UNKNOWN_CLARIFICATION_PREFIX);
+}
+
+export function clarificationQuestion(value: string): string {
+  return isUnknownClarification(value)
+    ? value.slice(UNKNOWN_CLARIFICATION_PREFIX.length)
+    : value;
+}
 
 function translateText(text: string, language: Language): string {
   if (language === "en") return text;
@@ -203,6 +249,32 @@ function translateText(text: string, language: Language): string {
   return text;
 }
 
+export function localizeText(text: string, language: Language): string {
+  return translateText(text, language);
+}
+
+export function localizeClarification(
+  value: string,
+  language: Language,
+): string {
+  const question = translateText(clarificationQuestion(value), language);
+  return isUnknownClarification(value)
+    ? `${language === "hi" ? "अज्ञात" : "Unknown"}: ${question}`
+    : question;
+}
+
+export function localizeDisclosureEntry(
+  entry: DisclosureEntry,
+  language: Language,
+): DisclosureEntry {
+  if (language === "en") return entry;
+  return {
+    ...entry,
+    label: translateText(entry.label, language),
+    disclosure: translateText(entry.disclosure, language),
+  };
+}
+
 export function localizeNeed(
   need: InformationNeed,
   language: Language,
@@ -217,7 +289,7 @@ export function localizeNeed(
     breakdown: translateText(need.breakdown, language),
     informationHolder: translateText(need.informationHolder, language),
     unresolvedClarifications: need.unresolvedClarifications.map((item) =>
-      translateText(item, language),
+      localizeClarification(item, language),
     ),
   };
 }

@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 import type { Outcome } from "../domain/types";
 import {
   RESULT_STAGE_COPY,
+  draftReturnPhase,
   resultForCitationReview,
   resultOutcomeAfterCitationReview,
   type CitationReviewState,
 } from "./result-stage";
 
 describe("result-stage semantics", () => {
+  it("returns direct drafts to confirmation when no result exists", () => {
+    expect(draftReturnPhase(false)).toBe("confirm");
+    expect(draftReturnPhase(true)).toBe("result");
+  });
+
   it("does not downgrade a result while a citation report is awaiting confirmation", () => {
     const review: CitationReviewState = {
       status: "awaiting-confirmation",

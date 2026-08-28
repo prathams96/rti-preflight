@@ -16,6 +16,10 @@ export function resultOutcomeAfterCitationReview(
   return review.status === "downgraded" ? "PARTIALLY_RESOLVED" : outcome;
 }
 
+export function draftReturnPhase(hasResult: boolean): "confirm" | "result" {
+  return hasResult ? "result" : "confirm";
+}
+
 /**
  * Keep exported evidence aligned with what the result stage communicates.
  * The original evidence remains attached so a citizen can inspect the
