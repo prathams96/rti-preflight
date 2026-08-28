@@ -77,10 +77,11 @@ describe("release boundary routes", () => {
                 resolutionPreference: "published",
                 unresolvedClarifications: [],
                 display: {
-                  canonicalNeed: "राज्यों की रिपोर्ट की गई प्रवृत्ति पहचानें",
-                  measure: "चोरी और बरामदगी",
+                  canonicalNeed:
+                    "राज्यों में रिपोर्ट की गई चोरी की संपत्ति और बरामदगी का रुझान 2021 और 2023 के बीच पहचानें",
+                  measure: "चोरी की संपत्ति और बरामदगी का प्रतिशत",
                   geography: "सभी राज्य/केंद्र शासित प्रदेश",
-                  period: "2021 से 2023",
+                  period: "2021 बनाम 2023",
                   breakdown: "राज्य / केंद्र शासित प्रदेश",
                   informationHolder: "National Crime Records Bureau",
                   unresolvedClarifications: [],
@@ -169,10 +170,10 @@ describe("release boundary routes", () => {
               },
             ],
             evidenceStatus:
-              "जाँचे गए स्नैपशॉट में कोई सहायक व्यय विवरण, लेजर, कार्यादेश या ठेकेदार रिकॉर्ड नहीं मिला।",
+              "जाँचे गए स्नैपशॉट से विश्वसनीय निष्कर्ष नहीं मिला।",
             evidenceStatusGroundingIds: ["result:evidenceStatus"],
             searchScope:
-              "पंजीकृत फाइलिंग साक्ष्य स्नैपशॉट में Northern Railway रिकॉर्ड दायरा जाँचा गया।",
+              "पंजीकृत Northern Railway फाइलिंग फ़िक्स्चर में जाँच करने पर स्नैपशॉट को कोई सहायक रिकॉर्ड नहीं मिला।",
             searchScopeGroundingIds: ["result:searchScope"],
             recommendedAction: "रिकॉर्ड-केंद्रित RTI ड्राफ्ट की समीक्षा करें।",
             recommendedActionGroundingIds: ["result:recommendedAction"],

@@ -303,6 +303,33 @@ export function localizeClarification(
     : question;
 }
 
+/**
+ * Preferred display form for a clarification. When the model produced a
+ * presentation in the selected language, its wording is what the citizen
+ * sees; otherwise fall back to the local stock translation. The canonical
+ * clarification string (including any "Unknown:" prefix) remains the state
+ * identity and is never replaced by localized text.
+ */
+export function clarificationDisplay(
+  need: InformationNeed | undefined,
+  clarification: string,
+  language: Language,
+): string {
+  const index = need?.unresolvedClarifications.indexOf(clarification) ?? -1;
+  const presentationText =
+    index >= 0 &&
+    need?.presentation?.language === language &&
+    need.presentation.unresolvedClarifications[index]
+      ? need.presentation.unresolvedClarifications[index]
+      : undefined;
+  if (presentationText !== undefined) {
+    return isUnknownClarification(clarification)
+      ? `${language === "hi" ? "अज्ञात" : "Unknown"}: ${presentationText}`
+      : presentationText;
+  }
+  return localizeClarification(clarification, language);
+}
+
 export function localizeDisclosureEntry(
   entry: DisclosureEntry,
   language: Language,

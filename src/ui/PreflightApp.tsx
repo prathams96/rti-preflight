@@ -48,9 +48,9 @@ import {
 } from "./result-stage";
 import { informationNeedEditErrors } from "../preflight/need-validation";
 import {
-  localizeClarification,
   localizeDisclosureEntry,
   canonicalizeNeedValue,
+  clarificationDisplay,
   localizeFilingProfile,
   localizeMessage,
   localizeNeed,
@@ -324,6 +324,8 @@ function isRenderableResolution(value: unknown): value is RenderableResolution {
     isStringArray(value.gaps) &&
     isNonEmptyString(value.searchScope) &&
     isNonEmptyString(value.recommendedAction) &&
+    (value.narrationLanguage === undefined ||
+      isOneOf(value.narrationLanguage, ["en", "hi"] as const)) &&
     validCalculation &&
     (value.executionReceipt === undefined ||
       isExecutionReceipt(value.executionReceipt)) &&
@@ -1250,6 +1252,25 @@ function needSignature(need: InformationNeed | undefined): string {
   });
 }
 
+/**
+ * Pure guard for late draft responses. A response is stale when the request
+ * generation changed (language switch, need edit, navigation, or reset), the
+ * confirmed need changed, or the citizen already started editing the draft.
+ */
+export function shouldDiscardDraftResponse(input: {
+  capturedGeneration: number;
+  currentGeneration: number;
+  capturedSignature: string;
+  currentSignature: string;
+  draftEdited: boolean;
+}): boolean {
+  return (
+    input.capturedGeneration !== input.currentGeneration ||
+    input.capturedSignature !== input.currentSignature ||
+    input.draftEdited
+  );
+}
+
 function Field({
   label,
   value,
@@ -1641,6 +1662,7 @@ export default function PreflightApp() {
   const [briefFeedback, setBriefFeedback] = useState("");
   const [savedPreflights, setSavedPreflights] = useState<SavedPreflight[]>([]);
   const draftRequestGeneration = useRef(0);
+  const resolveRequestGeneration = useRef(0);
   const separatedDraftCounter = useRef(0);
   const [savedPreflightsLoaded, setSavedPreflightsLoaded] = useState(false);
   const [resumeState, setResumeState] = useState<SavedState | undefined>();
@@ -1696,6 +1718,20 @@ export default function PreflightApp() {
     const feedbackKey = feedbackKeys.find((key) => briefFeedback === copy[key]);
     if (feedbackKey) setBriefFeedback(COPY[nextLanguage][feedbackKey]);
     setLanguage(nextLanguage);
+    if (
+      phase === "result" &&
+      result?.narration === "verified_model" &&
+      result.narrationLanguage !== nextLanguage
+    ) {
+      void resolve(nextLanguage);
+    } else if (
+      phase === "draft" &&
+      need &&
+      draftText !== "" &&
+      draftText === draftOriginalText
+    ) {
+      requestDraft(nextLanguage);
+    }
   }
 
   useEffect(() => {
@@ -1880,6 +1916,69 @@ export default function PreflightApp() {
     setResumeState(undefined);
   }
 
+  function requestDraft(targetLanguage: Language) {
+    if (!need) return;
+    invalidateFilingConfirmations();
+    const guidedCoverage = isNorthernRailwayGuidedNeed(need);
+    const generation = ++draftRequestGeneration.current;
+    const requestSignature = filingNeedSignature(need);
+    void fetch("/api/draft", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-rti-trace-id": journeyTraceId,
+      },
+      body: JSON.stringify({
+        need,
+        language: targetLanguage,
+        ...(guidedCoverage ? { route: { id: NORTHERN_RAILWAY_ROUTE.id } } : {}),
+        maxChars: guidedCoverage
+          ? NORTHERN_RAILWAY_ROUTE.profile.text.maxChars
+          : 3_000,
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          draft?: { text?: string };
+          filingPackage?: ValidatedFilingPackage;
+          guidedCoverage?: boolean;
+          message?: string;
+        };
+        if (!response.ok || typeof payload.draft?.text !== "string")
+          throw new Error(
+            payload.message ?? COPY[targetLanguage].prepareFailure,
+          );
+        if (
+          !need ||
+          shouldDiscardDraftResponse({
+            capturedGeneration: generation,
+            currentGeneration: draftRequestGeneration.current,
+            capturedSignature: requestSignature,
+            currentSignature: filingNeedSignature(need),
+            draftEdited: Boolean(draftText && draftText !== draftOriginalText),
+          })
+        )
+          return;
+        if (payload.guidedCoverage && payload.filingPackage) {
+          traceRecorder.record("route.validated", journeyTraceId, {
+            component: "filing-route",
+            version: payload.filingPackage.route.profile.version,
+            status: "working",
+            code: payload.filingPackage.route.id,
+          });
+        }
+        setFilingPackage(payload.filingPackage);
+        setDraftText(payload.draft.text);
+        setDraftOriginalText(payload.draft.text);
+        setFilingError("");
+        setPhase("draft");
+      })
+      .catch(() => {
+        if (generation !== draftRequestGeneration.current) return;
+        setDraftError(COPY[targetLanguage].prepareFailure);
+      });
+  }
+
   function openDraft() {
     if (!need) return;
     if (holderNeedsClarification) {
@@ -1901,60 +2000,7 @@ export default function PreflightApp() {
       setPhase("draft");
       return;
     }
-    const guidedCoverage = isNorthernRailwayGuidedNeed(need);
-    const generation = ++draftRequestGeneration.current;
-    const requestSignature = filingNeedSignature(need);
-    const requestLanguage = language;
-    void fetch("/api/draft", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-rti-trace-id": journeyTraceId,
-      },
-      body: JSON.stringify({
-        need,
-        language,
-        ...(guidedCoverage ? { route: { id: NORTHERN_RAILWAY_ROUTE.id } } : {}),
-        maxChars: guidedCoverage
-          ? NORTHERN_RAILWAY_ROUTE.profile.text.maxChars
-          : 3_000,
-      }),
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as {
-          draft?: { text?: string };
-          filingPackage?: ValidatedFilingPackage;
-          guidedCoverage?: boolean;
-          message?: string;
-        };
-        if (!response.ok || typeof payload.draft?.text !== "string")
-          throw new Error(payload.message ?? copy.prepareFailure);
-        if (
-          generation !== draftRequestGeneration.current ||
-          !need ||
-          filingNeedSignature(need) !== requestSignature ||
-          language !== requestLanguage ||
-          (draftText && draftText !== draftOriginalText)
-        )
-          return;
-        if (payload.guidedCoverage && payload.filingPackage) {
-          traceRecorder.record("route.validated", journeyTraceId, {
-            component: "filing-route",
-            version: payload.filingPackage.route.profile.version,
-            status: "working",
-            code: payload.filingPackage.route.id,
-          });
-        }
-        setFilingPackage(payload.filingPackage);
-        setDraftText(payload.draft.text);
-        setDraftOriginalText(payload.draft.text);
-        setFilingError("");
-        setPhase("draft");
-      })
-      .catch(() => {
-        if (generation !== draftRequestGeneration.current) return;
-        setDraftError(copy.prepareFailure);
-      });
+    requestDraft(language);
   }
 
   function confirmNeed() {
@@ -2342,8 +2388,9 @@ export default function PreflightApp() {
       setIsInterpreting(false);
     }
   }
-  async function resolve() {
+  async function resolve(overrideLanguage?: Language) {
     if (!need) return;
+    const targetLanguage = overrideLanguage ?? language;
     if (
       challengedEvidenceId &&
       challengedNeedSignature === needSignature(need)
@@ -2351,7 +2398,7 @@ export default function PreflightApp() {
       setError(
         localizeMessage(
           "Change and reconfirm the Information Need before rechecking this challenged source.",
-          language,
+          targetLanguage,
         ),
       );
       setPhase("confirm");
@@ -2359,6 +2406,7 @@ export default function PreflightApp() {
     }
     setError("");
     setPhase("search");
+    const generation = ++resolveRequestGeneration.current;
     traceRecorder.record("resolution.started", journeyTraceId, {
       component: "resolution-route",
       version: "resolution-route-v1",
@@ -2371,7 +2419,7 @@ export default function PreflightApp() {
           "content-type": "application/json",
           "x-rti-trace-id": journeyTraceId,
         },
-        body: JSON.stringify({ need, language }),
+        body: JSON.stringify({ need, language: targetLanguage }),
       });
       const payload = (await response.json()) as RenderableResolution & {
         message?: string;
@@ -2381,6 +2429,7 @@ export default function PreflightApp() {
           payload.message ??
             "We couldn’t check the prototype snapshot just now.",
         );
+      if (generation !== resolveRequestGeneration.current) return;
       traceRecorder.record("resolution.completed", payload.traceId, {
         component: "resolution-route",
         version:
@@ -2401,6 +2450,7 @@ export default function PreflightApp() {
       setChallengeCandidateId("");
       setPhase("result");
     } catch (caught) {
+      if (generation !== resolveRequestGeneration.current) return;
       traceRecorder.record("resolution.completed", journeyTraceId, {
         component: "resolution-route",
         version: "resolution-route-v1",
@@ -2412,7 +2462,7 @@ export default function PreflightApp() {
           caught instanceof Error
             ? caught.message
             : "We couldn’t check the prototype snapshot just now.",
-          language,
+          targetLanguage,
         ),
       );
       setPhase("confirm");
@@ -2454,6 +2504,12 @@ export default function PreflightApp() {
 
   function returnFromDraft() {
     setPhase(draftReturnPhase(Boolean(result)));
+  }
+
+  /** Navigate back to Ask while invalidating any in-flight draft request. */
+  function returnToAsk() {
+    draftRequestGeneration.current += 1;
+    setPhase("start");
   }
   const citationReview: CitationReviewState = challengeCandidateId
     ? { status: "awaiting-confirmation", evidenceId: challengeCandidateId }
@@ -2648,19 +2704,22 @@ export default function PreflightApp() {
           <h1 id="select-title">{copy.selectTitle}</h1>
           <p className="lede">{copy.selectIntro}</p>
           <div className="need-options active-plane">
-            {needs.map((candidate) => (
-              <button
-                key={candidate.id}
-                className="need-option"
-                onClick={() => {
-                  setNeed(candidate);
-                  setPhase("confirm");
-                }}
-              >
-                <span>{candidate.canonicalNeed}</span>
-                <small>{candidate.originalText}</small>
-              </button>
-            ))}
+            {needs.map((candidate) => {
+              const displayCandidate = localizeNeed(candidate, language);
+              return (
+                <button
+                  key={candidate.id}
+                  className="need-option"
+                  onClick={() => {
+                    setNeed(candidate);
+                    setPhase("confirm");
+                  }}
+                >
+                  <span>{displayCandidate.canonicalNeed}</span>
+                  <small>{candidate.originalText}</small>
+                </button>
+              );
+            })}
             <p className="supporting-copy">{copy.oneNeed}</p>
           </div>
         </section>
@@ -2673,7 +2732,7 @@ export default function PreflightApp() {
               <p className="eyebrow">{copy.confirmStage}</p>
               <h1 id="confirm-title">{copy.confirm}</h1>
             </div>
-            <button className="text-button" onClick={() => setPhase("start")}>
+            <button className="text-button" onClick={returnToAsk}>
               {copy.edit}
             </button>
           </div>
@@ -2744,7 +2803,7 @@ export default function PreflightApp() {
             {pendingClarifications.map((clarification) => (
               <div className="clarification status-partial" key={clarification}>
                 <strong>{copy.clarification}</strong>
-                <p>{localizeClarification(clarification, language)}</p>
+                <p>{clarificationDisplay(need, clarification, language)}</p>
                 <p className="supporting-copy">{copy.unknownClarification}</p>
                 <button
                   className="quiet-button"
@@ -2769,7 +2828,7 @@ export default function PreflightApp() {
             {retainedUnknownClarifications.map((clarification) => (
               <div className="clarification status-partial" key={clarification}>
                 <strong>{copy.clarification}</strong>
-                <p>{localizeClarification(clarification, language)}</p>
+                <p>{clarificationDisplay(need, clarification, language)}</p>
                 <p className="supporting-copy">{copy.unknownRetained}</p>
               </div>
             ))}
@@ -2860,7 +2919,7 @@ export default function PreflightApp() {
                 <strong>{copy.clarification}</strong>
                 {retainedUnknownClarifications.map((clarification) => (
                   <p key={clarification}>
-                    {localizeClarification(clarification, language)}
+                    {clarificationDisplay(need, clarification, language)}
                   </p>
                 ))}
                 <p className="supporting-copy">{copy.unknownRetained}</p>
@@ -3260,7 +3319,7 @@ export default function PreflightApp() {
                 <strong>{copy.clarification}</strong>
                 {retainedUnknownClarifications.map((clarification) => (
                   <p key={clarification}>
-                    {localizeClarification(clarification, language)}
+                    {clarificationDisplay(need, clarification, language)}
                   </p>
                 ))}
                 <p className="supporting-copy">{copy.unknownRetained}</p>

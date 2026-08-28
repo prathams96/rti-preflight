@@ -151,6 +151,50 @@ describe("filing draft generation route", () => {
     expect(payload.draft.text).toContain("कृपया");
   });
 
+  it("ignores a caller-supplied maxChars and keeps the registry constraint", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "");
+    const need = interpretWithFixture(SCENARIO_PROMPTS[2].prompt)[0];
+    const response = await POST(
+      new Request("http://localhost/api/draft", {
+        method: "POST",
+        body: JSON.stringify({
+          need,
+          language: "en",
+          route: { id: NORTHERN_RAILWAY_ROUTE.id },
+          maxChars: 5,
+        }),
+      }),
+    );
+    const payload = await response.json();
+    expect(payload.guidedCoverage).toBe(true);
+    expect(payload.validation.valid).toBe(true);
+    expect(payload.filingPackage.route.profile.text.maxChars).toBe(
+      NORTHERN_RAILWAY_ROUTE.profile.text.maxChars,
+    );
+    expect(payload.validation.characterCount).toBeGreaterThan(5);
+    expect(payload.draft.text.length).toBeGreaterThan(5);
+  });
+
+  it("cannot expand the verified portal constraint with an oversized caller maxChars", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "");
+    const need = interpretWithFixture(SCENARIO_PROMPTS[2].prompt)[0];
+    const response = await POST(
+      new Request("http://localhost/api/draft", {
+        method: "POST",
+        body: JSON.stringify({
+          need,
+          language: "en",
+          route: { id: NORTHERN_RAILWAY_ROUTE.id },
+          maxChars: 99_999,
+        }),
+      }),
+    );
+    const payload = await response.json();
+    expect(payload.filingPackage.route.profile.text.maxChars).toBe(
+      NORTHERN_RAILWAY_ROUTE.profile.text.maxChars,
+    );
+  });
+
   it.each([
     ["measure", "Parking expenditure"],
     ["geography", "Mumbai Central Railway Station"],

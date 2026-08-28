@@ -227,8 +227,25 @@ function hasUnsupportedEntity(text: string, allowed: string): boolean {
   );
 }
 
+const ABSENCE_EN = [/\bno\b/i, /\bnot\b/i, /\bnone\b/i, /\babsence\b/i];
+
+const ABSENCE_HI = [/नहीं/u, /अभाव/u, /कमी/u];
+
+/**
+ * Conservative check for absence, non-verification, or uncertainty. This is
+ * deliberately narrow: it exists to stop a model narration from silently
+ * inverting a deterministic "no finding" anchor into a positive claim.
+ */
+function communicatesAbsence(text: string): boolean {
+  return (
+    ABSENCE_EN.some((pattern) => pattern.test(text)) ||
+    ABSENCE_HI.some((pattern) => pattern.test(text))
+  );
+}
+
 function preservesAnchor(text: string, source: string): boolean {
   if (text === source) return true;
+  if (communicatesAbsence(source) && !communicatesAbsence(text)) return false;
   const sourceNumbers = numbers(source);
   if (sourceNumbers.some((number) => !numbers(text).includes(number)))
     return false;

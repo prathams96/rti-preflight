@@ -7,6 +7,7 @@ import {
   readPersistedState,
   readSessionFilingState,
   restoreSavedPreflightForLanguage,
+  shouldDiscardDraftResponse,
 } from "./PreflightApp";
 import {
   createFilingModule,
@@ -351,5 +352,54 @@ describe("Preflight persistence boundaries", () => {
     expect(restored.draftOriginalText).toBe(
       "Please provide records showing the confirmed need.",
     );
+  });
+
+  it("discards a late draft response after a language/need change, navigation, or citizen edit", () => {
+    const signature = "need-signature-a";
+    const changedSignature = "need-signature-b";
+
+    // A matching request may be applied.
+    expect(
+      shouldDiscardDraftResponse({
+        capturedGeneration: 3,
+        currentGeneration: 3,
+        capturedSignature: signature,
+        currentSignature: signature,
+        draftEdited: false,
+      }),
+    ).toBe(false);
+
+    // Language switch or navigation advances the generation.
+    expect(
+      shouldDiscardDraftResponse({
+        capturedGeneration: 3,
+        currentGeneration: 4,
+        capturedSignature: signature,
+        currentSignature: signature,
+        draftEdited: false,
+      }),
+    ).toBe(true);
+
+    // A need edit changes the signature.
+    expect(
+      shouldDiscardDraftResponse({
+        capturedGeneration: 3,
+        currentGeneration: 3,
+        capturedSignature: signature,
+        currentSignature: changedSignature,
+        draftEdited: false,
+      }),
+    ).toBe(true);
+
+    // A citizen edit makes the stored draft authoritative.
+    expect(
+      shouldDiscardDraftResponse({
+        capturedGeneration: 3,
+        currentGeneration: 3,
+        capturedSignature: signature,
+        currentSignature: signature,
+        draftEdited: true,
+      }),
+    ).toBe(true);
   });
 });

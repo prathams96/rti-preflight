@@ -152,6 +152,7 @@ export type RenderableResolution = {
   calculationMetadata?: CalculationMetadata;
   narration?: NarrationState;
   narrationRejectionCode?: string;
+  narrationLanguage?: Language;
   coverageManifest?: {
     capabilityManifestHash: string;
     checkedAuthority: string;

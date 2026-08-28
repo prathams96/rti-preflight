@@ -219,4 +219,55 @@ describe("citizen-visible narration verification", () => {
       ).rejectionCode,
     ).toBe("NARRATION_PROHIBITED_ASSERTION");
   });
+
+  it("rejects English polarity inversion of a deterministic no-finding anchor", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "How much was spent maintaining lifts and escalators at New Delhi Railway Station during FY 2024–25?",
+        traceId: "polarity-railway",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({ need, snapshot });
+    expect(result.outcome).toBe("NO_RELIABLE_FINDING");
+    const proposed = completeNarration("result:headline", result, {
+      gaps: [
+        "The snapshot contains supporting expenditure statement, ledger extract, work order, and contractor record for this need.",
+      ],
+      gapsGroundingIds: ["result:gap:0"],
+    });
+    expect(verifyNarration(proposed, need, result).accepted).toBe(false);
+  });
+
+  it("rejects Hindi polarity inversion of a deterministic no-finding anchor", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "How much was spent maintaining lifts and escalators at New Delhi Railway Station during FY 2024–25?",
+        traceId: "polarity-railway-hi",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({ need, snapshot });
+    const proposed = completeNarration("result:headline", result, {
+      gaps: ["स्नैपशॉट में सहायक व्यय विवरण उपलब्ध हैं।"],
+      gapsGroundingIds: ["result:gap:0"],
+    });
+    expect(verifyNarration(proposed, need, result).accepted).toBe(false);
+  });
+
+  it("rejects polarity inversion for an outside-snapshot coverage outcome", async () => {
+    const preflight = new RTIPreflightModule();
+    const need = (
+      await preflight.interpret({
+        text: "How many trees were planted in my city park last year?",
+        traceId: "polarity-outside",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({ need, snapshot });
+    expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
+    const proposed = completeNarration("result:headline", result, {
+      evidenceStatus: "Verified from the available sources",
+    });
+    expect(verifyNarration(proposed, need, result).accepted).toBe(false);
+  });
 });

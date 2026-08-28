@@ -154,6 +154,24 @@ export function shouldPreferDraftingRoute(
   return Boolean(need.draftingIntent && need.scenario !== "ncrb-property");
 }
 
+/**
+ * Classify a single model-returned need from its own canonical content,
+ * independent of sibling needs or any seeded fixture normalization applied to
+ * another index. Drafting intent is a citizen-level signal, so a synthetic
+ * previous-response still must not surface as a search scenario.
+ */
+export function scenarioForModelNeed(
+  content: string,
+  hasDraftingIntent: boolean,
+): ScenarioId {
+  if (
+    hasDraftingIntent &&
+    /(?:earlier|previous|पुरानी|पिछली|पहले की)\s*(?:rti|आरटीआई)/iu.test(content)
+  )
+    return "unsupported";
+  return scenarioForText(content);
+}
+
 export function scenarioForText(text: string): ScenarioId {
   const normalized = text.toLocaleLowerCase();
   // An explicit drafting goal must not be mistaken for the synthetic

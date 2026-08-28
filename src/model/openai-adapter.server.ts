@@ -11,10 +11,14 @@ import {
   hasExplicitDraftingIntent,
   interpretWithFixture,
   SCENARIO_PROMPTS,
-  scenarioForText,
+  scenarioForModelNeed,
 } from "../content/scenarios";
 import { resolveAuthorityName } from "./authority-registry";
-import { matchesLanguageForFields, preservesMeaning } from "./language";
+import {
+  matchesLanguageForFields,
+  preservesPresentationField,
+  type PresentationField,
+} from "./language";
 
 type OpenAIResponse = {
   output_text?: string;
@@ -117,21 +121,32 @@ export function modelNeedsToInterpretation(input: {
   )
     ? interpretWithFixture(input.originalText)[0]
     : undefined;
+  const explicitDrafting = hasExplicitDraftingIntent(input.originalText);
   const needs: InformationNeed[] = input.needs.map((modelNeed, index) => {
     const normalizedNeed =
       index === 0 && seededFixture ? seededFixture : modelNeed;
     const holder = resolveAuthorityName(normalizedNeed.informationHolder);
     if (
       modelNeed.display &&
-      ![
-        [normalizedNeed.canonicalNeed, modelNeed.display.canonicalNeed],
-        [normalizedNeed.measure, modelNeed.display.measure],
-        [normalizedNeed.geography, modelNeed.display.geography],
-        [normalizedNeed.period, modelNeed.display.period],
-        [normalizedNeed.breakdown, modelNeed.display.breakdown],
-        [holder?.name ?? normalizedNeed.informationHolder, modelNeed.display.informationHolder],
-      ].every(([canonical, display]) =>
-        preservesMeaning(canonical, display, language),
+      !(
+        [
+          ["canonicalNeed", normalizedNeed.canonicalNeed],
+          ["measure", normalizedNeed.measure],
+          ["geography", normalizedNeed.geography],
+          ["period", normalizedNeed.period],
+          ["breakdown", normalizedNeed.breakdown],
+          [
+            "informationHolder",
+            holder?.name ?? normalizedNeed.informationHolder,
+          ],
+        ] as Array<[PresentationField, string]>
+      ).every(([field, canonical]) =>
+        preservesPresentationField({
+          field,
+          canonical,
+          presentation: modelNeed.display![field],
+          language,
+        }),
       )
     )
       throw new Error("PRESENTATION_MISMATCH");
@@ -147,12 +162,14 @@ export function modelNeedsToInterpretation(input: {
       informationHolderStatus: holder ? "verified" : "unverified",
       resolutionPreference: modelNeed.resolutionPreference,
       unresolvedClarifications: modelNeed.unresolvedClarifications.slice(0, 2),
-      scenario: index === 0 && seededFixture
-        ? seededFixture.scenario
-        : hasExplicitDraftingIntent(input.originalText)
-          ? scenarioForText(input.originalText)
-          : scenarioForText(`${modelNeed.canonicalNeed} ${modelNeed.measure}`),
-      draftingIntent: hasExplicitDraftingIntent(input.originalText),
+      scenario:
+        index === 0 && seededFixture
+          ? seededFixture.scenario
+          : scenarioForModelNeed(
+              `${modelNeed.canonicalNeed} ${modelNeed.measure}`,
+              explicitDrafting,
+            ),
+      draftingIntent: explicitDrafting,
       ...(modelNeed.display
         ? {
             presentation: {
@@ -288,22 +305,23 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
         .map((item) => item.text ?? "")
         .join("");
     if (!raw) throw new Error("SCHEMA_MISMATCH");
+    let parsed: { needs?: unknown };
     try {
-      const parsed = JSON.parse(raw) as { needs?: unknown };
-      if (
-        !Array.isArray(parsed.needs) ||
-        parsed.needs.some((need) => !isModelNeed(need))
-      )
-        throw new Error("SCHEMA_MISMATCH");
-      return modelNeedsToInterpretation({
-        originalText: input.text,
-        redactedText: redacted,
-        needs: parsed.needs as ModelNeed[],
-        traceId: input.traceId,
-        language: input.language,
-      });
+      parsed = JSON.parse(raw) as { needs?: unknown };
     } catch {
       throw new Error("INVALID_JSON");
     }
+    if (
+      !Array.isArray(parsed.needs) ||
+      parsed.needs.some((need) => !isModelNeed(need))
+    )
+      throw new Error("SCHEMA_MISMATCH");
+    return modelNeedsToInterpretation({
+      originalText: input.text,
+      redactedText: redacted,
+      needs: parsed.needs as ModelNeed[],
+      traceId: input.traceId,
+      language: input.language,
+    });
   }
 }

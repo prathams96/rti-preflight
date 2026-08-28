@@ -8,6 +8,7 @@ import { COPY } from "./PreflightApp";
 import {
   clarificationQuestion,
   canonicalizeNeedValue,
+  clarificationDisplay,
   localizeFilingDraft,
   localizeClarification,
   localizeDisclosureEntry,
@@ -235,5 +236,59 @@ describe("Hindi journey localization", () => {
       /^अज्ञात: .*नगरपालिका.*वित्तीय वर्ष/u,
     );
     expect(localizeClarification(unknown, "hi")).not.toContain("Unknown:");
+  });
+
+  it("prefers a model-authored selected-language presentation for multi-need display", () => {
+    const need = {
+      ...interpretWithFixture(SCENARIO_PROMPTS[0].prompt)[0],
+      presentation: {
+        language: "hi" as const,
+        canonicalNeed: "राज्यों में चोरी की संपत्ति का रुझान पहचानें",
+        measure: "चोरी की संपत्ति और बरामदगी",
+        geography: "सभी राज्य",
+        period: "2021 और 2023",
+        breakdown: "राज्य",
+        informationHolder: "National Crime Records Bureau",
+        unresolvedClarifications: [],
+      },
+    };
+
+    const display = localizeNeed(need, "hi");
+    expect(display.canonicalNeed).toBe(need.presentation.canonicalNeed);
+    expect(display.canonicalNeed).not.toBe(need.canonicalNeed);
+    // The canonical need itself remains English and stable.
+    expect(need.canonicalNeed).toContain("property stolen");
+  });
+
+  it("displays the model clarification wording when it matches the selected language", () => {
+    const canonical =
+      "Which municipal corporation or city, and which financial year should be checked?";
+    const need = {
+      ...interpretWithFixture("How much did my municipality spend?")[0],
+      unresolvedClarifications: [canonical],
+      presentation: {
+        language: "hi" as const,
+        canonicalNeed: "नगरपालिका व्यय रिकॉर्ड",
+        measure: "व्यय",
+        geography: "नगरपालिका",
+        period: "वित्तीय वर्ष",
+        breakdown: "मद",
+        informationHolder: "नगर निगम",
+        unresolvedClarifications: [
+          "किस नगरपालिका या शहर और किस वित्तीय वर्ष की जाँच की जानी चाहिए?",
+        ],
+      },
+    };
+
+    expect(clarificationDisplay(need, canonical, "hi")).toBe(
+      "किस नगरपालिका या शहर और किस वित्तीय वर्ष की जाँच की जानी चाहिए?",
+    );
+    // When the presentation language differs, fall back to the stock translation.
+    expect(clarificationDisplay(need, canonical, "en")).toBe(canonical);
+
+    const unknown = `Unknown: ${canonical}`;
+    expect(clarificationDisplay(need, unknown, "hi")).toMatch(
+      /^अज्ञात: किस नगरपालिका/u,
+    );
   });
 });

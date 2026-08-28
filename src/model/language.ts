@@ -1,4 +1,13 @@
 import type { Language } from "../domain/types";
+import { resolveAuthorityName } from "./authority-registry";
+
+export type PresentationField =
+  | "canonicalNeed"
+  | "measure"
+  | "geography"
+  | "period"
+  | "breakdown"
+  | "informationHolder";
 
 /** Conservative guard against a provider silently ignoring the requested locale. */
 export function matchesLanguage(value: string, language: Language): boolean {
@@ -17,7 +26,7 @@ export function matchesLanguageForFields(
 
 const CONCEPTS: Array<[RegExp, RegExp]> = [
   [/records?|information/i, /रिकॉर्ड|अभिलेख|सूचना|records?|information/iu],
-  [/claim/i, /दावा|claim/iu],
+  [/claim/i, /दाव[ाे]|claim/iu],
   [/status/i, /स्थिति|status/iu],
   [/property/i, /संपत्ति|property/iu],
   [/stolen|theft/i, /चोरी|stolen|theft/iu],
@@ -67,6 +76,49 @@ export function preservesMeaning(
   }
   const applicable = CONCEPTS.filter(([sourcePattern]) =>
     sourcePattern.test(source),
+  );
+  return (
+    applicable.length === 0 ||
+    applicable.every(([, targetPattern]) => targetPattern.test(presentation))
+  );
+}
+
+/**
+ * Field-aware presentation validation. Registered authority names and their
+ * approved abbreviations may intentionally remain in Roman script even when
+ * the surrounding natural-language fields are Hindi; every other field must
+ * actually be written in the selected language and preserve the canonical
+ * meaning. This keeps an English canonicalNeed from leaking into Hindi mode
+ * without rejecting legal abbreviations such as "EPFO" or "NCRB".
+ */
+export function preservesPresentationField(input: {
+  field: PresentationField;
+  canonical: string;
+  presentation: string;
+  language: Language;
+}): boolean {
+  const { field, canonical, presentation, language } = input;
+  if (field === "informationHolder" && resolveAuthorityName(presentation))
+    return true;
+  if (!matchesLanguage(presentation, language)) return false;
+  if (
+    normalizedNumbers(canonical).some(
+      (number) => !normalizedNumbers(presentation).includes(number),
+    )
+  )
+    return false;
+  if (language === "en") {
+    const sourceTerms = canonical.toLocaleLowerCase().match(/[a-z]{4,}/g) ?? [];
+    const targetTerms = new Set(
+      presentation.toLocaleLowerCase().match(/[a-z]{4,}/g) ?? [],
+    );
+    return (
+      sourceTerms.length === 0 ||
+      sourceTerms.some((term) => targetTerms.has(term))
+    );
+  }
+  const applicable = CONCEPTS.filter(([sourcePattern]) =>
+    sourcePattern.test(canonical),
   );
   return (
     applicable.length === 0 ||

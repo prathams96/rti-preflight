@@ -196,6 +196,7 @@ export async function narrateOrFallback(input: {
       recommendedAction: verified.narration.recommendedAction,
       gaps: verified.narration.gaps,
       narration: "verified_model",
+      narrationLanguage: input.language ?? "en",
     };
   } catch (error) {
     const fallback = deterministicNarration(input.result);
