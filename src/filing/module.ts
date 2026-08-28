@@ -134,6 +134,7 @@ export function buildFilingPackageArtifact(
   const artifact: FilingPackageArtifact = {
     artifactVersion: "1",
     kind: "filing-package",
+    productName: "RTI Tathya",
     disclosure: "Independent research assistant—not an official RTI response.",
     confirmedNeed,
     filingPackage: {

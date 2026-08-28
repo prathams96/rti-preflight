@@ -81,6 +81,16 @@ export type ConfirmedFilingNeed = {
   resolutionPreference?: string;
   unresolvedClarifications?: string[];
   scenario?: string;
+  presentation?: {
+    language: "en" | "hi";
+    canonicalNeed: string;
+    measure: string;
+    geography: string;
+    period: string;
+    breakdown: string;
+    informationHolder: string;
+    unresolvedClarifications: string[];
+  };
 };
 
 export type ValidatedFilingPackage = {
@@ -147,6 +157,7 @@ export type FilingPackageArtifactInput = {
 export type FilingPackageArtifact = {
   artifactVersion: "1";
   kind: "filing-package";
+  productName: "RTI Tathya";
   disclosure: "Independent research assistant—not an official RTI response.";
   confirmedNeed: Record<string, unknown>;
   filingPackage: {

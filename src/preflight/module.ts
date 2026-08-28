@@ -8,6 +8,7 @@ import type {
   InformationNeed,
   NeedInterpretation,
   RenderableResolution,
+  Language,
 } from "../domain/types";
 import {
   groundingForFixtureValue,
@@ -25,6 +26,7 @@ import { DeterministicInterpretationAdapter } from "../model/fake-adapter";
 import { normalizeTraceId } from "../observability";
 import { executeNcrbPlan } from "../calc/ncrb-plan";
 import { classifyOutcome } from "./classifier";
+import { informationNeedEditErrors } from "./need-validation";
 import {
   OpenAINarrationAdapter,
   narrateOrFallback,
@@ -32,25 +34,28 @@ import {
 import type { PreflightModule } from "./interface";
 
 function validNeed(need: InformationNeed): boolean {
-  return Boolean(
-    need &&
-    typeof need === "object" &&
-    typeof need.originalText === "string" &&
-    typeof need.canonicalNeed === "string" &&
-    typeof need.measure === "string" &&
-    typeof need.geography === "string" &&
-    typeof need.period === "string" &&
-    typeof need.breakdown === "string" &&
-    typeof need.informationHolder === "string" &&
-    ["published", "formal", "unsure"].includes(need.resolutionPreference) &&
-    Array.isArray(need.unresolvedClarifications) &&
-    typeof need.scenario === "string",
+  return (
+    Boolean(
+      need &&
+      typeof need === "object" &&
+      typeof need.originalText === "string" &&
+      typeof need.canonicalNeed === "string" &&
+      typeof need.measure === "string" &&
+      typeof need.geography === "string" &&
+      typeof need.period === "string" &&
+      typeof need.breakdown === "string" &&
+      typeof need.informationHolder === "string" &&
+      ["published", "formal", "unsure"].includes(need.resolutionPreference) &&
+      Array.isArray(need.unresolvedClarifications) &&
+      typeof need.scenario === "string",
+    ) && informationNeedEditErrors(need).length === 0
   );
 }
 
 function redactedInterpretation(
   text: string,
   traceId: string,
+  language: Language = "en",
 ): NeedInterpretation {
   const { redacted } = redactSensitiveIdentifiers(text);
   const needs = interpretWithFixture(redacted);
@@ -60,6 +65,7 @@ function redactedInterpretation(
     needs,
     clarifications: clarificationsForNeeds(needs).slice(0, 2),
     traceId,
+    language,
   };
 }
 
@@ -361,7 +367,7 @@ function epfoResolution(
     evidence: [
       {
         id: decision.route.id,
-        sourceTitle: "EPFO Know Your Claim Status",
+        sourceTitle: "EPFO Member Passbook",
         publisher: decision.route.canonicalHolder,
         sourceType: "official_service_route",
         url: decision.route.officialUrl,
@@ -414,10 +420,11 @@ function resolveNeed(
     );
   return {
     outcome: classifyOutcome({ need, execution: "OUT_OF_SNAPSHOT" }),
-    headline: "This request is outside the prototype Evidence Snapshot.",
+    headline:
+      "We couldn’t verify this from the sources available in this prototype.",
     meaning:
-      "The prototype cannot claim that the information is unavailable or unpublished. You can review the scope, edit the need, or prepare a Filing Draft.",
-    evidenceStatus: "Outside the prototype Evidence Snapshot",
+      "This does not mean the information is unavailable or unpublished. We cannot claim an answer because the sources available in this prototype do not cover this request.",
+    evidenceStatus: "Not verified from available sources",
     evidence: [],
     rows: [],
     gaps: [
@@ -426,8 +433,8 @@ function resolveNeed(
     searchScope:
       "The prototype checked its Capability Manifest and found no registered source for this need.",
     recommendedAction: grievance
-      ? "Prepare a records-focused Filing Draft asking for orders, notes, reports, or correspondence rather than an explanation of why."
-      : "Review Search Scope, edit the Information Need, or prepare a Filing Draft.",
+      ? "Prepare a records-focused RTI Filing Draft asking for orders, notes, reports, or correspondence rather than an explanation of why."
+      : "Review the checked scope, edit the Information Need, or prepare an RTI Filing Draft.",
     coverageManifest: {
       capabilityManifestHash: source.capabilityManifest.hash,
       checkedAuthority: need.informationHolder,
@@ -446,6 +453,7 @@ export class RTIPreflightModule implements PreflightModule {
   interpret(input: {
     text: string;
     traceId: string;
+    language?: Language;
   }): Promise<NeedInterpretation> {
     return this.adapter.interpret(input);
   }
@@ -453,6 +461,7 @@ export class RTIPreflightModule implements PreflightModule {
     need: InformationNeed;
     snapshot: Snapshot;
     traceId?: string;
+    language?: Language;
   }): Promise<RenderableResolution> {
     if (!validNeed(input.need)) throw new Error("INVALID_NEED");
     validateSnapshot(input.snapshot);
@@ -470,13 +479,14 @@ export class RTIPreflightModule implements PreflightModule {
       need: redactedNeed(input.need),
       result,
       traceId: result.traceId,
+      language: input.language,
     });
   }
 }
 
 export function createOfflinePreflightModule(): RTIPreflightModule {
   return new RTIPreflightModule({
-    interpret: async ({ text, traceId }) =>
-      redactedInterpretation(text, traceId),
+    interpret: async ({ text, traceId, language }) =>
+      redactedInterpretation(text, traceId, language),
   });
 }

@@ -1,6 +1,6 @@
-# RTI Preflight
+# RTI Tathya
 
-RTI Preflight helps an Indian citizen resolve a public-information need through the least burdensome valid route, without presenting itself as a public authority or official RTI service.
+RTI Tathya helps an Indian citizen resolve a public-information need through the least burdensome valid route, without presenting itself as a public authority or official RTI service.
 
 ## Language
 
@@ -12,7 +12,7 @@ _Avoid_: Query, prompt, RTI query
 A citizen who uses RTI infrequently and cannot be assumed to know the responsible authority, applicable process, or effective request wording.
 _Avoid_: Novice user, layperson
 
-**RTI Preflight**:
+**RTI Tathya**:
 An independent research and drafting assistant that helps an Occasional Applicant find reliable existing information or prepare an RTI request when filing is necessary.
 _Avoid_: RTI bot, automated PIO, official RTI portal
 
@@ -65,7 +65,7 @@ A clearly fictional, identity-free response used only to demonstrate how the pro
 _Avoid_: Anonymized RTI Response, official response
 
 **Verified Coverage**:
-The authorities, sources, periods, and material that RTI Preflight can truthfully report it checked for an Information Need.
+The authorities, sources, periods, and material that RTI Tathya can truthfully report it checked for an Information Need.
 _Avoid_: Full coverage, exhaustive government search
 
 **Search Scope**:
@@ -73,11 +73,11 @@ The citizen-facing disclosure of the Verified Coverage used to produce a result,
 _Avoid_: Search log, technical coverage
 
 **Research Coverage**:
-The public authorities and Primary Public Sources that RTI Preflight is designed to search for Research Findings.
+The public authorities and Primary Public Sources that RTI Tathya is designed to search for Research Findings.
 _Avoid_: Product coverage, all-government access
 
 **Guided Filing Coverage**:
-The Filing Routes for which RTI Preflight can validate a Filing Draft, demonstrate applicant fields and fees, and complete a Demo Submission.
+The Filing Routes for which RTI Tathya can validate a Filing Draft, demonstrate applicant fields and fees, and complete a Demo Submission.
 _Avoid_: Supported authorities, RTI coverage
 
 **Information Holder**:
@@ -115,7 +115,7 @@ A source-specific limitation needed to prevent a Research Finding from being und
 _Avoid_: Disclaimer, fine print
 
 **Evidence Conflict**:
-A material disagreement between applicable Primary Public Sources that prevents RTI Preflight from selecting one claim as authoritative.
+A material disagreement between applicable Primary Public Sources that prevents RTI Tathya from selecting one claim as authoritative.
 _Avoid_: Data glitch, resolved discrepancy
 
 **Evidence Status**:
@@ -135,7 +135,7 @@ An outcome in which the checked sources do not support an answer to the Informat
 _Avoid_: No information exists, not public
 
 **Interpretation Failure**:
-A recoverable system state in which RTI Preflight could not reliably transform the citizen's input into an Information Need Card; it is not a resolution outcome or evidence finding.
+A recoverable system state in which RTI Tathya could not reliably transform the citizen's input into an Information Need Card; it is not a resolution outcome or evidence finding.
 _Avoid_: No Reliable Finding, invalid request
 
 ## Measurement
@@ -155,7 +155,7 @@ _Avoid_: Redundant RTI, unnecessary citizen request
 ## Citizen artifacts
 
 **Evidence Brief**:
-A portable record of the confirmed Information Need, Research Finding, supporting evidence, unresolved gaps, search date, Search Scope, and RTI Preflight's independent status.
+A portable record of the confirmed Information Need, Research Finding, supporting evidence, unresolved gaps, search date, Search Scope, and RTI Tathya's independent status.
 _Avoid_: AI report, RTI response
 
 **Filing Draft**:

@@ -22,7 +22,7 @@ The user may be on a mobile device or slower connection, may have limited digita
 
 ## Product Purpose
 
-RTI Preflight is an independent research and drafting assistant. It first checks whether reliable published government information resolves a citizen's confirmed Information Need. If it does not—or the citizen still requires a new formal response—it prepares a focused, editable Filing Draft and demonstrates the filing journey without transmitting anything to a government system.
+RTI Tathya is an independent research and drafting assistant. It first checks whether reliable published government information resolves a citizen's confirmed Information Need. If it does not—or the citizen still requires a new formal response—it prepares a focused, editable Filing Draft and demonstrates the filing journey without transmitting anything to a government system.
 
 The product exists because public information can already be available yet hard to discover. Its promise is: **Before you file and wait, check whether reliable public information already answers your question—and prepare a better RTI when it does not.**
 
@@ -30,7 +30,7 @@ Success is measured by the **Valid Resolution Path rate**: journeys that end in 
 
 ## Positioning
 
-RTI Preflight is not a general government chatbot, authority directory, or filing-avoidance tool. Its distinctive mechanism is a citizen-confirmed, need-first journey that separates language-model interpretation from evidence retrieval and deterministic calculation. Every factual result must be traceable to the curated Evidence Snapshot, every derived result must expose its operands and operation, and uncertainty routes conservatively while the citizen's option to file remains available.
+RTI Tathya is not a general government chatbot, authority directory, or filing-avoidance tool. Its distinctive mechanism is a citizen-confirmed, need-first journey that separates language-model interpretation from evidence retrieval and deterministic calculation. Every factual result must be traceable to the curated Evidence Snapshot, every derived result must expose its operands and operation, and uncertainty routes conservatively while the citizen's option to file remains available.
 
 ## Operating Context
 
@@ -64,7 +64,7 @@ Research remains anonymous until the citizen chooses to save or file. All seven 
 
 ## Brand Commitments
 
-- Product name: **RTI Preflight**.
+- Product name: **RTI Tathya**.
 - Persistent status: **Independent hackathon prototype—not affiliated with or endorsed by any government authority.**
 - The product must never imply official status, partnership, endorsement, or exhaustive access to Indian government information. Government logos must not be used in a way that suggests endorsement.
 - Voice is plain, precise, respectful, non-legalistic, and honest about what is real, curated, synthetic, working, or simulated. Prototype limitations belong in the interface, not only in footer text.

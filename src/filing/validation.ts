@@ -56,6 +56,9 @@ const STOP_WORDS = new Set(
     " ",
   ),
 );
+
+type Script = "latin" | "devanagari";
+
 function terms(value: string): Set<string> {
   return new Set(
     value
@@ -63,6 +66,26 @@ function terms(value: string): Set<string> {
       .match(/[\p{L}\p{N}]+/gu)
       ?.filter((word) => word.length > 3 && !STOP_WORDS.has(word)) ?? [],
   );
+}
+
+function termsForScript(value: string, script: Script): Set<string> {
+  const pattern =
+    script === "latin" ? /[A-Za-z][A-Za-z0-9’'-]*/g : /[\u0900-\u097F]+/gu;
+  return new Set(value.toLocaleLowerCase().match(pattern) ?? []);
+}
+
+function looksLikeReplacement(baseText: string, draftText: string): boolean {
+  for (const script of ["latin", "devanagari"] as const) {
+    const baseTerms = [...termsForScript(baseText, script)].filter(
+      (term) =>
+        term.length > 3 && (script === "devanagari" || !STOP_WORDS.has(term)),
+    );
+    const draftTerms = termsForScript(draftText, script);
+    if (baseTerms.length < 3 || draftTerms.size < 3) continue;
+    const sharedTerms = baseTerms.filter((term) => draftTerms.has(term));
+    if (sharedTerms.length < 2) return true;
+  }
+  return false;
 }
 
 function addsLikelyHindiNeed(base: string, draft: string): boolean {
@@ -77,10 +100,10 @@ export function detectDraftDivergence(
   const base = terms(`${need.canonicalNeed ?? ""} ${need.originalText ?? ""}`);
   const draft = terms(draftText);
   const addedTerms = [...draft].filter((term) => !base.has(term));
-  const baseScopeTerms = [...base].filter((term) => term.length >= 5);
-  const sharedScopeTerms = baseScopeTerms.filter((term) => draft.has(term));
-  const replacedNeed =
-    baseScopeTerms.length >= 3 && sharedScopeTerms.length < 2;
+  const replacedNeed = looksLikeReplacement(
+    `${need.canonicalNeed ?? ""} ${need.originalText ?? ""}`,
+    draftText,
+  );
   const likelyAddedNeed =
     /\b(also|additionally|unrelated|separate)\b/i.test(draftText) ||
     /\b(pension|arrears|salary|leave|grievance|budget|parking|water|school|road|hospital|employment|recruitment)\b/i.test(

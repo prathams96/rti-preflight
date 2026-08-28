@@ -173,17 +173,25 @@ describe("release gates", () => {
     const result = await preflight.resolve({ need, snapshot });
     const id = groundingCatalog(result)[0].id;
     const base = {
-      headlineGroundingIds: [id],
-      meaningGroundingIds: [id],
+      headlineGroundingIds: ["result:headline"],
+      meaningGroundingIds: ["result:meaning"],
       sentences: [{ text: "The result is grounded.", groundingIds: [id] }],
+      evidenceStatus: result.evidenceStatus,
+      evidenceStatusGroundingIds: ["result:evidenceStatus"],
+      searchScope: result.searchScope,
+      searchScopeGroundingIds: ["result:searchScope"],
+      recommendedAction: result.recommendedAction,
+      recommendedActionGroundingIds: ["result:recommendedAction"],
+      gaps: result.gaps,
+      gapsGroundingIds: result.gaps.map((_, index) => `result:gap:${index}`),
     };
 
     expect(
       verifyNarration(
         {
           ...base,
-          headline: "The calculation found a reported pattern.",
-          meaning: "Review the official figures and calculation.",
+          headline: result.headline,
+          meaning: result.meaning,
         },
         need,
         result,

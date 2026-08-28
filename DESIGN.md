@@ -1,24 +1,24 @@
 ---
-name: RTI Preflight
+name: RTI Tathya
 description: Evidence-led civic research and drafting arranged on a physical drafting-table surface.
 ---
 
 <!-- Captured from the implemented surface in src/ui/PreflightApp.tsx and src/app/globals.css. -->
 
-# Design System: RTI Preflight
+# Design System: RTI Tathya
 
 ## Overview
 
 **Creative North Star: “Drafting Table for Evidence”**
 
-RTI Preflight makes inspection tangible without imitating a government portal. The page is a light drafting-table ground beneath a compact dark-teal utility strip. The citizen’s current task sits on a white paper plane with crisp registration marks and a physical edge shadow; evidence and examples sit on pale blue translucent acetate layers that can align or offset for comparison.
+RTI Tathya makes inspection tangible without imitating a government portal. The page is a light drafting-table ground beneath a compact dark-teal utility strip. The citizen’s current task sits on a white paper plane with crisp registration marks and a physical edge shadow; evidence and examples sit on pale blue translucent acetate layers that can align or offset for comparison.
 
 The visual language is precise, quiet, and civic. Depth comes from paper edges, restrained shadows, opacity, and slight registration offsets—not from generic glass UI, decorative data graphics, or chatbot chrome. The surface remains a tool for asking, confirming, checking, and preserving the right to file.
 
 ## Surface anatomy
 
 - **Utility strip:** Full-width dark-teal bar containing the independent-prototype identity statement and Prototype details action.
-- **Identity row:** RTI Preflight wordmark/registration mark and a compact English/Hindi language toggle, placed above the journey content.
+- **Identity row:** RTI Tathya logo/wordmark and a compact English/Hindi language toggle, placed above the journey content.
 - **Task plane:** White paper Ask, Information Need, or Result plane with a strong outline, squared corners, physical bottom/side edge shadow, and registration marks at its corners.
 - **Acetate layers:** Pale blue translucent evidence cards, examples, calculation strips, and supporting fields. Adjacent evidence cards may be subtly offset to show separate source layers.
 - **Action accent:** Amber is reserved for the primary action; it is never used to signal warning, conflict, evidence quality, or selection.

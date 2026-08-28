@@ -1,4 +1,4 @@
-# Contributing to RTI Preflight
+# Contributing to RTI Tathya
 
 Work is issue-driven and pull-request-only. Keep each change within the issue it addresses, preserve the repository's product and architecture decisions, and explain any new assumptions in the pull request.
 

@@ -5,6 +5,7 @@ import type {
   ExecutionReceipt,
   GroundingReference,
   InformationNeed,
+  Language,
   RenderableResolution,
 } from "../domain/types";
 import { redactSensitiveIdentifiers } from "../model/redaction";
@@ -17,11 +18,13 @@ export type EvidenceBriefInput = {
   need: InformationNeed;
   result: RenderableResolution;
   searchDate: string;
+  language?: Language;
 };
 
 export type EvidenceBrief = {
   artifactVersion: typeof EVIDENCE_BRIEF_VERSION;
   kind: "evidence-brief";
+  productName: "RTI Tathya";
   disclosure: typeof EVIDENCE_BRIEF_DISCLOSURE;
   searchDate: string;
   confirmedInformationNeed: {
@@ -306,6 +309,7 @@ export function buildEvidenceBrief(input: EvidenceBriefInput): EvidenceBrief {
   const brief: EvidenceBrief = {
     artifactVersion: EVIDENCE_BRIEF_VERSION,
     kind: "evidence-brief",
+    productName: "RTI Tathya",
     disclosure: EVIDENCE_BRIEF_DISCLOSURE,
     searchDate: input.searchDate,
     confirmedInformationNeed: {

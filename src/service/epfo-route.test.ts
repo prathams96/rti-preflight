@@ -35,11 +35,10 @@ describe("EPFO official service route", () => {
       version: "1.0.0",
       canonicalHolder: "Employees' Provident Fund Organisation",
       purpose: "Check the status of an EPF claim",
-      officialUrl: "https://passbook.epfindia.gov.in/MemClaimStatusUAN/",
+      officialUrl: "https://passbook.epfindia.gov.in/MemberPassBook/login",
       verificationDate: "2026-08-27",
       primarySourceUrls: [
-        "https://passbook.epfindia.gov.in/MemClaimStatusUAN/",
-        "https://www.epfindia.gov.in/site_en/KYCS.php/Help.php",
+        "https://passbook.epfindia.gov.in/MemberPassBook/login",
       ],
     });
   });
