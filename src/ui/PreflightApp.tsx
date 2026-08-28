@@ -1616,7 +1616,12 @@ function Field({
   return (
     <label className="field">
       <span>{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} />
+      <textarea
+        className="field-value"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        rows={2}
+      />
     </label>
   );
 }
@@ -2997,26 +3002,27 @@ export default function PreflightApp() {
         <p className="topbar-identity">
           <Icon name="info" /> {copy.independent}
         </p>
-        <button className="text-button" onClick={() => setDetailsOpen(true)}>
-          {copy.details} <Icon name="external" />
-        </button>
-        {phase !== "start" && (
-          <button className="text-button global-restart" onClick={reset}>
-            {copy.restart}
+        <div className="topbar-actions">
+          <button className="text-button" onClick={() => setDetailsOpen(true)}>
+            {copy.details} <Icon name="external" />
           </button>
-        )}
+          {phase !== "start" && (
+            <button className="text-button global-restart" onClick={reset}>
+              {copy.restart}
+            </button>
+          )}
+        </div>
       </header>
       <div className="brand-row">
         <div className="wordmark">
           <Image
             className="wordmark-logo"
-            src="/rti-tathya-logo.png"
+            src="/rti-tathya-logo-transparent.png"
             alt="RTI Tathya logo"
-            width={1254}
-            height={1254}
-            priority
+            width={1018}
+            height={814}
+            sizes="(max-width: 420px) 3.2rem, (max-width: 720px) 3.6rem, 5rem"
           />
-          <span className="wordmark-name">RTI Tathya</span>
         </div>
         <button
           className={`language-toggle language-toggle-${language}`}
