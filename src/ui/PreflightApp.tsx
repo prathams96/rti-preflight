@@ -669,8 +669,6 @@ export const COPY = {
     unsure: "I’m not sure",
     calculation: "Calculation",
     matching: "matching rows",
-    evidenceLock: "Evidence locked to the checked rows",
-    scenarioSelected: "Currently loaded in the question field",
     emptyResult: "No States/UTs matched these conditions.",
     unresolved: "What remains unresolved",
     whatFound: "What we found",
@@ -745,7 +743,7 @@ export const COPY = {
     stepOtp: "1. OTP",
     stepIdentity: "2. Applicant details",
     stepReview: "3. Review",
-    stepPayment: "4. Demo payment",
+    stepPayment: "4. Payment",
     otpTitle: "Demo only",
     applicantTitle: "Applicant details",
     reviewTitle: "Review your RTI",
@@ -967,8 +965,6 @@ export const COPY = {
     unsure: "मैं निश्चित नहीं हूँ",
     calculation: "गणना",
     matching: "मिलती पंक्तियाँ",
-    evidenceLock: "जाँची गई पंक्तियों से प्रमाण तय",
-    scenarioSelected: "अभी सवाल वाले फ़ील्ड में लोड है",
     emptyResult: "इन शर्तों से कोई राज्य/केंद्र शासित प्रदेश मेल नहीं खाया।",
     unresolved: "क्या अभी अनसुलझा है",
     whatFound: "हमें क्या मिला",
@@ -1042,7 +1038,7 @@ export const COPY = {
     stepOtp: "1. OTP",
     stepIdentity: "2. आवेदक का विवरण",
     stepReview: "3. समीक्षा",
-    stepPayment: "4. डेमो भुगतान",
+    stepPayment: "4. भुगतान",
     otpTitle: "केवल डेमो",
     applicantTitle: "आवेदक का विवरण",
     reviewTitle: "अपनी RTI की समीक्षा करें",
@@ -3136,15 +3132,10 @@ export default function PreflightApp() {
                   <button
                     key={scenario.id}
                     className={isSelected ? "scenario selected" : "scenario"}
+                    aria-label={scenarioPrompt}
                     onClick={() => updateAskText(scenarioPrompt)}
                   >
-                    <strong>
-                      {language === "hi" ? scenario.hiLabel : scenario.label}
-                    </strong>
                     <span>{scenarioPrompt}</span>
-                    {isSelected && (
-                      <span className="sr-only">{copy.scenarioSelected}</span>
-                    )}
                     <Icon name={isSelected ? "check" : "insert"} />
                   </button>
                 );
@@ -3517,7 +3508,7 @@ export default function PreflightApp() {
             )}
             {displayTable && displayResult.calculation && (
               <>
-                <div className="calculation-strip evidence-lock">
+                <div className="calculation-strip">
                   <strong className="evidence-stamp">
                     <span className="evidence-count">
                       {displayTable.rows.length}
@@ -3527,9 +3518,6 @@ export default function PreflightApp() {
                   </strong>
                   <span className="calculation-operation">
                     {displayResult?.calculation?.operation}
-                  </span>
-                  <span className="evidence-lock-label">
-                    {copy.evidenceLock}
                   </span>
                 </div>
                 <div className="table-wrap">

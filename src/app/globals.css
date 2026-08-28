@@ -761,22 +761,6 @@ select:focus {
   line-height: 1.46;
 }
 
-.scenario strong {
-  grid-column: 2;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--ink-strong);
-  font-size: clamp(0.94rem, 1.7vw, 1.08rem);
-  line-height: 1.25;
-}
-
-.scenario span:not(:first-child) {
-  grid-column: 2;
-  color: var(--ink-muted);
-  font-size: 0.88rem;
-  line-height: 1.4;
-}
-
 .scenario.selected {
   border-color: var(--ink);
   background: var(--acetate-light);
@@ -1706,27 +1690,6 @@ select:focus {
   font-size: 0.9rem;
 }
 
-.evidence-lock-label {
-  width: fit-content;
-  padding-top: 0.25rem;
-  border-top: 1px solid var(--ink);
-  color: var(--ink);
-  font-size: 0.76rem;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  animation: evidence-lock-reveal 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes evidence-lock-reveal {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
 .table-wrap {
   overflow-x: auto;
   margin: 1.1rem -0.2rem 0;
@@ -2153,14 +2116,6 @@ footer {
     font-size: 0.78rem;
   }
 
-  .scenario strong {
-    font-size: 0.82rem;
-  }
-
-  .scenario span:not(:first-child) {
-    font-size: 0.76rem;
-  }
-
   .content-column {
     padding: 2.25rem 0 2rem;
   }
@@ -2360,11 +2315,6 @@ footer {
 
   .ai-scan-beam {
     display: none;
-  }
-
-  .evidence-lock-label {
-    animation: none;
-    clip-path: none;
   }
 
   .ai-stage:first-child {
