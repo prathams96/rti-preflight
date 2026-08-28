@@ -34,6 +34,7 @@ import { normaliseNeedPhrase } from "../filing/phrase";
 import { EPFO_CLAIM_STATUS_ROUTE } from "../service/epfo-route";
 import { serializeEvidenceBrief } from "../evidence/brief";
 import { createTraceRecorder, generateTraceId } from "../observability";
+import { ASK_SCREEN_COPY } from "./start-screen-copy";
 
 type Phase =
   | "start"
@@ -165,12 +166,11 @@ const COPY = {
   en: {
     independent: "Independent prototype — not a government service.",
     headline: "Find out before you file an RTI",
-    supporting:
-      "Ask for public information in your own words. We’ll check published government sources first and help prepare an RTI when needed.",
+    supporting: ASK_SCREEN_COPY.en.supporting,
     label: "What public information are you looking for?",
     privacy:
       "Do not enter passwords, OTPs, Aadhaar, PAN, EPIC, or account numbers.",
-    submit: "Check what's already public",
+    submit: ASK_SCREEN_COPY.en.submit,
     details: "Prototype details",
     examples: "Try one of these",
     confirm: "Is this what you're asking for?",
@@ -322,7 +322,7 @@ const COPY = {
     separatedDraft: "Separated draft to interpret",
     cpcbCut:
       "Air-quality results are withheld until two compatible official sources agree. We'd rather show you nothing than show you a number we can't stand behind.",
-    askReassurance: "Free · takes about 20 seconds · nothing is filed yet",
+    askReassurance: ASK_SCREEN_COPY.en.reassurance,
     confirmIntro:
       "We rewrote your question so it can be checked against official records. Correct anything that's wrong — this is exactly what we'll search for.",
     statutoryTimeline:
@@ -335,11 +335,10 @@ const COPY = {
   hi: {
     independent: "स्वतंत्र प्रोटोटाइप — कोई सरकारी सेवा नहीं।",
     headline: "RTI दाखिल करने से पहले पता करें",
-    supporting:
-      "सार्वजनिक जानकारी अपने शब्दों में पूछें। हम पहले प्रकाशित सरकारी स्रोत देखेंगे और ज़रूरत होने पर RTI तैयार करने में मदद करेंगे।",
+    supporting: ASK_SCREEN_COPY.hi.supporting,
     label: "आप कौन-सी सार्वजनिक जानकारी ढूँढ रहे हैं?",
     privacy: "पासवर्ड, OTP, आधार, PAN, EPIC या खाता नंबर दर्ज न करें।",
-    submit: "पहले देखें कि क्या पहले से सार्वजनिक है",
+    submit: ASK_SCREEN_COPY.hi.submit,
     details: "प्रोटोटाइप विवरण",
     examples: "इनमें से कोई आज़माएँ",
     confirm: "क्या आप यही पूछना चाहते हैं?",
@@ -490,7 +489,7 @@ const COPY = {
     separatedDraft: "अलग किया गया draft समझें",
     cpcbCut:
       "जब तक दो संगत आधिकारिक स्रोत सहमत नहीं होते, वायु-गुणवत्ता के नतीजे नहीं दिखाए जाते। ऐसा आँकड़ा दिखाने से बेहतर है कुछ न दिखाना जिस पर हम भरोसा न कर सकें।",
-    askReassurance: "निःशुल्क · लगभग 20 सेकंड · अभी कुछ दाखिल नहीं हो रहा",
+    askReassurance: ASK_SCREEN_COPY.hi.reassurance,
     confirmIntro:
       "हमने आपके प्रश्न को इस तरह लिखा है कि उसे आधिकारिक रिकॉर्ड से जाँचा जा सके। कुछ ग़लत हो तो सुधार लें — हम बिलकुल यही खोजेंगे।",
     statutoryTimeline:
@@ -1489,7 +1488,9 @@ export default function PreflightApp() {
             >
               {copy.submit}
             </button>
-            <p className="supporting-copy">{copy.askReassurance}</p>
+            <p className="supporting-copy ask-reassurance">
+              {copy.askReassurance}
+            </p>
           </section>
           <details className="examples supporting-plane" open>
             <summary>{copy.examples}</summary>

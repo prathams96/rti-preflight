@@ -2506,3 +2506,131 @@ footer {
     animation: none;
   }
 }
+
+/* Ask screen: keep the citizen-facing explanation and action readable. */
+.intro h1 {
+  max-width: 12ch;
+  color: #102f37;
+  font-size: clamp(2.55rem, 6.2vw, 5.55rem);
+  font-weight: 700;
+  line-height: 0.99;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+  white-space: normal;
+}
+
+.intro .lede {
+  display: block;
+  max-width: 63ch;
+  margin: 1rem 0 0;
+  color: #315d64;
+  font-size: clamp(1rem, 1.7vw, 1.2rem);
+  line-height: 1.6;
+}
+
+.ask-plane .action-button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 0;
+  padding-inline: 1rem;
+  color: #102f37;
+  font-size: clamp(0.92rem, 1.25vw, 1.05rem);
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+}
+
+.ask-plane .action-button::before,
+.ask-plane .action-button::after {
+  display: none;
+}
+
+.examples summary {
+  min-height: 2.75rem;
+  padding: 0.5rem 0;
+}
+
+.examples summary::before {
+  content: "⌄";
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.45rem;
+  border: 1px solid currentColor;
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: transform 180ms ease;
+}
+
+.examples[open] summary::before {
+  transform: rotate(180deg);
+}
+
+.scenario {
+  min-height: 2.75rem;
+}
+
+@media (max-width: 620px) {
+  .intro {
+    margin: 0 0 1.35rem;
+  }
+
+  .intro h1 {
+    font-size: clamp(2.25rem, 11vw, 3.35rem);
+  }
+
+  .intro .lede {
+    margin-top: 0.95rem;
+    font-size: 0.98rem;
+  }
+
+  .ask-plane {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    padding: 1.2rem 1rem 1rem;
+  }
+
+  .ask-plane > label,
+  .ask-plane textarea,
+  .ask-plane .privacy-note,
+  .ask-plane .error-message,
+  .ask-plane .action-button,
+  .ask-plane .ask-reassurance {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .ask-plane .action-button {
+    width: 100%;
+    min-height: 2.75rem;
+    margin-right: 0;
+    border-top: 1px solid rgba(112, 65, 6, 0.38);
+    font-size: 1rem;
+  }
+
+  .ask-plane .ask-reassurance {
+    margin: 0.8rem 0 0;
+  }
+
+  .examples {
+    margin-right: 0;
+  }
+
+  .scenario,
+  .scenario:nth-child(2),
+  .scenario:nth-child(3) {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2rem;
+    min-height: 2.75rem;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0.85rem 0.72rem 0.85rem 0;
+    transform: none;
+  }
+
+  .scenario span:first-child {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+}
