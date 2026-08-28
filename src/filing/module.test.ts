@@ -65,6 +65,7 @@ describe("Filing Module public seam", () => {
       id: need.id,
       canonicalNeed: need.canonicalNeed,
     });
+    expect(artifact.productName).toBe("RTI Tathya");
     expect(artifact.filingPackage.route).toMatchObject({
       id: NORTHERN_RAILWAY_ROUTE.id,
       officialUrl: NORTHERN_RAILWAY_ROUTE.officialUrl,

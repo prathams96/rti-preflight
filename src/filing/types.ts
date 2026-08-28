@@ -147,6 +147,7 @@ export type FilingPackageArtifactInput = {
 export type FilingPackageArtifact = {
   artifactVersion: "1";
   kind: "filing-package";
+  productName: "RTI Tathya";
   disclosure: "Independent research assistant—not an official RTI response.";
   confirmedNeed: Record<string, unknown>;
   filingPackage: {

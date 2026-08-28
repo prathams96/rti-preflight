@@ -30,6 +30,7 @@ describe("Evidence Brief artifact", () => {
     expect(brief).toMatchObject({
       artifactVersion: "1",
       kind: "evidence-brief",
+      productName: "RTI Tathya",
       disclosure:
         "Independent research assistant—not an official RTI response.",
       searchDate: SEARCH_DATE,

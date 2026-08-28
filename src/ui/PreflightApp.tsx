@@ -8,6 +8,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
+import Image from "next/image";
 import type {
   InformationNeed,
   Language,
@@ -79,11 +80,10 @@ type SavedPreflight = {
   language: Language;
 };
 
-type IconName = "mark" | "info" | "external" | "check" | "warning" | "pending";
+type IconName = "info" | "external" | "check" | "warning" | "pending";
 
 function Icon({ name }: { name: IconName }) {
   const paths = {
-    mark: <path d="M4 12h4m4 0h8M12 4v4m0 4v8M5.5 5.5l3 3m5 5 5 5" />,
     info: (
       <>
         <circle cx="12" cy="12" r="8.5" />
@@ -1172,7 +1172,7 @@ export default function PreflightApp() {
     const url = `data:application/json;charset=utf-8,${encodeURIComponent(serialized)}`;
     const link = document.createElement("a");
     link.href = url;
-    link.download = "rti-preflight-filing-package.json";
+    link.download = "rti-tathya-filing-package.json";
     link.style.display = "none";
     document.body.appendChild(link);
     link.click();
@@ -1191,7 +1191,7 @@ export default function PreflightApp() {
           new Date().toISOString().slice(0, 10),
       });
       const blob = new Blob([serialized], { type: "application/json" });
-      const file = new File([blob], "rti-preflight-evidence-brief.json", {
+      const file = new File([blob], "rti-tathya-evidence-brief.json", {
         type: "application/json",
       });
       if (
@@ -1200,7 +1200,7 @@ export default function PreflightApp() {
       ) {
         try {
           await navigator.share({
-            title: "RTI Preflight Evidence Brief",
+            title: "RTI Tathya Evidence Brief",
             text: "Independent research assistant—not an official RTI response.",
             files: [file],
           });
@@ -1216,7 +1216,7 @@ export default function PreflightApp() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "rti-preflight-evidence-brief.json";
+      link.download = "rti-tathya-evidence-brief.json";
       link.style.display = "none";
       document.body.appendChild(link);
       link.click();
@@ -1408,10 +1408,15 @@ export default function PreflightApp() {
       </header>
       <div className="brand-row">
         <div className="wordmark">
-          <span className="wordmark-mark" aria-hidden="true">
-            <Icon name="mark" />
-          </span>
-          <span>RTI Preflight</span>
+          <Image
+            className="wordmark-logo"
+            src="/rti-tathya-logo.png"
+            alt="RTI Tathya logo"
+            width={1254}
+            height={1254}
+            priority
+          />
+          <span className="wordmark-name">RTI Tathya</span>
         </div>
         <button
           className={`language-toggle language-toggle-${language}`}

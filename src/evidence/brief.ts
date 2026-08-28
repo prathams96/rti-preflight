@@ -22,6 +22,7 @@ export type EvidenceBriefInput = {
 export type EvidenceBrief = {
   artifactVersion: typeof EVIDENCE_BRIEF_VERSION;
   kind: "evidence-brief";
+  productName: "RTI Tathya";
   disclosure: typeof EVIDENCE_BRIEF_DISCLOSURE;
   searchDate: string;
   confirmedInformationNeed: {
@@ -306,6 +307,7 @@ export function buildEvidenceBrief(input: EvidenceBriefInput): EvidenceBrief {
   const brief: EvidenceBrief = {
     artifactVersion: EVIDENCE_BRIEF_VERSION,
     kind: "evidence-brief",
+    productName: "RTI Tathya",
     disclosure: EVIDENCE_BRIEF_DISCLOSURE,
     searchDate: input.searchDate,
     confirmedInformationNeed: {

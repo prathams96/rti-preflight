@@ -1,4 +1,4 @@
-# RTI Preflight — UX and Product Specification
+# RTI Tathya — UX and Product Specification
 
 **Status:** Confirmed for prototype build  
 **Date:** 27 August 2026  
@@ -6,7 +6,7 @@
 
 ## 1. Product definition
 
-RTI Preflight is an independent research and drafting assistant that helps an occasional RTI applicant resolve one public-information need through the least burdensome valid route.
+RTI Tathya is an independent research and drafting assistant that helps an occasional RTI applicant resolve one public-information need through the least burdensome valid route.
 
 The product first checks whether reliable public information already resolves the need. If it does not, or if the citizen still needs a new formal response, it prepares a focused RTI filing package and demonstrates the filing journey without transmitting anything to a government system.
 
@@ -110,13 +110,13 @@ This is a minimal fallback, not a separate designed journey.
 
 ## 6. Prototype scenario matrix
 
-| Scenario | Seeded question or task | Main behavior | Evidence truth |
-|---|---|---|---|
-| NCRB property recovery | Between 2021 and 2023, which States/UTs reported an increase in property stolen but a decline in recovery percentage? | Derived Finding | Real official CSV |
-| Previous RTI discovery | Find an earlier RTI response relevant to a selected Central information need | Prior-response retrieval | Clearly labelled RTI Response Fixture |
-| EPFO personal status | What is the status of my EPF claim? | Official Service Route instead of RTI | Real route metadata; synthetic identity |
-| CPCB disagreement | Ask for a metric represented differently in two applicable official publications | Cut → Outside Snapshot Coverage | Scenario disabled until [the CPCB evidence gate](CPCB-EVIDENCE-GATE.md) approves two compatible official sources |
-| Northern Railway filing | How much was spent maintaining lifts and escalators at New Delhi Railway Station during FY 2024–25, and which contractors received the work? | No Reliable Finding → complete filing | Curated in-scope no-finding fixture, visible execution receipt, and verified Central route metadata |
+| Scenario                | Seeded question or task                                                                                                                      | Main behavior                         | Evidence truth                                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| NCRB property recovery  | Between 2021 and 2023, which States/UTs reported an increase in property stolen but a decline in recovery percentage?                        | Derived Finding                       | Real official CSV                                                                                                |
+| Previous RTI discovery  | Find an earlier RTI response relevant to a selected Central information need                                                                 | Prior-response retrieval              | Clearly labelled RTI Response Fixture                                                                            |
+| EPFO personal status    | What is the status of my EPF claim?                                                                                                          | Official Service Route instead of RTI | Real route metadata; synthetic identity                                                                          |
+| CPCB disagreement       | Ask for a metric represented differently in two applicable official publications                                                             | Cut → Outside Snapshot Coverage       | Scenario disabled until [the CPCB evidence gate](CPCB-EVIDENCE-GATE.md) approves two compatible official sources |
+| Northern Railway filing | How much was spent maintaining lifts and escalators at New Delhi Railway Station during FY 2024–25, and which contractors received the work? | No Reliable Finding → complete filing | Curated in-scope no-finding fixture, visible execution receipt, and verified Central route metadata              |
 
 ### Content integrity rule
 
@@ -213,14 +213,14 @@ Expose the system's interpretation and resolve material ambiguity before retriev
 
 #### Hero card
 
-| Field | Value |
-|---|---|
-| Measures | Value of property stolen; recovery percentage |
-| Comparison | 2021 versus 2023 |
-| Geography | All States/UTs |
-| Condition | Stolen value increased and recovery percentage declined |
-| Likely holder | National Crime Records Bureau |
-| Preference | Published government information is sufficient |
+| Field         | Value                                                   |
+| ------------- | ------------------------------------------------------- |
+| Measures      | Value of property stolen; recovery percentage           |
+| Comparison    | 2021 versus 2023                                        |
+| Geography     | All States/UTs                                          |
+| Condition     | Stolen value increased and recovery percentage declined |
+| Likely holder | National Crime Records Bureau                           |
+| Preference    | Published government information is sufficient          |
 
 #### Outcome-preference copy
 
@@ -331,15 +331,15 @@ Partial, conflict, and no-finding outcomes expand material gaps by default.
 
 #### Outcome actions
 
-| Outcome | Primary action | Secondary action |
-|---|---|---|
-| Source-Resolved | Save/share Evidence Brief | Still need an official response? Prepare an RTI |
-| Derived Finding | Review calculation and save | Prepare an RTI |
-| Partially Resolved | Request only the missing information | Edit need |
-| Formal Response Required | Prepare RTI | Review public evidence |
-| No Reliable Finding | Prepare RTI | Review Search Scope |
-| Evidence Conflict | Ask authority to identify authoritative figure | Compare sources |
-| Outside Snapshot Coverage | Prepare Filing Draft | Review Search Scope or edit need |
+| Outcome                   | Primary action                                 | Secondary action                                |
+| ------------------------- | ---------------------------------------------- | ----------------------------------------------- |
+| Source-Resolved           | Save/share Evidence Brief                      | Still need an official response? Prepare an RTI |
+| Derived Finding           | Review calculation and save                    | Prepare an RTI                                  |
+| Partially Resolved        | Request only the missing information           | Edit need                                       |
+| Formal Response Required  | Prepare RTI                                    | Review public evidence                          |
+| No Reliable Finding       | Prepare RTI                                    | Review Search Scope                             |
+| Evidence Conflict         | Ask authority to identify authoritative figure | Compare sources                                 |
+| Outside Snapshot Coverage | Prepare Filing Draft                           | Review Search Scope or edit need                |
 
 “No Reliable Finding” is used only when the need is inside declared snapshot coverage and the application can show what it checked. An unsupported domain is “Outside Snapshot Coverage”; it is not relabelled as a no-finding result.
 
@@ -398,9 +398,9 @@ Aggregate rows `Total State (S)`, `Total UT (S)`, and `Total All India` must be 
 
 **Example evidence row**
 
-| State | Stolen value 2021 | Stolen value 2023 | Change | Recovery 2021 | Recovery 2023 | Change |
-|---|---:|---:|---:|---:|---:|---:|
-| Gujarat | ₹175.1 crore | ₹423.5 crore | +₹248.4 crore | 38.4% | 23.2% | −15.2 pp |
+| State   | Stolen value 2021 | Stolen value 2023 |        Change | Recovery 2021 | Recovery 2023 |   Change |
+| ------- | ----------------: | ----------------: | ------------: | ------------: | ------------: | -------: |
+| Gujarat |      ₹175.1 crore |      ₹423.5 crore | +₹248.4 crore |         38.4% |         23.2% | −15.2 pp |
 
 **Required label**
 
@@ -640,77 +640,77 @@ These are interface contracts, not storage prescriptions.
 
 ### Information Need Card
 
-| Field | Required | Notes |
-|---|---|---|
-| Original citizen text | Yes | Preserved verbatim after identifier masking disclosure |
-| Canonical information need | Yes | One coherent need |
-| Measure/record sought | Yes | Citizen-confirmed |
-| Geography | When material | May be “All States/UTs” |
-| Period | When material | Dates, year, or financial year |
-| Breakdown | No | Only if requested or necessary |
-| Likely Information Holder | Yes before filing | Proposed and editable |
-| Resolution Preference | Yes | Published source, formal response, or unsure |
-| Unresolved clarifications | Yes | Empty when fully specified |
+| Field                      | Required          | Notes                                                  |
+| -------------------------- | ----------------- | ------------------------------------------------------ |
+| Original citizen text      | Yes               | Preserved verbatim after identifier masking disclosure |
+| Canonical information need | Yes               | One coherent need                                      |
+| Measure/record sought      | Yes               | Citizen-confirmed                                      |
+| Geography                  | When material     | May be “All States/UTs”                                |
+| Period                     | When material     | Dates, year, or financial year                         |
+| Breakdown                  | No                | Only if requested or necessary                         |
+| Likely Information Holder  | Yes before filing | Proposed and editable                                  |
+| Resolution Preference      | Yes               | Published source, formal response, or unsure           |
+| Unresolved clarifications  | Yes               | Empty when fully specified                             |
 
 ### Evidence item
 
-| Field | Required |
-|---|---|
-| Source title | Yes |
-| Publishing authority | Yes |
-| Source type | Yes |
-| Direct URL or fixture disclosure | Yes |
-| Applicable period | Yes |
-| Publication/update date | When available |
-| Supporting extract/row | Yes |
-| Geography/scope | Yes |
-| Snapshot date | Yes |
-| Translation status | When translated |
+| Field                            | Required        |
+| -------------------------------- | --------------- |
+| Source title                     | Yes             |
+| Publishing authority             | Yes             |
+| Source type                      | Yes             |
+| Direct URL or fixture disclosure | Yes             |
+| Applicable period                | Yes             |
+| Publication/update date          | When available  |
+| Supporting extract/row           | Yes             |
+| Geography/scope                  | Yes             |
+| Snapshot date                    | Yes             |
+| Translation status               | When translated |
 
 ### Result
 
-| Field | Required |
-|---|---|
-| Outcome | Yes |
-| Plain-language finding | Yes |
-| Evidence Status | Yes |
+| Field                   | Required               |
+| ----------------------- | ---------------------- |
+| Outcome                 | Yes                    |
+| Plain-language finding  | Yes                    |
+| Evidence Status         | Yes                    |
 | Supporting evidence IDs | Yes for factual claims |
-| Calculation details | For Derived Findings |
-| Gaps/conflicts | When present |
-| Search Scope | Yes |
-| Recommended action | Yes |
+| Calculation details     | For Derived Findings   |
+| Gaps/conflicts          | When present           |
+| Search Scope            | Yes                    |
+| Recommended action      | Yes                    |
 
 ### Filing Route Directory entry
 
-| Field | Required |
-|---|---|
-| Information Holder | Yes |
-| Official filing URL | Yes |
-| Online filing supported | Yes |
-| Character limit | When applicable |
-| Attachment rules | When applicable |
-| Fee/exemption rules | When applicable |
-| Last verification date | Yes |
-| Guided Filing Coverage | Yes/no |
+| Field                   | Required        |
+| ----------------------- | --------------- |
+| Information Holder      | Yes             |
+| Official filing URL     | Yes             |
+| Online filing supported | Yes             |
+| Character limit         | When applicable |
+| Attachment rules        | When applicable |
+| Fee/exemption rules     | When applicable |
+| Last verification date  | Yes             |
+| Guided Filing Coverage  | Yes/no          |
 
 ## 12. Prototype truth disclosure
 
 Make the following accessible from every screen through a compact “Prototype details” link:
 
-| Component | Status |
-|---|---|
-| NCRB source and figures | Real official public data |
-| Evidence Snapshot | Curated prototype snapshot |
-| Free-text interpretation | Working OpenAI integration |
-| Snapshot retrieval | Working |
-| Filtering and calculations | Working deterministic code |
-| Previous RTI response | Synthetic fixture |
-| CPCB conflict | Cut pending evidence-gate approval |
-| OTP | Simulated |
-| Applicant identity | Fictional |
-| Payment | Simulated |
-| Filing | Simulated |
-| Government integration | None |
+| Component                  | Status                             |
+| -------------------------- | ---------------------------------- |
+| NCRB source and figures    | Real official public data          |
+| Evidence Snapshot          | Curated prototype snapshot         |
+| Free-text interpretation   | Working OpenAI integration         |
+| Snapshot retrieval         | Working                            |
+| Filtering and calculations | Working deterministic code         |
+| Previous RTI response      | Synthetic fixture                  |
+| CPCB conflict              | Cut pending evidence-gate approval |
+| OTP                        | Simulated                          |
+| Applicant identity         | Fictional                          |
+| Payment                    | Simulated                          |
+| Filing                     | Simulated                          |
+| Government integration     | None                               |
 
 Persistent product label:
 

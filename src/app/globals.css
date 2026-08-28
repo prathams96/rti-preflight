@@ -1794,6 +1794,8 @@ body::after {
 }
 
 .wordmark {
+  display: flex;
+  align-items: center;
   gap: 1rem;
   color: #0b3039;
   font-size: clamp(1.85rem, 3vw, 2.35rem);
@@ -1801,20 +1803,19 @@ body::after {
   letter-spacing: -0.035em;
 }
 
-.wordmark-mark {
-  width: 3.3rem;
-  height: 3.3rem;
-  border: 0;
-  border-radius: 0;
-  color: #0d4450;
-  background: transparent;
-  box-shadow: none;
+.wordmark-logo {
+  width: 5.25rem;
+  height: 5.25rem;
+  flex: 0 0 5.25rem;
+  object-fit: contain;
+  border: 1px solid rgba(18, 71, 80, 0.2);
+  border-radius: 0.8rem;
+  background: #fff;
+  box-shadow: 0 0.35rem 0.8rem rgba(14, 59, 67, 0.12);
 }
 
-.wordmark-mark .ui-icon {
-  width: 3.3rem;
-  height: 3.3rem;
-  stroke-width: 1.15;
+.wordmark-name {
+  white-space: nowrap;
 }
 
 .language-toggle {
@@ -2392,10 +2393,11 @@ footer {
     font-size: 1.6rem;
   }
 
-  .wordmark-mark,
-  .wordmark-mark .ui-icon {
-    width: 2.45rem;
-    height: 2.45rem;
+  .wordmark-logo {
+    width: 3rem;
+    height: 3rem;
+    flex-basis: 3rem;
+    border-radius: 0.6rem;
   }
 
   .language-toggle {

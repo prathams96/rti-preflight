@@ -1,4 +1,4 @@
-# RTI Preflight release-gate report
+# RTI Tathya release-gate report
 
 This report is a checked-in evidence record for Luna tickets 21–25. It records what can be verified from this repository and keeps deployment-dependent claims explicitly open.
 

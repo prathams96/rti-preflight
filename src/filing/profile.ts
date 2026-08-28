@@ -14,7 +14,7 @@ const authority = {
   jurisdiction: "central" as const,
   aliases: ["Northern Railway"],
   lastVerified: "2026-08-27",
-  verifiedBy: "RTI Preflight route directory",
+  verifiedBy: "RTI Tathya route directory",
 };
 
 export const NORTHERN_RAILWAY_PROFILE = {
