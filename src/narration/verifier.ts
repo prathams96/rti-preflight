@@ -202,6 +202,7 @@ function allowedText(
     ]),
     ...result.rows.flatMap((row) => [
       row.geography,
+      ...row.columns.flatMap((column) => [column.label, column.value]),
       row.stolen2021,
       row.stolen2023,
       row.stolenDelta,

@@ -130,13 +130,24 @@ function publicGrounding(reference: GroundingReference): GroundingReference {
 function publicRow(row: DerivedRow): DerivedRow {
   return {
     geography: row.geography,
-    stolen2021: row.stolen2021,
-    stolen2023: row.stolen2023,
-    stolenDelta: row.stolenDelta,
-    recovery2021: row.recovery2021,
-    recovery2023: row.recovery2023,
-    recoveryDelta: row.recoveryDelta,
-    unit: row.unit,
+    columns: row.columns.map((column) => ({
+      key: column.key,
+      label: safeText(column.label),
+      value: safeText(column.value),
+    })),
+    ...(row.stolen2021 === undefined ? {} : { stolen2021: row.stolen2021 }),
+    ...(row.stolen2023 === undefined ? {} : { stolen2023: row.stolen2023 }),
+    ...(row.stolenDelta === undefined ? {} : { stolenDelta: row.stolenDelta }),
+    ...(row.recovery2021 === undefined
+      ? {}
+      : { recovery2021: row.recovery2021 }),
+    ...(row.recovery2023 === undefined
+      ? {}
+      : { recovery2023: row.recovery2023 }),
+    ...(row.recoveryDelta === undefined
+      ? {}
+      : { recoveryDelta: row.recoveryDelta }),
+    ...(row.unit === undefined ? {} : { unit: row.unit }),
     lineage: row.lineage.map(publicGrounding),
     ...(row.calculationMetadata === undefined
       ? {}

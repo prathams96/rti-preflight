@@ -566,15 +566,33 @@ class BriefPdfLayout {
   }
 
   table(rows: readonly DerivedRow[]): void {
-    const columns = [
-      { label: this.copy.tableState, width: 116 },
-      { label: `${this.copy.tableStolen}\n2021`, width: 65 },
-      { label: `${this.copy.tableStolen}\n2023`, width: 65 },
-      { label: this.copy.tableChange, width: 61 },
-      { label: `${this.copy.tableRecovery}\n2021`, width: 70 },
-      { label: `${this.copy.tableRecovery}\n2023`, width: 70 },
-      { label: this.copy.tableChange, width: 64 },
-    ];
+    const legacy = Boolean(
+      rows[0]?.stolen2021 &&
+      rows[0]?.stolen2023 &&
+      rows[0]?.stolenDelta &&
+      rows[0]?.recovery2021 &&
+      rows[0]?.recovery2023 &&
+      rows[0]?.recoveryDelta,
+    );
+    const columns = legacy
+      ? [
+          { label: this.copy.tableState, width: 116 },
+          { label: `${this.copy.tableStolen}\n2021`, width: 65 },
+          { label: `${this.copy.tableStolen}\n2023`, width: 65 },
+          { label: this.copy.tableChange, width: 61 },
+          { label: `${this.copy.tableRecovery}\n2021`, width: 70 },
+          { label: `${this.copy.tableRecovery}\n2023`, width: 70 },
+          { label: this.copy.tableChange, width: 64 },
+        ]
+      : [
+          { label: this.copy.tableState, width: 116 },
+          ...(rows[0]?.columns ?? []).map((column) => ({
+            label: column.label,
+            width: Math.floor(
+              (CONTENT_WIDTH - 116) / (rows[0]?.columns.length || 1),
+            ),
+          })),
+        ];
     const headerHeight = 29;
     const rowHeight = 22;
     this.ensure(headerHeight + rows.length * rowHeight + 10);
@@ -604,15 +622,17 @@ class BriefPdfLayout {
           rowHeight,
           COLORS.paleTeal,
         );
-      const values = [
-        row.geography,
-        row.stolen2021,
-        row.stolen2023,
-        row.stolenDelta,
-        row.recovery2021,
-        row.recovery2023,
-        row.recoveryDelta,
-      ];
+      const values = legacy
+        ? [
+            row.geography,
+            row.stolen2021 ?? "",
+            row.stolen2023 ?? "",
+            row.stolenDelta ?? "",
+            row.recovery2021 ?? "",
+            row.recovery2023 ?? "",
+            row.recoveryDelta ?? "",
+          ]
+        : [row.geography, ...row.columns.map((column) => column.value)];
       x = MARGIN;
       for (const [index, value] of values.entries()) {
         const width = columns[index].width;

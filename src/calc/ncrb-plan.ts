@@ -12,6 +12,7 @@ import {
   type CalcPlan,
   type RegisteredTable,
   type RegisteredRow,
+  type RegisteredMeasure,
 } from "./registered-table";
 
 export const NCRB_PLAN: CalcPlan = {
@@ -92,6 +93,27 @@ export const NCRB_PLAN: CalcPlan = {
   ],
 };
 
+export const NCRB_MEASURES: readonly RegisteredMeasure[] = [
+  {
+    name: "value of property stolen",
+    periodColumns: {
+      "2021": "stolen_2021",
+      "2022": "stolen_2022",
+      "2023": "stolen_2023",
+    },
+    unit: "INR crore",
+  },
+  {
+    name: "percentage recovery of stolen property",
+    periodColumns: {
+      "2021": "recovery_2021",
+      "2022": "recovery_2022",
+      "2023": "recovery_2023",
+    },
+    unit: "%",
+  },
+];
+
 function registeredColumns(): RegisteredTable["columns"] {
   const dimension = (key: string) => ({
     key,
@@ -130,8 +152,10 @@ function registeredColumns(): RegisteredTable["columns"] {
   return [
     dimension("state"),
     money("stolen_2021"),
+    money("stolen_2022"),
     money("stolen_2023"),
     percentage("recovery_2021"),
+    percentage("recovery_2022"),
     percentage("recovery_2023"),
   ];
 }
@@ -146,15 +170,19 @@ function tableRows(snapshot: Snapshot): RegisteredRow[] {
       values: {
         state: row.state,
         stolen_2021: row.stolen2021,
+        stolen_2022: row.raw.split(",")[5],
         stolen_2023: row.stolen2023,
         recovery_2021: row.recovery2021,
+        recovery_2022: row.raw.split(",")[7],
         recovery_2023: row.recovery2023,
       },
       lineage: {
         state: cell("state"),
         stolen_2021: cell("stolen_2021"),
+        stolen_2022: cell("stolen_2022"),
         stolen_2023: cell("stolen_2023"),
         recovery_2021: cell("recovery_2021"),
+        recovery_2022: cell("recovery_2022"),
         recovery_2023: cell("recovery_2023"),
       },
     };
@@ -170,11 +198,14 @@ export function ncrbRegisteredTable(source: Snapshot): RegisteredTable {
     aggregateRowKeys: source.table.aggregateRowKeys,
     allowedOperations: [
       "excludeAggregates",
+      "excludeNulls",
       "derive",
       "filter",
       "sort",
+      "limit",
       "project",
     ],
+    measures: NCRB_MEASURES,
   };
 }
 

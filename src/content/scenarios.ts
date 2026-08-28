@@ -1,4 +1,5 @@
 import type {
+  AnalysisIntent,
   Clarification,
   InformationNeed,
   ScenarioId,
@@ -94,6 +95,105 @@ export const CPCB_CONFLICT_DECISION = {
 
 const DEFAULT_PREFERENCE = "unsure" as const;
 
+const NCRB_MEASURES = {
+  stolen: "value of property stolen",
+  recovery: "percentage recovery of stolen property",
+} as const;
+
+function ncrbYears(text: string): string[] {
+  return [
+    ...new Set([...text.matchAll(/\b(20\d{2})\b/g)].map((match) => match[1])),
+  ].sort();
+}
+
+function comparisonFor(text: string): "increase" | "decrease" | undefined {
+  if (
+    /\b(increase|increased|increasing|up|rise|rose|higher|grew|growth)\b/i.test(
+      text,
+    ) ||
+    /बढ़|वृद्धि/u.test(text)
+  )
+    return "increase";
+  if (
+    /\b(decrease|decreased|decreasing|decline|declined|down|lower|fell|fall)\b/i.test(
+      text,
+    ) ||
+    /घट|गिर|कम/u.test(text)
+  )
+    return "decrease";
+  return undefined;
+}
+
+export function ncrbAnalysisIntent(text: string): AnalysisIntent | undefined {
+  const [fromPeriod, toPeriod] = ncrbYears(text);
+  if (!fromPeriod || !toPeriod) return undefined;
+  const predicateCandidates: Array<
+    | {
+        measure: string;
+        comparison: "increase" | "decrease" | undefined;
+        fromPeriod: string;
+        toPeriod: string;
+      }
+    | undefined
+  > = [
+    /property stolen|stolen property/i.test(text) ||
+    /चोरी.*संपत्ति|संपत्ति.*चोरी/u.test(text)
+      ? {
+          measure: NCRB_MEASURES.stolen,
+          comparison: comparisonFor(text),
+          fromPeriod,
+          toPeriod,
+        }
+      : undefined,
+    /recovery|recovered|बरामदगी|बरामद/u.test(text)
+      ? {
+          measure: NCRB_MEASURES.recovery,
+          comparison: comparisonFor(
+            /property stolen|stolen property/i.test(text) ||
+              /चोरी.*संपत्ति|संपत्ति.*चोरी/u.test(text)
+              ? text.slice(
+                  Math.max(
+                    0,
+                    Math.max(
+                      text.toLocaleLowerCase().indexOf("recover"),
+                      Math.max(text.indexOf("बरामदगी"), text.indexOf("बरामद")),
+                    ),
+                  ),
+                )
+              : text,
+          ),
+          fromPeriod,
+          toPeriod,
+        }
+      : undefined,
+  ];
+  const predicates = predicateCandidates
+    .filter((predicate) => predicate?.comparison !== undefined)
+    .map((predicate) => ({
+      ...predicate!,
+      comparison: predicate!.comparison!,
+    }));
+  if (predicates.length === 0) return undefined;
+  const rankingMatch = text.match(/\b(?:top|which)\s+(\d+)\b/i);
+  const rankingMeasure = predicates.find(
+    (predicate) => predicate.measure === NCRB_MEASURES.stolen,
+  )?.measure;
+  const ranking =
+    rankingMeasure &&
+    (/\b(largest|biggest|highest)\b/i.test(text) || rankingMatch)
+      ? {
+          measure: rankingMeasure,
+          direction: "desc" as const,
+          limit: Number(rankingMatch?.[1] ?? 5),
+        }
+      : undefined;
+  return {
+    predicates,
+    logic: predicates.length > 1 && /\bor\b|either/i.test(text) ? "or" : "and",
+    ...(ranking ? { ranking } : {}),
+  };
+}
+
 const ENGLISH_DRAFTING_ACTION =
   "(?:prepare|draft|write|file|submit|make|create)";
 const HINDI_DRAFTING_ACTION =
@@ -183,8 +283,10 @@ export function scenarioForText(text: string): ScenarioId {
   )
     return "unsupported";
   if (
-    (normalized.includes("property") && normalized.includes("stolen")) ||
-    (text.includes("चोरी") && text.includes("संपत्ति"))
+    (normalized.includes("property") &&
+      (normalized.includes("stolen") || normalized.includes("recover"))) ||
+    (text.includes("संपत्ति") &&
+      (text.includes("चोरी") || text.includes("बरामद")))
   )
     return "ncrb-property";
   if (
@@ -237,18 +339,43 @@ function needForScenario(
   };
 
   switch (id) {
-    case "ncrb-property":
+    case "ncrb-property": {
+      const analysisIntent = ncrbAnalysisIntent(text);
+      const predicates = analysisIntent?.predicates ?? [];
+      const seeded =
+        text.trim().toLocaleLowerCase() ===
+          SCENARIO_PROMPTS[0].prompt.toLocaleLowerCase() ||
+        text.trim() === SCENARIO_PROMPTS[0].hiPrompt;
+      const heroSemantics =
+        predicates.length === 2 &&
+        predicates[0].fromPeriod === "2021" &&
+        predicates[0].toPeriod === "2023";
       return {
         ...common,
         canonicalNeed:
-          "Identify individual States/UTs where reported property stolen increased and recovery percentage declined between 2021 and 2023.",
-        measure: "Value of property stolen and percentage recovered",
+          seeded || heroSemantics
+            ? "Identify individual States/UTs where reported property stolen increased and recovery percentage declined between 2021 and 2023."
+            : predicates.length === 2
+              ? `Identify individual States/UTs where the requested conditions hold between ${predicates[0].fromPeriod} and ${predicates[0].toPeriod}.`
+              : predicates.length === 1
+                ? `Identify individual States/UTs where reported ${predicates[0].measure} ${predicates[0].comparison === "increase" ? "increased" : "declined"} between ${predicates[0].fromPeriod} and ${predicates[0].toPeriod}.`
+                : text.trim(),
+        measure:
+          (seeded || heroSemantics
+            ? "Value of property stolen and percentage recovered"
+            : predicates.map((predicate) => predicate.measure).join(" and ")) ||
+          "Property data",
         geography: "All States/UTs",
-        period: "2021 versus 2023",
+        period:
+          predicates.length > 0
+            ? `${predicates[0].fromPeriod} versus ${predicates[0].toPeriod}`
+            : "Not specified",
         breakdown: "State / UT",
         informationHolder: "National Crime Records Bureau",
         informationHolderStatus: "verified",
+        ...(analysisIntent ? { analysisIntent } : {}),
       };
+    }
     case "railway-filing":
       return {
         ...common,

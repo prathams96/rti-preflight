@@ -236,15 +236,31 @@ function isEvidenceItem(value: unknown): boolean {
 function isDerivedRow(value: unknown): boolean {
   if (!isObject(value)) return false;
   const calculationMetadata = value.calculationMetadata;
+  const legacyFields = [
+    "stolen2021",
+    "stolen2023",
+    "stolenDelta",
+    "recovery2021",
+    "recovery2023",
+    "recoveryDelta",
+  ];
+  const hasLegacyFields = legacyFields.every((key) =>
+    isNonEmptyString(value[key]),
+  );
+  const hasColumns =
+    Array.isArray(value.columns) &&
+    value.columns.length > 0 &&
+    value.columns.every(
+      (column) =>
+        isObject(column) &&
+        isNonEmptyString(column.key) &&
+        isNonEmptyString(column.label) &&
+        isNonEmptyString(column.value),
+    );
   return (
     isNonEmptyString(value.geography) &&
-    isNonEmptyString(value.stolen2021) &&
-    isNonEmptyString(value.stolen2023) &&
-    isNonEmptyString(value.stolenDelta) &&
-    isNonEmptyString(value.recovery2021) &&
-    isNonEmptyString(value.recovery2023) &&
-    isNonEmptyString(value.recoveryDelta) &&
-    value.unit === "INR crore" &&
+    (hasLegacyFields || hasColumns) &&
+    (value.unit === undefined || value.unit === "INR crore") &&
     Array.isArray(value.lineage) &&
     value.lineage.every(isGroundingReference) &&
     (calculationMetadata === undefined ||
@@ -257,6 +273,24 @@ function isDerivedRow(value: unknown): boolean {
           "policyVersion",
           "policyHash",
         ].every((key) => isNonEmptyString(calculationMetadata[key]))))
+  );
+}
+
+function isLegacyNcrbRow(row: {
+  stolen2021?: string;
+  stolen2023?: string;
+  stolenDelta?: string;
+  recovery2021?: string;
+  recovery2023?: string;
+  recoveryDelta?: string;
+}): boolean {
+  return Boolean(
+    row.stolen2021 &&
+    row.stolen2023 &&
+    row.stolenDelta &&
+    row.recovery2021 &&
+    row.recovery2023 &&
+    row.recoveryDelta,
   );
 }
 
@@ -3449,10 +3483,20 @@ export default function PreflightApp() {
                     <thead>
                       <tr>
                         <th scope="col">{copy.stateColumn}</th>
-                        <th scope="col">{copy.stolenColumn}</th>
-                        <th scope="col">{copy.changeColumn}</th>
-                        <th scope="col">{copy.recoveryColumn}</th>
-                        <th scope="col">{copy.changeColumn}</th>
+                        {isLegacyNcrbRow(result.rows[0] ?? {}) ? (
+                          <>
+                            <th scope="col">{copy.stolenColumn}</th>
+                            <th scope="col">{copy.changeColumn}</th>
+                            <th scope="col">{copy.recoveryColumn}</th>
+                            <th scope="col">{copy.changeColumn}</th>
+                          </>
+                        ) : (
+                          (result.rows[0]?.columns ?? []).map((column) => (
+                            <th scope="col" key={column.key}>
+                              {column.label}
+                            </th>
+                          ))
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -3462,24 +3506,35 @@ export default function PreflightApp() {
                           data-testid={`result-row-${row.geography}`}
                         >
                           <th scope="row">{row.geography}</th>
-                          <td data-label={copy.stolenColumn}>
-                            ₹{row.stolen2021} → ₹{row.stolen2023} {copy.crore}
-                          </td>
-                          <td
-                            data-label={copy.changeColumn}
-                            className="numeric"
-                          >
-                            {row.stolenDelta}
-                          </td>
-                          <td data-label={copy.recoveryColumn}>
-                            {row.recovery2021}% → {row.recovery2023}%
-                          </td>
-                          <td
-                            data-label={copy.changeColumn}
-                            className="numeric"
-                          >
-                            {row.recoveryDelta}
-                          </td>
+                          {isLegacyNcrbRow(row) ? (
+                            <>
+                              <td data-label={copy.stolenColumn}>
+                                ₹{row.stolen2021} → ₹{row.stolen2023}{" "}
+                                {copy.crore}
+                              </td>
+                              <td
+                                data-label={copy.changeColumn}
+                                className="numeric"
+                              >
+                                {row.stolenDelta}
+                              </td>
+                              <td data-label={copy.recoveryColumn}>
+                                {row.recovery2021}% → {row.recovery2023}%
+                              </td>
+                              <td
+                                data-label={copy.changeColumn}
+                                className="numeric"
+                              >
+                                {row.recoveryDelta}
+                              </td>
+                            </>
+                          ) : (
+                            row.columns.map((column) => (
+                              <td data-label={column.label} key={column.key}>
+                                {column.value}
+                              </td>
+                            ))
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -3496,11 +3551,13 @@ export default function PreflightApp() {
                     >
                       <summary>{copy.inspectRow(row.geography)}</summary>
                       <p>
-                        {row.stolen2021} → {row.stolen2023} {copy.crore};{" "}
-                        {copy.changeLabel} {row.stolenDelta}.{" "}
-                        {copy.recoveryLabel} {row.recovery2021}% →{" "}
-                        {row.recovery2023}%; {copy.changeLabel}{" "}
-                        {row.recoveryDelta}.
+                        {isLegacyNcrbRow(row)
+                          ? `${row.stolen2021} → ${row.stolen2023} ${copy.crore}; ${copy.changeLabel} ${row.stolenDelta}. ${copy.recoveryLabel} ${row.recovery2021}% → ${row.recovery2023}%; ${copy.changeLabel} ${row.recoveryDelta}.`
+                          : row.columns
+                              .map(
+                                (column) => `${column.label}: ${column.value}`,
+                              )
+                              .join("; ")}
                       </p>
                       <ul>
                         {row.lineage.map((reference, index) => (
