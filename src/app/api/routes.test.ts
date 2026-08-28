@@ -279,28 +279,27 @@ describe("release boundary routes", () => {
       new Response(
         JSON.stringify({
           output_text: JSON.stringify({
-            headline: "जाँचे गए स्नैपशॉट में विश्वसनीय निष्कर्ष नहीं मिला।",
+            headline:
+              "इस प्रोटोटाइप में जाँचे गए स्रोतों से विश्वसनीय सार्वजनिक उत्तर नहीं मिला।",
             headlineGroundingIds: ["result:headline"],
             meaning:
-              "यह रिकॉर्ड के उपलब्ध या प्रकाशित होने पर निष्कर्ष नहीं देता; गुम रिकॉर्ड के लिए RTI ड्राफ्ट तैयार करें।",
+              "इस प्रोटोटाइप में जाँचे गए सरकारी स्रोत आपके सवाल का पूरा जवाब नहीं देते। जानकारी के लिए RTI ड्राफ्ट तैयार करें।",
             meaningGroundingIds: ["result:meaning"],
             sentences: [
               {
-                text: "जाँचे गए दायरे की समीक्षा करें।",
+                text: "जाँचे गए स्रोतों की जानकारी देखें।",
                 groundingIds: ["result:searchScope"],
               },
             ],
-            evidenceStatus:
-              "जाँचे गए स्नैपशॉट से विश्वसनीय निष्कर्ष नहीं मिला।",
+            evidenceStatus: "जाँचे गए स्रोतों से विश्वसनीय उत्तर नहीं मिला।",
             evidenceStatusGroundingIds: ["result:evidenceStatus"],
             searchScope:
-              "पंजीकृत Northern Railway फाइलिंग फ़िक्स्चर में जाँच करने पर स्नैपशॉट को कोई सहायक रिकॉर्ड नहीं मिला।",
+              "यह प्रोटोटाइप सीमित संख्या में सहेजे गए सरकारी स्रोतों को जाँचता है। यह सरकारी सिस्टम को लाइव नहीं खोज रहा है।",
             searchScopeGroundingIds: ["result:searchScope"],
-            recommendedAction: "रिकॉर्ड-केंद्रित RTI ड्राफ्ट की समीक्षा करें।",
+            recommendedAction:
+              "अभी भी चाहिए जानकारी के लिए RTI ड्राफ्ट तैयार करें।",
             recommendedActionGroundingIds: ["result:recommendedAction"],
-            gaps: [
-              "स्नैपशॉट में इस रिकॉर्ड अनुरोध के लिए सहायक साक्ष्य की कमी है।",
-            ],
+            gaps: ["जाँचे गए स्रोतों से इस सवाल का विश्वसनीय जवाब नहीं मिला।"],
             gapsGroundingIds: ["result:gap:0"],
           }),
         }),

@@ -91,10 +91,9 @@ function formalResponse(
     ...base,
     outcome: "FORMAL_RESPONSE_REQUIRED",
     headline:
-      "A new written response remains available for this Information Need.",
-    meaning: `${base.meaning} You chose a formal response, so the related Research Finding is preserved while you decide whether to prepare a Filing Draft.`,
-    recommendedAction:
-      "Review the formal-response path and prepare a Filing Draft when ready.",
+      "You can ask the relevant government authority for a written reply",
+    meaning: `${base.meaning} You chose a written reply, so you can prepare an RTI draft for the relevant authority.`,
+    recommendedAction: "Prepare an RTI draft when you are ready.",
     researchFinding: {
       outcome: base.outcome,
       headline: base.headline,
@@ -175,11 +174,10 @@ function derivedNcrbResolution(
       execution: "CONFORMING",
       derivedFinding: true,
     }),
-    headline: `${rows.length} States/UTs matched the conditions in the official table.`,
+    headline: "We found an answer using official government data",
     meaning:
-      "The reported value of property stolen increased while the reported recovery percentage declined between 2021 and 2023.",
-    evidenceStatus:
-      "Calculated from official figures—not directly stated by NCRB.",
+      "The answer below was calculated from published NCRB figures for 2021 and 2023.",
+    evidenceStatus: "Calculated from official data",
     evidence: [
       {
         id: "ncrb-table-20a",
@@ -199,9 +197,9 @@ function derivedNcrbResolution(
     rows,
     gaps: execution.gaps,
     searchScope:
-      "The prototype Evidence Snapshot checked the NCRB Table 20A.1 CSV for 2021–2023 and excluded three declared aggregate rows.",
+      "This prototype checks a limited set of saved government sources. It is not searching government systems live. For this check, we looked at NCRB Table 20A.1 for 2021–2023 and left out three total rows.",
     recommendedAction:
-      "Review the calculation and save the finding, or prepare an RTI if you still need an official response.",
+      "Review how this was calculated, or prepare an RTI if you still want a written reply.",
     calculation: {
       operation:
         "Compare 2021 and 2023 stolen values and recovery percentages for each individual State/UT.",
@@ -227,7 +225,7 @@ function derivedNcrbResolution(
   return need.resolutionPreference === "formal"
     ? formalResponse(
         base,
-        "The confirmed Information Need selected a new written response.",
+        "You chose a written response from a government authority.",
       )
     : base;
 }
@@ -242,20 +240,20 @@ function noFindingResolution(
     snapshot: source.representation.hash,
   });
   const gaps = [
-    "The snapshot contains no supporting expenditure statement, ledger extract, work order, or contractor record for this need.",
+    "The sources checked by this prototype did not provide the expenditure, work order, or contractor information.",
   ];
   const base: RenderableResolution = {
     outcome: classifyOutcome({ need, execution: "IN_SCOPE_EMPTY" }),
-    headline: "The checked snapshot did not support a reliable finding.",
+    headline: "We couldn’t find a reliable public answer",
     meaning:
-      "This does not establish that the records are unavailable or unpublished. You can prepare a focused RTI for the missing records.",
-    evidenceStatus: "No reliable finding from the checked snapshot",
+      "The government sources checked by this prototype do not fully answer your question. An RTI may help you request the information directly from the relevant authority.",
+    evidenceStatus: "The sources checked did not provide a reliable answer",
     evidence: [],
     rows: [],
     gaps,
     searchScope:
-      "The prototype Evidence Snapshot checked its registered Northern Railway filing fixture and found no supporting records.",
-    recommendedAction: "Prepare a focused RTI asking for the missing records.",
+      "This prototype checks a limited set of saved government sources. It is not searching government systems live.",
+    recommendedAction: "Prepare an RTI for the information you still need.",
     executionReceipt: receipt(
       source,
       planHash,
@@ -267,7 +265,7 @@ function noFindingResolution(
   return need.resolutionPreference === "formal"
     ? formalResponse(
         base,
-        "The confirmed Information Need selected a new written response.",
+        "You chose a written response from a government authority.",
       )
     : base;
 }
@@ -283,12 +281,13 @@ function syntheticFixtureResolution(
   if (!fixture) throw new Error("SYNTHETIC_FIXTURE_NOT_REGISTERED");
   const evidence: EvidenceItem = {
     id: fixture.id,
-    sourceTitle: fixture.title,
-    publisher: fixture.publisher,
+    sourceTitle: "Earlier RTI response example",
+    publisher: "Prototype example",
     sourceType: "rti_response_fixture",
     applicablePeriod: fixture.applicablePeriod,
-    extract: `${fixture.disclosure} ${fixture.content}`,
-    syntheticDisclosure: fixture.disclosure,
+    extract:
+      "This is a fictional, identity-free example about a generic public programme. It is not a real RTI response and does not reproduce a government record.",
+    syntheticDisclosure: "Prototype example — this is not a real RTI response.",
     translationStatus: "original",
     grounding: fixture.values.map((value) =>
       groundingForFixtureValue(fixture.id, value.pointer, source),
@@ -296,22 +295,22 @@ function syntheticFixtureResolution(
   };
   const base: RenderableResolution = {
     outcome: "SOURCE_RESOLVED",
-    headline: "A synthetic earlier RTI response fixture is available.",
+    headline: "We found a similar earlier RTI response",
     meaning:
-      "This example demonstrates how a previous response could be displayed. It is fictional and does not represent an official response.",
-    evidenceStatus:
-      "Found through a Fictional RTI Response Fixture—not an official response",
+      "An earlier response may help answer your question before you file a new RTI.",
+    evidenceStatus: "Prototype example — this is not a real RTI response.",
     evidence: [evidence],
     rows: [],
     gaps: [],
-    searchScope: `The prototype checked the registered ${fixture.title}. ${fixture.disclosure}`,
-    recommendedAction: "Review the fixture, or prepare a new RTI.",
+    searchScope:
+      "This prototype checked a saved example of an earlier RTI response.",
+    recommendedAction: "Review the earlier response, or prepare a new RTI.",
     traceId,
   };
   return need.resolutionPreference === "formal"
     ? formalResponse(
         base,
-        "The confirmed Information Need selected a new written response.",
+        "You chose a written response from a government authority.",
       )
     : base;
 }
@@ -338,11 +337,11 @@ function epfoResolution(
       outcome: "FORMAL_RESPONSE_REQUIRED",
       headline:
         decision.subjectScope === "another-person"
-          ? "An EPFO service route cannot establish another person’s record access."
+          ? "An official EPFO service cannot show another person’s record."
           : "Confirm whose EPF claim you need before choosing a route.",
       meaning:
-        "Possessing another person’s identifier is not permission to access their record. This prototype does not request an account number, Aadhaar, PAN, OTP, or government login. You can prepare a records-focused Filing Draft without a promise that the authority will disclose the record.",
-      evidenceStatus: "No personal record retrieved",
+        "Having another person’s identifier does not give permission to access their record. This prototype does not request an account number, Aadhaar, PAN, OTP, or government login. You can prepare an RTI draft for records, but the authority’s reply cannot be promised.",
+      evidenceStatus: "No personal record was checked",
       evidence: [],
       rows: [],
       gaps: [
@@ -351,19 +350,19 @@ function epfoResolution(
           : "The record subject is not clear enough to select an own-record service route.",
       ],
       searchScope:
-        "The prototype does not retrieve personal records or accept account identifiers. Only the represented own-record service route can be opened.",
+        "This prototype does not retrieve personal records or accept account identifiers. Only the official service for your own record can be opened.",
       recommendedAction:
-        "Prepare a conservative Filing Draft asking for records, if appropriate.",
+        "Prepare an RTI draft for the records, if appropriate.",
       formalResponseReason:
         "The represented authenticated service route is limited to the citizen’s own record.",
       traceId,
     };
   return {
     outcome: "OFFICIAL_SERVICE_ROUTE",
-    headline: "This looks like your own personal EPF record.",
+    headline: "You may not need an RTI for this",
     meaning:
-      "The official EPFO claim-status route is intended for a member’s own claim. This prototype does not enter credentials, access a record, or promise a status.",
-    evidenceStatus: "Official service route—not a retrieved finding",
+      "EPF claim status can be checked through an official EPFO service. For personal claim status, using the official service is usually quicker than filing an RTI. This prototype does not access your record or promise a status.",
+    evidenceStatus: "Official service available",
     evidence: [
       {
         id: decision.route.id,
@@ -373,7 +372,7 @@ function epfoResolution(
         url: decision.route.officialUrl,
         applicablePeriod: "Current own-record claim status",
         extract:
-          "Use the official EPFO route yourself for your own claim. No account details are requested or transmitted by this prototype.",
+          "EPF claim status can be checked through an official EPFO service. No account details are requested or transmitted by this prototype.",
         translationStatus: "original",
         grounding: [],
       },
@@ -381,8 +380,8 @@ function epfoResolution(
     rows: [],
     gaps: [],
     searchScope:
-      "The prototype classified this as an own-record service route; it did not retrieve a personal record or send any identifier.",
-    recommendedAction: "Open the official EPFO claim-status route yourself.",
+      "This prototype identified an official service for your own record. It did not retrieve a personal record or send any identifier.",
+    recommendedAction: "Go to the official EPFO service.",
     serviceRoute: {
       id: decision.route.id,
       purpose: decision.route.purpose,
@@ -420,21 +419,20 @@ function resolveNeed(
     );
   return {
     outcome: classifyOutcome({ need, execution: "OUT_OF_SNAPSHOT" }),
-    headline:
-      "We couldn’t verify this from the sources available in this prototype.",
+    headline: "We couldn’t find a reliable public answer",
     meaning:
-      "This does not mean the information is unavailable or unpublished. We cannot claim an answer because the sources available in this prototype do not cover this request.",
-    evidenceStatus: "Not verified from available sources",
+      "The government sources checked by this prototype do not fully answer your question. An RTI may help you request the information directly from the relevant authority.",
+    evidenceStatus: "The sources checked did not provide a reliable answer",
     evidence: [],
     rows: [],
     gaps: [
-      "The requested authority or publication is not registered in this snapshot.",
+      "The sources checked by this prototype did not provide a reliable answer for this question.",
     ],
     searchScope:
-      "The prototype checked its Capability Manifest and found no registered source for this need.",
+      "This prototype checks a limited set of saved government sources. It is not searching government systems live.",
     recommendedAction: grievance
-      ? "Prepare a records-focused RTI Filing Draft asking for orders, notes, reports, or correspondence rather than an explanation of why."
-      : "Review the checked scope, edit the Information Need, or prepare an RTI Filing Draft.",
+      ? "Prepare an RTI asking for orders, notes, reports, or correspondence."
+      : "Review what we checked, change your question, or prepare an RTI draft.",
     coverageManifest: {
       capabilityManifestHash: source.capabilityManifest.hash,
       checkedAuthority: need.informationHolder,

@@ -39,7 +39,7 @@ describe("Evidence Brief artifact", () => {
       },
       result: {
         outcome: "DERIVED_FINDING",
-        evidenceStatus: expect.stringContaining("not directly stated"),
+        evidenceStatus: "Calculated from official data",
         calculation: {
           filters: expect.arrayContaining([
             "2023 stolen value > 2021 stolen value",
@@ -72,7 +72,9 @@ describe("Evidence Brief artifact", () => {
     const evidence = brief.result.evidence[0];
 
     expect(evidence.sourceType).toBe("rti_response_fixture");
-    expect(evidence.syntheticDisclosure).toMatch(/fictional|not an official/i);
+    expect(evidence.syntheticDisclosure).toMatch(
+      /fictional|not an official|not a real RTI response/i,
+    );
     expect(evidence.url).toBeUndefined();
     expect(
       evidence.grounding.every(

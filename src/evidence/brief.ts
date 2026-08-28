@@ -247,7 +247,7 @@ function validateEvidence(items: readonly EvidenceItem[]): void {
     if (item.sourceType === "rti_response_fixture") {
       if (
         !item.syntheticDisclosure ||
-        !/(?:fictional|synthetic|not an official)/i.test(
+        !/(?:fictional|synthetic|not an official|not a real RTI response)/i.test(
           item.syntheticDisclosure,
         )
       )

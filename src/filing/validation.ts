@@ -37,13 +37,13 @@ export function validateFilingPackage(
 ): StepValidation {
   const errors: string[] = [];
   if (filingPackage.draft.needId !== filingPackage.confirmedNeed.id)
-    errors.push(
-      "The Filing Draft is not tied to the confirmed Information Need.",
-    );
+    errors.push("The RTI draft is not tied to the confirmed question.");
   if (filingPackage.draft.holderId !== filingPackage.holder.id)
-    errors.push("The Filing Draft holder does not match the selected route.");
+    errors.push(
+      "The government authority in the RTI draft does not match the selected RTI channel.",
+    );
   if (filingPackage.draft.routeId !== filingPackage.route.id)
-    errors.push("The Filing Draft route does not match the validated route.");
+    errors.push("The RTI channel does not match the checked channel.");
   return { valid: errors.length === 0, errors };
 }
 
@@ -162,14 +162,12 @@ export function validateDemoStep(
   )
     errors.push("Identity fields such as Aadhaar and PAN are not accepted.");
   if (step === "review" && input.confirmed !== true)
-    errors.push(
-      "Review and explicitly confirm the Filing Package before payment.",
-    );
+    errors.push("Review and confirm the RTI details before payment.");
   if (
     step === "payment" &&
     (input.method !== "demo_upi" || input.amountInr !== 10)
   )
-    errors.push("Only the simulated ₹10 Demo UPI payment is accepted.");
+    errors.push("Only the simulated ₹10 demo payment is accepted.");
   if (step === "confirmation" && input.confirmed !== true)
     errors.push("Explicit confirmation is required.");
   return { valid: errors.length === 0, errors };

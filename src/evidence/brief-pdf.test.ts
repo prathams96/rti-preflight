@@ -115,7 +115,7 @@ describe("Evidence Brief PDF export", () => {
 
     expect(brief.result.evidence[0].sourceType).toBe("rti_response_fixture");
     expect(brief.result.evidence[0].syntheticDisclosure).toMatch(
-      /fictional|not an official/i,
+      /fictional|not an official|not a real RTI response/i,
     );
     expect(JSON.stringify(brief)).not.toMatch(
       /123456|fictional applicant|Demo OTP|UPI|filing profile/i,
@@ -140,7 +140,9 @@ describe("Evidence Brief PDF export", () => {
     expect(brief.confirmedInformationNeed.canonicalNeed).toContain(
       "राज्यों/केंद्र शासित प्रदेशों",
     );
-    expect(brief.result.headline).toContain("राज्य/केंद्र शासित प्रदेश");
+    expect(brief.result.headline).toBe(
+      "हमें आधिकारिक सरकारी डेटा से एक उत्तर मिला",
+    );
     expect(text).toContain("/Subtype /Type0");
     expect(text).toContain("/FontFile2");
     expect(text).toContain("/ToUnicode");

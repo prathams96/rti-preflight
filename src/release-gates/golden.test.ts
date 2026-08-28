@@ -148,7 +148,7 @@ describe("release gates", () => {
 
     expect(result.evidence[0]).toMatchObject({
       sourceType: "rti_response_fixture",
-      syntheticDisclosure: expect.stringContaining("not an official response"),
+      syntheticDisclosure: expect.stringContaining("not a real RTI response"),
     });
     expect(result.evidence[0].grounding.map((item) => item.locator)).toEqual(
       fixture.values.map((value) => ({

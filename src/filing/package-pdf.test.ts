@@ -114,10 +114,10 @@ describe("Filing Package PDF export", () => {
     const pdf = await serializeFilingPackagePdf(input, "hi");
     const text = new TextDecoder().decode(pdf);
 
-    expect(planText).toContain("डेमो फाइलिंग पैकेज");
-    expect(planText).toContain("फाइलिंग ड्राफ्ट");
+    expect(planText).toContain("RTI ड्राफ्ट");
+    expect(planText).toContain("RTI अनुरोध");
     expect(planText).toContain("डेमो UPI");
-    expect(planText).toContain("काल्पनिक सबमिशन समय");
+    expect(planText).toContain("डेमो समय");
     expect(planText).toContain(marker);
     expect(
       buildFilingPackageArtifact(input).filingPackage.draft.text,
