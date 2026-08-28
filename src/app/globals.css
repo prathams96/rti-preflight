@@ -215,6 +215,16 @@ h3 {
   letter-spacing: -0.035em;
 }
 
+.wordmark-logo {
+  width: 3.3rem;
+  height: 3.3rem;
+  flex: 0 0 3.3rem;
+  object-fit: contain;
+  border: 1px solid var(--rule);
+  border-radius: 0.35rem;
+  background: var(--paper);
+}
+
 .wordmark-mark {
   display: grid;
   width: 3.3rem;
@@ -1465,6 +1475,12 @@ footer {
   .wordmark-mark .ui-icon {
     width: 2.45rem;
     height: 2.45rem;
+  }
+
+  .wordmark-logo {
+    width: 2.45rem;
+    height: 2.45rem;
+    flex-basis: 2.45rem;
   }
 
   .language-toggle {
