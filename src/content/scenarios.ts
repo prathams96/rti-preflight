@@ -93,21 +93,58 @@ export const CPCB_CONFLICT_DECISION = {
 
 const DEFAULT_PREFERENCE = "unsure" as const;
 
+const ENGLISH_DRAFTING_ACTION =
+  "(?:prepare|draft|write|file|submit|make|create)";
+const HINDI_DRAFTING_ACTION =
+  "(?:तैयार|ड्राफ्ट|लिख|दाखिल|फाइल|बना|prepare|draft|write|file|submit|make|create)";
+const ENGLISH_RTI_OBJECT = "(?:a\\s+|an\\s+|the\\s+)?(?:new\\s+)?rti\\b";
+const RTI_REFERENCE = "(?:आरटीआई|rti)";
+
+const EXPLICIT_ENGLISH_DRAFTING_INTENT = new RegExp(
+  `\\b(?:help(?:\\s+me)?(?:\\s+to)?\\s+)?${ENGLISH_DRAFTING_ACTION}\\s+${ENGLISH_RTI_OBJECT}|\\b(?:please\\s+)?help(?:\\s+me)?(?:\\s+to)?\\s+${ENGLISH_DRAFTING_ACTION}\\s+(?:an?\\s+)?rti\\b|\\b(?:i\\s+want|i\\s+need|please)\\s+(?:to\\s+)?${ENGLISH_DRAFTING_ACTION}\\s+(?:an?\\s+)?rti\\b|\\brti\\b[\\s\\S]{0,70}\\b${ENGLISH_DRAFTING_ACTION}\\b`,
+  "i",
+);
+
+const EXPLICIT_HINDI_OR_MIXED_DRAFTING_INTENT = new RegExp(
+  `(?:${RTI_REFERENCE})[\\s\\S]{0,80}${HINDI_DRAFTING_ACTION}(?:\\s+करना\\s+है)?|${HINDI_DRAFTING_ACTION}[\\s\\S]{0,80}(?:${RTI_REFERENCE})`,
+  "iu",
+);
+
+const ENGLISH_NEGATION =
+  "(?:don't|dont|do\\s+not|doesn't|does\\s+not|didn't|did\\s+not|won't|will\\s+not|wouldn't|would\\s+not|can't|cannot|can\\s+not|shouldn't|should\\s+not|never|not\\s+(?:want|need|wish|intend|plan|looking|trying|going|willing))";
+const HINDI_NEGATION = "(?:नहीं|नही|\\bnahi\\b|\\bnahin\\b|मत|\\bmat\\b)";
+
+const NEGATED_ENGLISH_DRAFTING_INTENT = new RegExp(
+  `(?:\\b${ENGLISH_NEGATION}\\b[\\s\\S]{0,60}\\b${ENGLISH_DRAFTING_ACTION}\\s+${ENGLISH_RTI_OBJECT}|\\bnot\\s+(?:to\\s+)?${ENGLISH_DRAFTING_ACTION}\\s+${ENGLISH_RTI_OBJECT})`,
+  "i",
+);
+
+const NEGATED_HINDI_OR_MIXED_DRAFTING_INTENT = new RegExp(
+  `(?:${RTI_REFERENCE})[\\s\\S]{0,48}${HINDI_NEGATION}[\\s\\S]{0,32}${HINDI_DRAFTING_ACTION}|(?:${RTI_REFERENCE})[\\s\\S]{0,48}${HINDI_DRAFTING_ACTION}[\\s\\S]{0,24}${HINDI_NEGATION}(?:\\s+(?:करना|करनी|करने|करूँ|करता|करती|चाहता|चाहती|है|हूँ|हैं|hai|hoon|karna|karni|karne|chahta|chahti))?|${HINDI_NEGATION}[\\s\\S]{0,48}${RTI_REFERENCE}[\\s\\S]{0,48}${HINDI_DRAFTING_ACTION}`,
+  "iu",
+);
+
 /**
  * Detect an explicit request to prepare, write, draft, or file a new RTI.
  * This is deterministic routing metadata, not a model-generated conclusion.
  */
 export function hasExplicitDraftingIntent(text: string): boolean {
   const normalized = text.replace(/[“”‘’]/g, "'");
-  const english =
-    /\b(?:help(?:\s+me)?(?:\s+to)?\s+)?(?:prepare|draft|write|file|submit|make|create)\s+(?:a\s+|an\s+|the\s+)?(?:new\s+)?rti\b|\b(?:please\s+)?help(?:\s+me)?(?:\s+to)?\s+(?:prepare|draft|write|file|submit|make|create)\s+(?:an?\s+)?rti\b|\b(?:i\s+want|i\s+need|please)\s+(?:to\s+)?(?:prepare|draft|write|file|submit|make|create)\s+(?:an?\s+)?rti\b|\brti\b[\s\S]{0,70}\b(?:prepare|draft|write|file|submit|make|create)\b/i.test(
-      normalized,
+  const clauses = normalized.split(
+    /(?:[.!?,;:]+|\b(?:but|however|instead)\b|(?:पर|लेकिन|बल्कि))/iu,
+  );
+
+  return clauses.some((clause) => {
+    const hasPositiveIntent =
+      EXPLICIT_ENGLISH_DRAFTING_INTENT.test(clause) ||
+      EXPLICIT_HINDI_OR_MIXED_DRAFTING_INTENT.test(clause);
+    if (!hasPositiveIntent) return false;
+
+    return (
+      !NEGATED_ENGLISH_DRAFTING_INTENT.test(clause) &&
+      !NEGATED_HINDI_OR_MIXED_DRAFTING_INTENT.test(clause)
     );
-  const hindiOrMixed =
-    /(?:आरटीआई|rti)[\s\S]{0,80}(?:तैयार|ड्राफ्ट|लिख|दाखिल|फाइल|बना|करना\s+है|करें)|(?:तैयार|ड्राफ्ट|लिख|दाखिल|फाइल|बना)[\s\S]{0,80}(?:आरटीआई|rti)/iu.test(
-      normalized,
-    );
-  return english || hindiOrMixed;
+  });
 }
 
 /** Existing NCRB evidence may still be shown; other explicit RTI goals draft directly. */

@@ -63,6 +63,28 @@ describe("seeded scenario boundaries", () => {
     }
   });
 
+  it("does not route negated drafting requests directly to drafting", () => {
+    for (const text of [
+      "I don't want to file an RTI",
+      "I do not want to draft an RTI",
+      "I am not looking to file an RTI",
+      "मैं RTI दाखिल नहीं करना चाहता हूँ",
+      "Mujhe RTI draft nahi karni hai",
+      "Mujhe RTI nahi file karni hai",
+      "RTI तैयार नहीं करनी है",
+    ]) {
+      expect(hasExplicitDraftingIntent(text), text).toBe(false);
+      expect(interpretWithFixture(text)[0].draftingIntent, text).toBe(false);
+    }
+  });
+
+  it("keeps a positive drafting clause after a negated alternative", () => {
+    const text =
+      "I don't want to search for an old response, but I want to file an RTI";
+    expect(hasExplicitDraftingIntent(text)).toBe(true);
+    expect(interpretWithFixture(text)[0].draftingIntent).toBe(true);
+  });
+
   it("gives explicit drafting intent precedence over the previous-response fixture", () => {
     expect(
       interpretWithFixture(
