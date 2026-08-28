@@ -153,7 +153,7 @@ export function createGenericRtiDemoRoute(need: ConfirmedFilingNeed): {
       ],
       submission: "demo",
     },
-    guidedCoverage: true,
+    guidedCoverage: false,
   };
   return { holder, route };
 }

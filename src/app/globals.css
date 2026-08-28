@@ -539,12 +539,7 @@ select:focus {
 .ask-plane .action-button {
   grid-area: action;
   min-height: 4.55rem;
-  margin-right: calc(clamp(1.35rem, 4.6vw, 4rem) * -1);
-  border-width: 0 0 0 1px;
-  border-radius: 0;
-  box-shadow:
-    inset 1px 0 rgba(255, 255, 255, 0.3),
-    -0.25rem 0.25rem 0 rgba(133, 76, 9, 0.15);
+  margin: 0.35rem 0;
   font-size: 1rem;
 }
 
@@ -605,6 +600,28 @@ select:focus {
 
 .resume-panel p {
   margin: 0.45rem 0 0.85rem;
+}
+
+.resume-panel .button-row {
+  margin-top: 0.25rem;
+}
+
+.confirm-actions {
+  margin-top: 1.25rem;
+}
+
+.unverified-disclosure {
+  margin-top: 0.35rem;
+  color: var(--partial);
+}
+
+.unverified-disclosure summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.unverified-disclosure p {
+  margin: 0.5rem 0 0;
 }
 
 .examples {

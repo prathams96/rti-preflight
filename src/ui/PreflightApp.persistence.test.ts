@@ -11,9 +11,11 @@ import {
   isStaleRequest,
   shouldSupersedeInterpretation,
   languageSwitchDecision,
+  openCalculationDetails,
 } from "./PreflightApp";
 import {
   createFilingModule,
+  createGenericRtiDemoRoute,
   NORTHERN_RAILWAY_HOLDER,
   NORTHERN_RAILWAY_ROUTE,
 } from "../filing";
@@ -36,6 +38,21 @@ function createStorage(): StorageMock {
 describe("Preflight persistence boundaries", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("opens the calculation disclosure before scrolling to it", () => {
+    const details = {
+      open: false,
+      scrollIntoView: vi.fn(),
+    } as unknown as HTMLDetailsElement;
+
+    openCalculationDetails(details);
+
+    expect(details.open).toBe(true);
+    expect(details.scrollIntoView).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "start",
+    });
   });
 
   it("does not persist filing phases in the research store", () => {
@@ -84,9 +101,10 @@ describe("Preflight persistence boundaries", () => {
       originalText: "Please provide the confirmed railway records.",
       canonicalNeed:
         "maintenance expenditure for lifts and escalators and contractors at New Delhi Railway Station during FY 2024-25",
-      measure: "Maintenance expenditure and contractor records",
+      measure:
+        "Maintenance expenditure, work orders, contracts, and contractor names",
       geography: "New Delhi Railway Station",
-      period: "Financial year 2024-25",
+      period: "Financial year 2024–25",
       breakdown: "Contractor",
       informationHolder: "Northern Railway",
       informationHolderStatus: "verified",
@@ -240,9 +258,10 @@ describe("Preflight persistence boundaries", () => {
       originalText: "Please provide the confirmed railway records.",
       canonicalNeed:
         "maintenance expenditure for lifts and escalators and contractors at New Delhi Railway Station during FY 2024-25",
-      measure: "Maintenance expenditure and contractor records",
+      measure:
+        "Maintenance expenditure, work orders, contracts, and contractor names",
       geography: "New Delhi Railway Station",
-      period: "Financial year 2024-25",
+      period: "Financial year 2024–25",
       breakdown: "Contractor",
       informationHolder: "Northern Railway",
       informationHolderStatus: "verified",
@@ -277,6 +296,53 @@ describe("Preflight persistence boundaries", () => {
       state,
       recoveryNeeded: false,
     });
+  });
+
+  it("rejects stale generic packages that claim guided coverage", async () => {
+    const sessionStorage = createStorage();
+    vi.stubGlobal("window", { localStorage: createStorage(), sessionStorage });
+    const filing = createFilingModule();
+    const need = {
+      id: "need-generic",
+      canonicalNeed: "municipal park maintenance budget records",
+      originalText: "Show me the municipal park maintenance budget.",
+      measure: "Maintenance budget",
+      geography: "Municipal parks",
+      period: "Financial year 2025-26",
+      breakdown: "Year",
+      informationHolder: "City Municipal Corporation",
+      informationHolderStatus: "unverified" as const,
+      resolutionPreference: "formal" as const,
+      unresolvedClarifications: [],
+      scenario: "unsupported" as const,
+    };
+    const { holder } = createGenericRtiDemoRoute(need);
+    const filingPackage = await filing.prepare({
+      need,
+      holder,
+      route: { ...NORTHERN_RAILWAY_ROUTE, guidedCoverage: true },
+    });
+    sessionStorage.setItem(
+      "rti-preflight-filing-v2",
+      JSON.stringify({
+        version: 2,
+        state: {
+          phase: "file",
+          draftText: filingPackage.draft.text,
+          package: filingPackage,
+          need,
+          step: "otp",
+          otp: "",
+          profile: filing.demoProfile,
+          reviewed: false,
+          paymentConfirmed: false,
+          language: "en",
+        },
+      }),
+    );
+
+    expect(readSessionFilingState()).toBeUndefined();
+    expect(sessionStorage.getItem("rti-preflight-filing-v2")).toBeNull();
   });
 
   it("discards malformed nested research and filing state", () => {

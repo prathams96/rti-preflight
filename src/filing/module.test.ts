@@ -336,7 +336,7 @@ describe("Filing Module public seam", () => {
     ).rejects.toThrow("FILING_PACKAGE_NOT_CONFIRMED");
   });
 
-  it("submits an interpreted need through the generic demo route", async () => {
+  it("rejects submission through the generic demo route outside guided coverage", async () => {
     const filing = createFilingModule();
     const genericNeed = {
       id: "need-city-budget",
@@ -360,17 +360,16 @@ describe("Filing Module public seam", () => {
       route,
     });
 
-    const acknowledgement = await filing.demoSubmit({
-      package: prepared,
-      confirmation: {
-        otp: DEMO_OTP,
-        profile: filing.demoProfile,
-        reviewed: true,
-        payment: { method: "demo_upi", amountInr: 10 },
-      },
-    });
-
-    expect(acknowledgement.holder).toBe("City Municipal Corporation");
-    expect(acknowledgement.route).toContain("not verified");
+    await expect(
+      filing.demoSubmit({
+        package: prepared,
+        confirmation: {
+          otp: DEMO_OTP,
+          profile: filing.demoProfile,
+          reviewed: true,
+          payment: { method: "demo_upi", amountInr: 10 },
+        },
+      }),
+    ).rejects.toThrow("FILING_PACKAGE_NOT_CONFIRMED");
   });
 });

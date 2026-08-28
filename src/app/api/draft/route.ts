@@ -164,7 +164,7 @@ export async function POST(request: Request) {
       NextResponse.json({
         draft: { text: fallbackText },
         filingPackage: fallbackPackage,
-        guidedCoverage: true,
+        guidedCoverage: verifiedRouteCoverage,
         validation: fallbackValidation,
         generation: "deterministic" as const,
         degraded: true,
@@ -260,7 +260,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         draft: { text: parsed.text },
         filingPackage,
-        guidedCoverage: true,
+        guidedCoverage: verifiedRouteCoverage,
         validation,
         generation: "openai" as const,
         degraded: false,
