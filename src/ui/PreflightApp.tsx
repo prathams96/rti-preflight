@@ -673,10 +673,6 @@ export const COPY = {
     officialSource: "Official source",
     pinnedCsv: "Open pinned CSV",
     tableCaption: "States and Union Territories matching the NCRB conditions",
-    stateColumn: "State/UT",
-    stolenColumn: "Stolen 2021 → 2023",
-    changeColumn: "Change",
-    recoveryColumn: "Recovery 2021 → 2023",
     inspectEvidence: "View source details",
     inspectRow: (geography: string) =>
       `View ${geography} figures and source cells`,
@@ -886,9 +882,6 @@ export const COPY = {
       "Answer using the fields above, or retain this one detail as unknown.",
     rowDetail: (row: string, values: string) =>
       `View ${row} figures and source cells: ${values}`,
-    changeLabel: "change",
-    recoveryLabel: "Recovery",
-    crore: "crore",
     plan: "Calculation plan",
     engine: "Calculation method",
     policy: "Checking rules",
@@ -976,10 +969,6 @@ export const COPY = {
     officialSource: "आधिकारिक स्रोत खोलें",
     pinnedCsv: "पिन किया गया CSV खोलें",
     tableCaption: "NCRB शर्तों से मेल खाने वाले राज्य और केंद्र शासित प्रदेश",
-    stateColumn: "राज्य/केंद्र शासित प्रदेश",
-    stolenColumn: "चोरी 2021 → 2023",
-    changeColumn: "बदलाव",
-    recoveryColumn: "बरामदगी 2021 → 2023",
     inspectEvidence: "स्रोत का विवरण देखें",
     inspectRow: (geography: string) =>
       `${geography} के आँकड़े और स्रोत सेल देखें`,
@@ -1186,9 +1175,6 @@ export const COPY = {
       "ऊपर दिए फ़ील्ड से उत्तर दें या इस विवरण को अज्ञात रहने दें।",
     rowDetail: (row: string, values: string) =>
       `${row} के मान और स्रोत सेल देखें: ${values}`,
-    changeLabel: "बदलाव",
-    recoveryLabel: "बरामदगी",
-    crore: "करोड़",
     plan: "गणना योजना",
     engine: "गणना का तरीका",
     policy: "जाँच के नियम",
