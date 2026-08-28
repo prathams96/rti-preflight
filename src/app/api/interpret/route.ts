@@ -3,7 +3,7 @@ import { RTIPreflightModule } from "../../../preflight/module";
 import { DeterministicInterpretationAdapter } from "../../../model/fake-adapter";
 import { OpenAIInterpretationAdapter } from "../../../model/openai-adapter.server";
 import { normalizeTraceId } from "../../../observability";
-import { isExactNcrbSeededPrompt } from "../../../content/scenarios";
+import { isExactScenarioPrompt } from "../../../content/scenarios";
 
 export const runtime = "nodejs";
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         // The deterministic parser is reserved for the explicit seeded demo
         // fixture. Arbitrary production free text must not be reparsed after
         // model failure because guessed semantics are unsafe.
-        if (!isExactNcrbSeededPrompt(body.text))
+        if (!isExactScenarioPrompt(body.text))
           return NextResponse.json(
             {
               code: "INTERPRETATION_UNAVAILABLE",

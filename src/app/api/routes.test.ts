@@ -234,25 +234,33 @@ describe("release boundary routes", () => {
     );
   });
 
-  it("falls back deterministically when the configured interpretation provider fails", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "configured-key");
-    const fetchMock = vi.fn().mockRejectedValue(new Error("provider down"));
-    vi.stubGlobal("fetch", fetchMock);
-    const response = await interpret(
-      new Request("http://localhost/api/interpret", {
-        method: "POST",
-        body: JSON.stringify({
-          text: SCENARIO_PROMPTS[0].prompt,
-          language: "en",
+  it.each(
+    SCENARIO_PROMPTS.flatMap(
+      (scenario) =>
+        [
+          [scenario.id, scenario.prompt, "en"],
+          [scenario.id, scenario.hiPrompt, "hi"],
+        ] as const,
+    ),
+  )(
+    "falls back deterministically for the exact %s seed when the configured provider fails (%s)",
+    async (scenarioId, text, language) => {
+      vi.stubEnv("OPENAI_API_KEY", "configured-key");
+      const fetchMock = vi.fn().mockRejectedValue(new Error("provider down"));
+      vi.stubGlobal("fetch", fetchMock);
+      const response = await interpret(
+        new Request("http://localhost/api/interpret", {
+          method: "POST",
+          body: JSON.stringify({ text, language }),
         }),
-      }),
-    );
-    const payload = await response.json();
-    expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledOnce();
-    expect(payload.needs[0].scenario).toBe("ncrb-property");
-    expect(payload.language).toBe("en");
-  });
+      );
+      const payload = await response.json();
+      expect(response.status).toBe(200);
+      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(payload.needs[0].scenario).toBe(scenarioId);
+      expect(payload.language).toBe(language);
+    },
+  );
 
   it("does not regex-reinterpret arbitrary free text after provider failure", async () => {
     vi.stubEnv("OPENAI_API_KEY", "configured-key");
@@ -263,6 +271,25 @@ describe("release boundary routes", () => {
         method: "POST",
         body: JSON.stringify({
           text: "Identify States/UTs where property stolen declined and recovery percentage increased between 2021 and 2023.",
+        }),
+      }),
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      code: "INTERPRETATION_UNAVAILABLE",
+    });
+  });
+
+  it("does not treat a near-seed as an exact fixture after provider failure", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "configured-key");
+    const fetchMock = vi.fn().mockRejectedValue(new Error("provider down"));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await interpret(
+      new Request("http://localhost/api/interpret", {
+        method: "POST",
+        body: JSON.stringify({
+          text: "Between 2021 and 2023, which States/UTs reported an increase in the value of property stolen?",
+          language: "en",
         }),
       }),
     );

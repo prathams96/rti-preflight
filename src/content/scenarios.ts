@@ -100,13 +100,17 @@ const NCRB_MEASURES = {
   recovery: "percentage recovery of stolen property",
 } as const;
 
-export function isExactScenarioPrompt(text: string): boolean {
+function exactScenarioForPrompt(text: string): ScenarioId | undefined {
   const normalized = text.trim().toLocaleLowerCase();
-  return SCENARIO_PROMPTS.some(
+  return SCENARIO_PROMPTS.find(
     (scenario) =>
       normalized === scenario.prompt.toLocaleLowerCase() ||
       normalized === scenario.hiPrompt.toLocaleLowerCase(),
-  );
+  )?.id;
+}
+
+export function isExactScenarioPrompt(text: string): boolean {
+  return exactScenarioForPrompt(text) !== undefined;
 }
 
 export function isExactNcrbSeededPrompt(text: string): boolean {
@@ -134,7 +138,7 @@ export function canonicalNeedFromAnalysisIntent(
     ? ` between ${firstPeriod.fromPeriod} and ${firstPeriod.toPeriod}`
     : "";
   const ranking = intent.ranking
-    ? ` Rank by ${intent.ranking.measure} change in ${intent.ranking.direction === "desc" ? "descending" : "ascending"} order.`
+    ? ` Return the ${intent.ranking.limit} States/UTs ranked by ${intent.ranking.measure} change in ${intent.ranking.direction === "desc" ? "descending" : "ascending"} order.`
     : "";
   return `Identify individual States/UTs where ${conditions.join(` ${intent.logic.toUpperCase()} `)}${period}.${ranking}`;
 }
@@ -344,6 +348,8 @@ export function scenarioForModelNeed(
 }
 
 export function scenarioForText(text: string): ScenarioId {
+  const exactScenario = exactScenarioForPrompt(text);
+  if (exactScenario) return exactScenario;
   const normalized = text.toLocaleLowerCase();
   // An explicit drafting goal must not be mistaken for the synthetic
   // previous-response example just because both mention an earlier RTI.
