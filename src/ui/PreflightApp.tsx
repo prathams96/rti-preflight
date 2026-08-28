@@ -69,6 +69,7 @@ export type Phase =
   | "draft"
   | "file"
   | "acknowledgement";
+type AiThinkingTask = "interpretation" | "resolution" | "draft";
 type SavedState = {
   phase: Phase;
   text: string;
@@ -752,6 +753,43 @@ export const COPY = {
     placeholder:
       "For example: How much did my municipality spend on road repairs in 2024-25?",
     interpreting: "Interpreting your need",
+    aiThinking: {
+      interpretation: {
+        eyebrow: "Assisted interpretation",
+        title: "Making your question checkable",
+        detail:
+          "We’re reading your wording and mapping it to one clear Information Need.",
+        stages: [
+          "Reading your wording",
+          "Separating the Information Need",
+          "Preparing a confirmation card",
+        ],
+      },
+      resolution: {
+        eyebrow: "Evidence check in progress",
+        title: "Checking the evidence",
+        detail:
+          "We’re checking only the registered Evidence Snapshot and preparing a grounded result.",
+        stages: [
+          "Confirming the selected need",
+          "Checking registered sources",
+          "Preparing a grounded result",
+        ],
+      },
+      draft: {
+        eyebrow: "Draft preparation in progress",
+        title: "Preparing your Filing Draft",
+        detail:
+          "We’re keeping your confirmed scope intact while shaping an editable records request.",
+        stages: [
+          "Reading the confirmed need",
+          "Keeping your scope intact",
+          "Preparing an editable draft",
+        ],
+      },
+      note: "These work areas describe this step; they are not a live progress report.",
+      cancel: "Back and edit",
+    },
     unknownClarification:
       "Answer using the fields above, or retain this one detail as unknown.",
     rowDetail: (row: string, values: string) =>
@@ -989,6 +1027,43 @@ export const COPY = {
     placeholder:
       "उदाहरण: मेरी नगरपालिका ने 2024-25 में सड़क की मरम्मत पर कितना खर्च किया?",
     interpreting: "आपकी ज़रूरत समझी जा रही है",
+    aiThinking: {
+      interpretation: {
+        eyebrow: "सहायता से समझ रहे हैं",
+        title: "आपके सवाल को जाँचने योग्य बना रहे हैं",
+        detail:
+          "हम आपके शब्द पढ़कर उन्हें एक स्पष्ट सूचना-ज़रूरत में बदल रहे हैं।",
+        stages: [
+          "आपके शब्द पढ़ रहे हैं",
+          "सूचना-ज़रूरत अलग कर रहे हैं",
+          "पुष्टि कार्ड तैयार कर रहे हैं",
+        ],
+      },
+      resolution: {
+        eyebrow: "प्रमाण की जाँच जारी है",
+        title: "प्रमाण की जाँच कर रहे हैं",
+        detail:
+          "हम केवल पंजीकृत प्रमाण स्नैपशॉट जाँचकर प्रमाण-आधारित नतीजा तैयार कर रहे हैं।",
+        stages: [
+          "चुनी गई ज़रूरत की पुष्टि कर रहे हैं",
+          "पंजीकृत स्रोत जाँच रहे हैं",
+          "प्रमाण-आधारित नतीजा तैयार कर रहे हैं",
+        ],
+      },
+      draft: {
+        eyebrow: "ड्राफ्ट तैयार किया जा रहा है",
+        title: "आपका फाइलिंग ड्राफ्ट तैयार कर रहे हैं",
+        detail:
+          "हम आपकी पुष्ट दायरे को बनाए रखते हुए रिकॉर्ड माँगने वाला बदलाव योग्य ड्राफ्ट बना रहे हैं।",
+        stages: [
+          "पुष्ट ज़रूरत पढ़ रहे हैं",
+          "आपका दायरा बनाए रख रहे हैं",
+          "बदलाव योग्य ड्राफ्ट तैयार कर रहे हैं",
+        ],
+      },
+      note: "ये चरण इस काम के हिस्से बताते हैं; यह लाइव प्रगति रिपोर्ट नहीं है।",
+      cancel: "वापस जाकर बदलें",
+    },
     unknownClarification:
       "ऊपर दिए फ़ील्ड से उत्तर दें या इस विवरण को अज्ञात रहने दें।",
     rowDetail: (row: string, values: string) =>
@@ -1025,6 +1100,91 @@ export const COPY = {
       `निर्णय ${date} को दर्ज किया गया; कोई विरोधाभास प्रमाण पंजीकृत नहीं है।`,
   },
 } as const;
+
+type AppCopy = (typeof COPY)[keyof typeof COPY];
+
+function AiThinkingScreen({
+  task,
+  copy,
+  onCancel,
+}: {
+  task: AiThinkingTask;
+  copy: AppCopy;
+  onCancel: () => void;
+}) {
+  const content = copy.aiThinking[task];
+
+  return (
+    <section
+      className={`content-column ai-thinking-state ai-thinking-${task}`}
+      aria-labelledby="ai-thinking-title"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="ai-thinking-plane">
+        <div className="ai-thinking-heading">
+          <div className="ai-thinking-signal" aria-hidden="true">
+            <Icon name="pending" />
+          </div>
+          <div>
+            <p className="eyebrow">{content.eyebrow}</p>
+            <h1 id="ai-thinking-title">{content.title}</h1>
+            <p className="lede">{content.detail}</p>
+          </div>
+        </div>
+
+        <div className="ai-workbench" aria-hidden="true">
+          <div className="ai-workbench-ruler">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="ai-paper ai-paper-back">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="ai-paper ai-paper-middle">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="ai-paper ai-paper-front">
+            <strong />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="ai-scan-beam" />
+          <div className="ai-scan-stamp">
+            <Icon name="pending" />
+          </div>
+        </div>
+
+        <ol className="ai-stage-list">
+          {content.stages.map((stage) => (
+            <li className="ai-stage" key={stage}>
+              <span className="ai-stage-indicator" aria-hidden="true">
+                <span />
+              </span>
+              <span>{stage}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="ai-thinking-note">
+          <Icon name="info" /> {copy.aiThinking.note}
+        </p>
+        <button className="secondary-button ai-cancel" onClick={onCancel}>
+          {copy.aiThinking.cancel}
+        </button>
+      </div>
+    </section>
+  );
+}
 
 const outcomeLabel: Record<string, string> = {
   DERIVED_FINDING: "Calculated from official figures",
@@ -1730,6 +1890,8 @@ export default function PreflightApp() {
   >();
   const [briefFeedback, setBriefFeedback] = useState("");
   const [savedPreflights, setSavedPreflights] = useState<SavedPreflight[]>([]);
+  const [activeAiTask, setActiveAiTask] = useState<AiThinkingTask | null>(null);
+  const [aiReturnPhase, setAiReturnPhase] = useState<Phase | null>(null);
   const draftRequestGeneration = useRef(0);
   const resolveRequestGeneration = useRef(0);
   const interpretRequestGeneration = useRef(0);
@@ -1761,6 +1923,8 @@ export default function PreflightApp() {
 
   function invalidatePreparedFiling() {
     draftRequestGeneration.current += 1;
+    setActiveAiTask(null);
+    setAiReturnPhase(null);
     invalidateFilingConfirmations();
     setFilingPackage(undefined);
     setDraftText("");
@@ -1779,6 +1943,8 @@ export default function PreflightApp() {
     resolveRequestGeneration.current += 1;
     interpretRequestGeneration.current += 1;
     setIsInterpreting(false);
+    setActiveAiTask(null);
+    setAiReturnPhase(null);
     const feedbackKeys = [
       "briefSaved",
       "briefShared",
@@ -1807,6 +1973,16 @@ export default function PreflightApp() {
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
+
+  useEffect(() => {
+    if (!activeAiTask && phase !== "search") return;
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
+  }, [activeAiTask, phase]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1988,6 +2164,8 @@ export default function PreflightApp() {
 
   function requestDraft(targetLanguage: Language) {
     if (!need) return;
+    setAiReturnPhase(phase);
+    setActiveAiTask("draft");
     invalidateFilingConfirmations();
     const guidedCoverage = isNorthernRailwayGuidedNeed(need);
     const generation = ++draftRequestGeneration.current;
@@ -2041,12 +2219,35 @@ export default function PreflightApp() {
         setDraftText(payload.draft.text);
         setDraftOriginalText(payload.draft.text);
         setFilingError("");
+        setActiveAiTask(null);
+        setAiReturnPhase(null);
         setPhase("draft");
       })
       .catch(() => {
         if (generation !== draftRequestGeneration.current) return;
+        setActiveAiTask(null);
+        setAiReturnPhase(null);
         setDraftError(COPY[targetLanguage].prepareFailure);
+        setPhase("draft");
       });
+  }
+
+  function cancelAiWork() {
+    if (!activeAiTask) return;
+    if (activeAiTask === "interpretation") {
+      interpretRequestGeneration.current += 1;
+      setIsInterpreting(false);
+      setPhase("start");
+    } else if (activeAiTask === "resolution") {
+      resolveRequestGeneration.current += 1;
+      setPhase("confirm");
+    } else {
+      draftRequestGeneration.current += 1;
+      setDraftError("");
+      setPhase(aiReturnPhase === "result" ? "result" : "confirm");
+    }
+    setActiveAiTask(null);
+    setAiReturnPhase(null);
   }
 
   function openDraft() {
@@ -2422,6 +2623,8 @@ export default function PreflightApp() {
     ) {
       interpretRequestGeneration.current += 1;
       setIsInterpreting(false);
+      setActiveAiTask(null);
+      setAiReturnPhase(null);
     }
     setText(value);
   }
@@ -2431,6 +2634,8 @@ export default function PreflightApp() {
     setError("");
     const generation = ++interpretRequestGeneration.current;
     setIsInterpreting(true);
+    setAiReturnPhase("start");
+    setActiveAiTask("interpretation");
     traceRecorder.record("interpretation.started", journeyTraceId, {
       component: "interpretation-route",
       version: "interpretation-route-v1",
@@ -2463,6 +2668,8 @@ export default function PreflightApp() {
       });
       setNeeds(payload.needs);
       setNeed(payload.needs[0]);
+      setActiveAiTask(null);
+      setAiReturnPhase(null);
       setPhase(payload.needs.length > 1 ? "select" : "confirm");
     } catch (caught) {
       if (isStaleRequest(generation, interpretRequestGeneration.current))
@@ -2481,9 +2688,14 @@ export default function PreflightApp() {
           language,
         ),
       );
+      setActiveAiTask(null);
+      setAiReturnPhase(null);
     } finally {
-      if (generation === interpretRequestGeneration.current)
+      if (generation === interpretRequestGeneration.current) {
         setIsInterpreting(false);
+        setActiveAiTask(null);
+        setAiReturnPhase(null);
+      }
     }
   }
   async function resolve(overrideLanguage?: Language) {
@@ -2504,6 +2716,8 @@ export default function PreflightApp() {
     }
     setError("");
     setPhase("search");
+    setAiReturnPhase("confirm");
+    setActiveAiTask("resolution");
     const generation = ++resolveRequestGeneration.current;
     traceRecorder.record("resolution.started", journeyTraceId, {
       component: "resolution-route",
@@ -2546,6 +2760,8 @@ export default function PreflightApp() {
       setChallengedEvidenceId("");
       setChallengedNeedSignature("");
       setChallengeCandidateId("");
+      setActiveAiTask(null);
+      setAiReturnPhase(null);
       setPhase("result");
     } catch (caught) {
       if (isStaleRequest(generation, resolveRequestGeneration.current)) return;
@@ -2563,6 +2779,8 @@ export default function PreflightApp() {
           targetLanguage,
         ),
       );
+      setActiveAiTask(null);
+      setAiReturnPhase(null);
       setPhase("confirm");
     }
   }
@@ -2571,6 +2789,8 @@ export default function PreflightApp() {
     resolveRequestGeneration.current += 1;
     interpretRequestGeneration.current += 1;
     setIsInterpreting(false);
+    setActiveAiTask(null);
+    setAiReturnPhase(null);
     setPhase("start");
     setText("");
     setNeeds([]);
@@ -2614,6 +2834,8 @@ export default function PreflightApp() {
     resolveRequestGeneration.current += 1;
     interpretRequestGeneration.current += 1;
     setIsInterpreting(false);
+    setActiveAiTask(null);
+    setAiReturnPhase(null);
     setPhase("start");
   }
   const citationReview: CitationReviewState = challengeCandidateId
@@ -2692,7 +2914,14 @@ export default function PreflightApp() {
         </button>
       </div>
 
-      {phase === "start" && (
+      {activeAiTask && (
+        <AiThinkingScreen
+          task={activeAiTask}
+          copy={copy}
+          onCancel={cancelAiWork}
+        />
+      )}
+      {phase === "start" && !activeAiTask && (
         <section className="start-layout" aria-labelledby="start-title">
           <div className="intro">
             <p className="eyebrow">{copy.askStage}</p>
@@ -2803,7 +3032,7 @@ export default function PreflightApp() {
         </section>
       )}
 
-      {phase === "select" && (
+      {phase === "select" && !activeAiTask && (
         <section className="content-column" aria-labelledby="select-title">
           <p className="eyebrow">{copy.multipleStage}</p>
           <h1 id="select-title">{copy.selectTitle}</h1>
@@ -2830,7 +3059,7 @@ export default function PreflightApp() {
         </section>
       )}
 
-      {phase === "confirm" && need && (
+      {phase === "confirm" && !activeAiTask && need && (
         <section className="content-column" aria-labelledby="confirm-title">
           <div className="section-heading">
             <div>
@@ -2969,29 +3198,15 @@ export default function PreflightApp() {
         </section>
       )}
 
-      {phase === "search" && (
-        <section className="content-column search-state" aria-live="polite">
-          <p className="eyebrow">{copy.searchStage}</p>
-          <h1>{copy.searching}</h1>
-          <p className="lede">{copy.searchingDetail}</p>
-          <div className="progress-list">
-            {(need?.scenario === "ncrb-property"
-              ? [copy.progressNeed, copy.progressNcrb, copy.progressNcrbDone]
-              : [
-                  copy.progressNeed,
-                  copy.progressCapabilities,
-                  copy.progressResult,
-                ]
-            ).map((stage, index) => (
-              <p className={index < 2 ? "done" : "active"} key={stage}>
-                <span aria-hidden="true">{index < 2 ? "✓" : "◌"}</span> {stage}
-              </p>
-            ))}
-          </div>
-        </section>
+      {phase === "search" && !activeAiTask && (
+        <AiThinkingScreen
+          task="resolution"
+          copy={copy}
+          onCancel={returnToAsk}
+        />
       )}
 
-      {phase === "result" && result && (
+      {phase === "result" && !activeAiTask && result && (
         <section className="content-column" aria-labelledby="result-title">
           <div className="section-heading">
             <div>
@@ -3322,7 +3537,7 @@ export default function PreflightApp() {
         </section>
       )}
 
-      {phase === "draft" && need && (
+      {phase === "draft" && !activeAiTask && need && (
         <section className="content-column" aria-labelledby="draft-title">
           <div className="section-heading">
             <div>
@@ -3511,7 +3726,7 @@ export default function PreflightApp() {
         </section>
       )}
 
-      {phase === "file" && filingPackage && (
+      {phase === "file" && !activeAiTask && filingPackage && (
         <section className="content-column" aria-labelledby="file-title">
           <div className="section-heading">
             <div>
@@ -3731,6 +3946,7 @@ export default function PreflightApp() {
       )}
 
       {phase === "acknowledgement" &&
+        !activeAiTask &&
         acknowledgement &&
         filingPackage &&
         need && (
