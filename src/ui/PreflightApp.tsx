@@ -141,6 +141,10 @@ const RESEARCH_KEY = "rti-preflight-state-v2";
 const FILING_KEY = "rti-preflight-filing-v2";
 const LEGACY_RESEARCH_KEY = "rti-preflight-draft";
 const LEGACY_FILING_KEY = "rti-preflight-filing";
+const RESEARCH_PHASES = ["select", "confirm", "search", "result"] as const;
+type ResearchPhase = (typeof RESEARCH_PHASES)[number];
+const isResearchPhase = (phase: Phase): phase is ResearchPhase =>
+  RESEARCH_PHASES.includes(phase as ResearchPhase);
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 const isNeed = (value: unknown): value is InformationNeed =>
@@ -673,7 +677,8 @@ const outcomeLabelHi: Record<string, string> = {
   FORMAL_RESPONSE_REQUIRED: "औपचारिक उत्तर ज़रूरी",
 };
 
-function persist(state: SavedState) {
+export function persist(state: SavedState) {
+  if (!isResearchPhase(state.phase)) return;
   try {
     window.localStorage.setItem(
       RESEARCH_KEY,
@@ -687,7 +692,7 @@ function persist(state: SavedState) {
   }
 }
 
-function readPersistedState(): SavedState | undefined {
+export function readPersistedState(): SavedState | undefined {
   if (typeof window === "undefined") return undefined;
   try {
     const parsed = JSON.parse(
@@ -701,12 +706,12 @@ function readPersistedState(): SavedState | undefined {
       throw new Error("invalid");
     return parsed.state;
   } catch {
-    clearPrototypeStorage();
+    clearResearchStorage();
     return undefined;
   }
 }
 
-function readSessionFilingState(): SessionFilingState | undefined {
+export function readSessionFilingState(): SessionFilingState | undefined {
   if (typeof window === "undefined") return undefined;
   try {
     const parsed = JSON.parse(
@@ -720,22 +725,34 @@ function readSessionFilingState(): SessionFilingState | undefined {
       throw new Error("invalid");
     return parsed.state;
   } catch {
-    clearPrototypeStorage();
+    clearFilingStorage();
     return undefined;
   }
 }
 
-function clearPrototypeStorage() {
+function clearResearchStorage() {
   try {
-    [RESEARCH_KEY, FILING_KEY, LEGACY_RESEARCH_KEY, LEGACY_FILING_KEY].forEach(
-      (key) => {
-        window.localStorage.removeItem(key);
-        window.sessionStorage.removeItem(key);
-      },
+    [RESEARCH_KEY, LEGACY_RESEARCH_KEY].forEach((key) =>
+      window.localStorage.removeItem(key),
     );
   } catch {
     /* optional storage */
   }
+}
+
+function clearFilingStorage() {
+  try {
+    [FILING_KEY, LEGACY_FILING_KEY].forEach((key) =>
+      window.sessionStorage.removeItem(key),
+    );
+  } catch {
+    /* optional storage */
+  }
+}
+
+function clearPrototypeStorage() {
+  clearResearchStorage();
+  clearFilingStorage();
 }
 
 function readSavedPreflights(): SavedPreflight[] {
@@ -1202,17 +1219,17 @@ export default function PreflightApp() {
   }, []);
 
   useEffect(() => {
-    if (phase !== "start")
-      persist({
-        phase,
-        text,
-        needs,
-        need,
-        result,
-        language,
-        challengedEvidenceId: challengedEvidenceId || undefined,
-        challengedNeedSignature: challengedNeedSignature || undefined,
-      });
+    if (!isResearchPhase(phase)) return;
+    persist({
+      phase,
+      text,
+      needs,
+      need,
+      result,
+      language,
+      challengedEvidenceId: challengedEvidenceId || undefined,
+      challengedNeedSignature: challengedNeedSignature || undefined,
+    });
   }, [
     phase,
     text,
