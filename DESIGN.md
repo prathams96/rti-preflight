@@ -1,116 +1,97 @@
 ---
 name: RTI Preflight
-description: Evidence-led civic research and drafting expressed as a flat inspection system.
+description: Evidence-led civic research and drafting arranged on a physical drafting-table surface.
 ---
 
-<!-- SEED: established with the user before implementation; re-run $impeccable document once there's code to capture the actual tokens and components. -->
+<!-- Captured from the implemented surface in src/ui/PreflightApp.tsx and src/app/globals.css. -->
 
 # Design System: RTI Preflight
 
 ## Overview
 
-**Creative North Star: "Evidence Light Table"**
+**Creative North Star: “Drafting Table for Evidence”**
 
-RTI Preflight makes inspection visible. A citizen's Information Need occupies the active plane while sources, interpretations, calculations, and drafts align beneath it for checking. Registration marks and flat overlays express provenance and comparison without imitating government paperwork or turning the experience into a chatbot.
+RTI Preflight makes inspection tangible without imitating a government portal. The page is a light drafting-table ground beneath a compact dark-teal utility strip. The citizen’s current task sits on a white paper plane with crisp registration marks and a physical edge shadow; evidence and examples sit on pale blue translucent acetate layers that can align or offset for comparison.
 
-The world is polished, serious, and entirely two-dimensional. It relies on typography, border weight, alignment, and disciplined color rather than physical-paper effects, decorative data graphics, or generic AI chrome. Expression must never obscure the current task, evidence state, or familiar control affordance.
+The visual language is precise, quiet, and civic. Depth comes from paper edges, restrained shadows, opacity, and slight registration offsets—not from generic glass UI, decorative data graphics, or chatbot chrome. The surface remains a tool for asking, confirming, checking, and preserving the right to file.
 
-**Key Characteristics:**
+## Surface anatomy
 
-- Flat, planar evidence fields aligned to one inspection grid.
-- One unmistakable active plane; supporting information remains quieter.
-- Registration brackets with a semantic inspection role.
-- Restrained civic clarity without official-looking government styling.
-- Icon, wording, and edge treatment working together for every status.
+- **Utility strip:** Full-width dark-teal bar containing the independent-prototype identity statement and Prototype details action.
+- **Identity row:** RTI Preflight wordmark/registration mark and a compact English/Hindi language toggle, placed above the journey content.
+- **Task plane:** White paper Ask, Information Need, or Result plane with a strong outline, squared corners, physical bottom/side edge shadow, and registration marks at its corners.
+- **Acetate layers:** Pale blue translucent evidence cards, examples, calculation strips, and supporting fields. Adjacent evidence cards may be subtly offset to show separate source layers.
+- **Action accent:** Amber is reserved for the primary action; it is never used to signal warning, conflict, evidence quality, or selection.
 
-## Colors
+## Color tokens
 
-The palette is cool, restrained, and evidence-led, with one deliberately scarce action color.
+- **Deep drafting teal** (`#102F37` / utility strip `#042B34` → `#063F49`): body ink, utility strip, headings, strongest rules, and high-emphasis non-action controls.
+- **Supporting teal** (`#225660`, `#315D64`): labels, explanatory copy, metadata, and quiet rules.
+- **Drafting-table ground** (`#E8F0EF`, with soft white and blue-green radial fields): page background.
+- **Paper** (`#FBFDFC` → `#EAF1F0`): task planes and primary working surfaces.
+- **Acetate blue** (`rgba(194, 224, 227, .45)` and related pale blue layers): evidence cards, source comparison, calculation, and supporting examples.
+- **Action amber** (`#F2A23A`, with the implemented action gradient): primary action only.
+- **Problem oxblood** (`#7A2733`) and **partial slate** (`#7B8588`): semantic problem/uncertain states, always accompanied by icon and explicit words.
 
-### Primary
+### Named rules
 
-- **Deep Inspection Teal** (`#132C33`): Active task planes, the strongest inspection frames, primary text on light surfaces, and high-emphasis controls that are not calls to action.
+**The One-Job Amber Rule.** Amber means the citizen can act. If an element is not a primary action, it cannot be amber.
 
-### Secondary
+**The Three-Channel Status Rule.** Status meaning is carried by an icon, a visible label, and semantic treatment (including edge/border treatment); color is never the sole signal.
 
-- **Oxidized Evidence Teal** (`#4F6F73`): Supporting rules, source metadata, quiet icons, and secondary evidence structure.
-- **Action Amber** (`#F2A23A`): Primary actions only. It never communicates warning, risk, conflict, gaps, evidence quality, or selection state.
-
-### Tertiary
-
-- **Problem Oxblood** (`#7A2733`): Conflicts, failures, and material evidence gaps, always paired with an icon and explicit wording.
-- **Partial Slate** (`#7B8588`): Partial, unknown, unverified, or outside-coverage states, always paired with an icon and explicit wording.
-
-### Neutral
-
-- **Light-Table Mist** (`#EEF2F1`): Page ground and quiet planar fields. It keeps the interface bright enough for mobile use in daylight without becoming clinical white.
-
-### Named Rules
-
-**The One-Job Amber Rule.** Amber means the citizen can act. If an element is not an action, it cannot be amber.
-
-**The Three-Channel Status Rule.** Status is never color alone. Every status combines a distinct icon, explicit words, and a colored left edge: teal for supported, slate for partial or unknown, and oxblood for a problem or conflict.
+**The Layer-Order Rule.** White paper is the active working surface. Pale blue acetate supports comparison and provenance; it must not overpower the confirmed need or result.
 
 ## Typography
 
-**Display Font:** Noto Sans, with `system-ui, sans-serif` fallback  
-**Body Font:** Noto Sans, with `system-ui, sans-serif` fallback  
-**Hindi Font:** Noto Sans Devanagari, with `Noto Sans, system-ui, sans-serif` fallback
+The implemented family is **Noto Sans**, with **Noto Sans Devanagari** for Hindi and `system-ui, sans-serif` fallbacks. Use tabular figures for changing counters, dates, percentages, monetary values, and aligned table columns.
 
-**Character:** Professional, restrained, and highly legible, with conventional letterforms and calm weight contrast. The same family carries headings, controls, evidence, and long-form explanations; hierarchy comes from scale and weight rather than switching personalities.
+- Keep headings, controls, evidence, and long-form explanations in the same family; hierarchy comes from scale and weight.
+- Use calm, precise labels in sentence case. Uppercase is reserved for small metadata where it improves scanning.
+- Hindi is the rhythm test: preserve line boxes, control heights, and spacing needed by Devanagari marks before tightening English.
+- The compact identity row and restrained introductory line establish context without competing with the task plane.
 
-### Hierarchy
+## Layout and responsive behavior
 
-- **Display:** Reserved for short, task-defining statements; exact size and weight remain to be resolved during implementation.
-- **Headline:** Establishes the current journey state without competing with the active task plane; exact metrics remain to be resolved during implementation.
-- **Title:** Names evidence groups, draft sections, and material steps.
-- **Body:** Uses Devanagari-safe line boxes and generous vertical padding. Hindi is the clipping and rhythm test; English must not be tightened below the metrics Hindi requires.
-- **Label:** Sentence case by default. Uppercase is not a decorative texture.
-- **Numeric UI:** Uses equal-width tabular figures for counters, dates, monetary values, percentages, and aligned columns (`font-variant-numeric: tabular-nums`). Counters must not jitter as values change.
+The content uses a shared registration width of roughly 1080px on larger screens, with the utility strip spanning the viewport. The Ask plane is a two-column drafting layout on wide screens: the question spans the plane, while the privacy note and primary action resolve as a lower working edge. Subsequent screens keep the same paper-plane hierarchy.
 
-### Named Rules
+Mobile is the design center. At narrow widths:
 
-**The Hindi-Sets-the-Rhythm Rule.** Line height and control height are approved in Hindi first, including marks above and below the headline; English inherits that space.
+- the identity row and language toggle remain compact and reachable;
+- paper planes lose the slight perspective treatment while retaining edge shadows and registration marks;
+- the Ask plane becomes a single readable column with a reachable action edge;
+- examples remain stacked acetate sheets;
+- evidence tables become labelled rows/cards without horizontal scrolling for primary actions;
+- language, Hindi copy, focus states, and tap targets remain first-class constraints.
 
-**The Stable-Numbers Rule.** Every changing counter and numeric column uses tabular figures. Visual wobble is a functional defect.
+## Depth, material, and registration
 
-## Layout
+The system is dimensional but restrained. Paper planes use a solid offset edge plus a soft cast shadow to suggest a sheet on a table. Evidence and example layers use pale blue transparency and small offsets to suggest acetate overlays. There is no backdrop blur, glowing glass, floating dashboard, or photoreal material treatment.
 
-The system is mobile-first and planar. Content aligns to a shared registration grid; the current task receives the strongest frame and contrast, while source material, explanations, and alternatives step down in emphasis without retreating into floating cards.
+Registration marks are short crosshair brackets at the corners of content being checked. They are functional: they identify the active paper plane or inspected result/need, never branding, navigation, empty space, or decoration.
 
-Desktop layouts widen the evidence plane and reveal more comparison at once. They do not become dashboards. Narrow layouts preserve the same reading order, turn dense tables into labelled rows, and keep primary actions reachable without horizontal scrolling.
+## Interaction and motion
 
-Spacing, breakpoints, maximum widths, and exact grid measurements remain to be resolved from the first implementation.
+Hover and active states use small, purposeful translation or contrast changes for buttons and example layers. Any registration/alignment motion must remain brief and subordinate to reading. Under `prefers-reduced-motion: reduce`, transforms are removed and transitions/animations are effectively disabled; all information and actions remain available in the static layout.
 
-## Elevation & Depth
+## Status and evidence treatment
 
-The system is flat by invariant. It uses no drop shadows, cast shadows, simulated paper thickness, perspective, tilt, parallax, floating sheets, glassmorphism, or photoreal material. Hierarchy comes from planar color fields, border weight, overlap, opacity, and alignment.
+Every outcome retains an icon plus explicit label and semantic treatment. Supported findings use teal treatment; partial, unknown, or outside-snapshot outcomes use slate; conflicts, failures, and material gaps use oxblood. Evidence cards expose source type, title, extract, publisher, applicable period, immutable cell-reference count, and an official-source link. Derived findings expose the operation, matching-row count, and caveat. Search Scope and unresolved gaps stay visible rather than being hidden in visual styling.
 
-**The Flat Evidence Rule.** A source layer may overlap or align, but it never appears to float above the citizen's work.
+## Do’s and don’ts
 
-## Shapes
+### Do
 
-Forms are crisp and near-square, with restrained corner treatment. Exact radius tokens remain to be resolved during implementation. Strong border weight belongs to the active inspection plane; quieter rules organize supporting material.
+- Make the current citizen task the strongest white paper plane on the table.
+- Use pale blue acetate layers to show provenance, examples, comparison, and supporting calculations.
+- Keep the independent prototype disclosure in the utility strip and retain visible prototype details.
+- Preserve icon + wording + semantic treatment for every status.
+- Test English/Hindi switching, mobile widths, keyboard focus, and reduced motion against real journey copy.
 
-Inspection brackets have one semantic meaning: the enclosed content is currently being inspected or validated. They may frame an Information Need, a source extract, a calculation, or a Filing Draft. They never decorate logos, navigation, headings, or empty space.
+### Don’t
 
-**The Brackets-Mean-Inspection Rule.** If the system is not actively checking the content, brackets do not appear.
-
-## Do's and Don'ts
-
-### Do:
-
-- **Do** make the active citizen task the strongest object on the screen through border weight, scale, and contrast.
-- **Do** use flat registration, alignment, and source layering to show how evidence is inspected.
-- **Do** pair every status with an icon, explicit wording, and a semantic left edge.
-- **Do** validate typography and control metrics with real Hindi copy and changing numerical values.
-- **Do** keep prototype limitations visible in the same visual system as the primary task.
-
-### Don't:
-
-- **Don't** use amber for warnings, gaps, conflicts, or evidence status.
-- **Don't** use color as the only carrier of meaning.
-- **Don't** use inspection brackets as branding or ornament.
-- **Don't** introduce 3D paper, shadows, glowing gradients, glass, chat bubbles, bento grids, or generic AI-assistant styling.
-- **Don't** imitate government identity, official seals, or tricolor portal conventions.
-- **Don't** let sample questions appear to be separate hardcoded product modes.
+- Don’t describe or implement the surface as a flat-only “Evidence Light Table.”
+- Don’t use amber for warnings, gaps, conflicts, evidence status, or selection.
+- Don’t use color as the only carrier of meaning.
+- Don’t turn paper planes into generic glass cards, bento dashboards, chat bubbles, or ornamental 3D objects.
+- Don’t use government seals, logos, tricolor portal conventions, or language implying official endorsement.
+- Don’t make seeded examples look like separate product modes; they feed the same journey as free text.

@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from "react";
 import type {
   InformationNeed,
   Language,
@@ -71,6 +78,40 @@ type SavedPreflight = {
   filingPackage?: ValidatedFilingPackage;
   language: Language;
 };
+
+type IconName = "mark" | "info" | "external" | "check" | "warning" | "pending";
+
+function Icon({ name }: { name: IconName }) {
+  const paths = {
+    mark: <path d="M4 12h4m4 0h8M12 4v4m0 4v8M5.5 5.5l3 3m5 5 5 5" />,
+    info: (
+      <>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 10.5v5M12 7.5h.01" />
+      </>
+    ),
+    external: <path d="M13 5h6v6m-1-5-8 8M16 15v3H5V7h3" />,
+    check: <path d="m5 12 4.2 4L19 6.5" />,
+    warning: (
+      <>
+        <path d="m12 4 8 15H4L12 4Z" />
+        <path d="M12 9v4.5M12 16h.01" />
+      </>
+    ),
+    pending: <path d="M12 4a8 8 0 1 0 8 8M12 4v8h8" />,
+  } as const;
+
+  return (
+    <svg
+      className="ui-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {paths[name]}
+    </svg>
+  );
+}
 
 type PersistedEnvelope<T> = { version: 2; state: T };
 const RESEARCH_KEY = "rti-preflight-state-v2";
@@ -615,15 +656,47 @@ function Details({
   onClose: () => void;
   copy: { cpcbCut: string };
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
-    closeRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusDialog = window.requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>("button")?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(focusDialog);
+      previouslyFocused?.focus();
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, []);
+
+  const keepFocusInDialog = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(
+      dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    );
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (
+      event.shiftKey
+        ? document.activeElement === first
+        : document.activeElement === last
+    ) {
+      event.preventDefault();
+      (event.shiftKey ? last : first)?.focus();
+    }
+  };
+
   return (
     <div className="dialog-backdrop" role="presentation" onClick={onClose}>
       <section
@@ -631,6 +704,8 @@ function Details({
         role="dialog"
         aria-modal="true"
         aria-labelledby="details-title"
+        ref={dialogRef}
+        onKeyDown={keepFocusInDialog}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="dialog-heading">
@@ -640,7 +715,6 @@ function Details({
           </div>
           <button
             className="icon-button"
-            ref={closeRef}
             onClick={onClose}
             aria-label="Close prototype details"
           >
@@ -718,6 +792,7 @@ export default function PreflightApp() {
   const [need, setNeed] = useState<InformationNeed | undefined>();
   const [result, setResult] = useState<RenderableResolution | undefined>();
   const [error, setError] = useState("");
+  const [isInterpreting, setIsInterpreting] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [challengedEvidenceId, setChallengedEvidenceId] = useState("");
   const [challengedNeedSignature, setChallengedNeedSignature] = useState("");
@@ -1154,8 +1229,9 @@ export default function PreflightApp() {
   }
 
   async function interpret() {
-    if (!text.trim()) return;
+    if (!text.trim() || isInterpreting) return;
     setError("");
+    setIsInterpreting(true);
     traceRecorder.record("interpretation.started", journeyTraceId, {
       component: "interpretation-route",
       version: "interpretation-route-v1",
@@ -1199,6 +1275,8 @@ export default function PreflightApp() {
           ? caught.message
           : "We couldn’t interpret your request just now. Nothing was submitted.",
       );
+    } finally {
+      setIsInterpreting(false);
     }
   }
   async function resolve() {
@@ -1321,23 +1399,28 @@ export default function PreflightApp() {
   return (
     <main className="app-shell">
       <header className="topbar">
+        <p className="topbar-identity">
+          <Icon name="info" /> {copy.independent}
+        </p>
+        <button className="text-button" onClick={() => setDetailsOpen(true)}>
+          {copy.details} <Icon name="external" />
+        </button>
+      </header>
+      <div className="brand-row">
         <div className="wordmark">
           <span className="wordmark-mark" aria-hidden="true">
-            ⌁
+            <Icon name="mark" />
           </span>
           <span>RTI Preflight</span>
         </div>
-        <div className="topbar-actions">
-          <button
-            className="text-button"
-            onClick={() => setLanguage(language === "en" ? "hi" : "en")}
-            aria-label={`Switch language to ${copy.language}`}
-          >
-            {copy.language}
-          </button>
-        </div>
-      </header>
-      <p className="independence-label">{copy.independent}</p>
+        <button
+          className={`language-toggle language-toggle-${language}`}
+          onClick={() => setLanguage(language === "en" ? "hi" : "en")}
+          aria-label={`Switch language to ${copy.language}`}
+        >
+          {copy.language}
+        </button>
+      </div>
 
       {phase === "start" && (
         <section className="start-layout" aria-labelledby="start-title">
@@ -1372,6 +1455,7 @@ export default function PreflightApp() {
           <section
             className="active-plane ask-plane"
             aria-label="Ask for public information"
+            aria-busy={isInterpreting}
           >
             <label htmlFor="need-input">{copy.label}</label>
             <textarea
@@ -1382,24 +1466,27 @@ export default function PreflightApp() {
               placeholder="For example: How much did my municipality spend on road repairs in 2024-25?"
             />
             <p className="privacy-note">
-              <span aria-hidden="true">ⓘ</span> {copy.privacy}
+              <Icon name="info" /> {copy.privacy}
             </p>
             {error && (
               <p className="error-message" role="alert">
-                <span aria-hidden="true">!</span>
+                <Icon name="warning" />
                 {error}
               </p>
             )}
             <button
               className="action-button"
-              disabled={!text.trim()}
+              disabled={!text.trim() || isInterpreting}
               onClick={interpret}
+              aria-label={
+                isInterpreting ? "Interpreting your need" : copy.submit
+              }
             >
               {copy.submit}
             </button>
             <p className="supporting-copy">{copy.askReassurance}</p>
           </section>
-          <details className="examples supporting-plane">
+          <details className="examples supporting-plane" open>
             <summary>{copy.examples}</summary>
             <div className="scenario-list">
               {SCENARIO_PROMPTS.map((scenario) => (
@@ -1408,7 +1495,8 @@ export default function PreflightApp() {
                   className="scenario"
                   onClick={() => setText(scenario.prompt)}
                 >
-                  <span>{scenario.label}</span>
+                  <span>{scenario.prompt}</span>
+                  <Icon name="external" />
                 </button>
               ))}
             </div>
