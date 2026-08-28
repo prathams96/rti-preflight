@@ -1284,15 +1284,30 @@ export function isStaleRequest(
   return capturedGeneration !== currentGeneration;
 }
 
+/**
+ * Editing the Ask text while an interpretation is in flight supersedes that
+ * request: the citizen changed their mind, so the stale response for the
+ * previous question must never populate the current one.
+ */
+export function shouldSupersedeInterpretation(input: {
+  value: string;
+  currentText: string;
+  isInterpreting: boolean;
+}): boolean {
+  return input.value !== input.currentText && input.isInterpreting;
+}
+
 export type LanguageSwitchDecision =
   "request-draft" | "resolve" | "restore-result" | "none";
 
 /**
- * Pure decision for what a language switch must do. A retained
- * `verified_model` narration re-runs resolution for a different selected
- * language even when the temporary phase is `search` (which a previous switch
- * may have set); when the retained narration already matches the selected
- * language it just restores the result instead of re-fetching.
+ * Pure decision for what a language switch must do. Resolution is strictly
+ * scoped to the Result/Search phases: a retained `verified_model` narration
+ * re-runs resolution for a different selected language (even while `search`,
+ * which a previous switch may have set), or restores the retained result when
+ * the narration already matches. Draft regenerates only while the draft is
+ * untouched. Every other phase (start/select/confirm/edited-draft/file/
+ * acknowledgement) only swaps UI chrome — never navigation or a request.
  */
 export function languageSwitchDecision(input: {
   phase: Phase;
@@ -1310,11 +1325,18 @@ export function languageSwitchDecision(input: {
     hasNeed,
     draftUntouched,
   } = input;
-  if (phase === "draft" && hasNeed && draftUntouched) return "request-draft";
-  if (narration === "verified_model") {
-    if (narrationLanguage !== nextLanguage) return "resolve";
-    if (phase === "search") return "restore-result";
+
+  if (phase === "draft") {
+    return hasNeed && draftUntouched ? "request-draft" : "none";
   }
+
+  if (phase === "result" || phase === "search") {
+    if (narration === "verified_model") {
+      if (narrationLanguage !== nextLanguage) return "resolve";
+      if (phase === "search") return "restore-result";
+    }
+  }
+
   return "none";
 }
 
@@ -2386,6 +2408,24 @@ export default function PreflightApp() {
     }
   }
 
+  /**
+   * Editing the Ask text supersedes any in-flight interpretation so a stale
+   * response for the previous question can never populate the next question.
+   */
+  function updateAskText(value: string) {
+    if (
+      shouldSupersedeInterpretation({
+        value,
+        currentText: text,
+        isInterpreting,
+      })
+    ) {
+      interpretRequestGeneration.current += 1;
+      setIsInterpreting(false);
+    }
+    setText(value);
+  }
+
   async function interpret() {
     if (!text.trim() || isInterpreting) return;
     setError("");
@@ -2564,6 +2604,7 @@ export default function PreflightApp() {
   }
 
   function returnFromDraft() {
+    draftRequestGeneration.current += 1;
     setPhase(draftReturnPhase(Boolean(result)));
   }
 
@@ -2686,7 +2727,7 @@ export default function PreflightApp() {
             <textarea
               id="need-input"
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => updateAskText(event.target.value)}
               rows={5}
               placeholder={copy.placeholder}
             />
@@ -2727,7 +2768,7 @@ export default function PreflightApp() {
                     language === "hi" ? scenario.hiLabel : scenario.label
                   }
                   onClick={() =>
-                    setText(
+                    updateAskText(
                       language === "hi" ? scenario.hiPrompt : scenario.prompt,
                     )
                   }

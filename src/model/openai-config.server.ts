@@ -15,8 +15,12 @@ export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5.6-luna";
  */
 export const OPENAI_REASONING = { effort: "low" as const };
 
-/** No longer brittle at 8 seconds, but still bounded for a latency-sensitive UI. */
-export const OPENAI_TIMEOUT_MS = 15_000;
+/**
+ * The deterministic fallback already guarantees availability, so the provider
+ * is given a full minute to complete a live GPT-5.6 Luna response rather than
+ * degrading to hardcoded prose after a few seconds.
+ */
+export const OPENAI_TIMEOUT_MS = 60_000;
 
 export type ProviderEndpointCategory = "interpretation" | "narration" | "draft";
 

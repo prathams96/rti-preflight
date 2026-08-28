@@ -417,11 +417,17 @@ export function verifyNarration(
     )
   )
     return { accepted: false, rejectionCode: "NARRATION_GROUNDING_MISSING" };
+  // Headline and meaning must own their deterministic anchors. This closes the
+  // loophole where a model cites an unrelated grounding ID (e.g. a need or
+  // evidence anchor) and thereby skips the polarity-preservation check.
   if (
-    (narration.headlineGroundingIds.includes("result:headline") &&
-      !preservesAnchor(narration.headline, result.headline)) ||
-    (narration.meaningGroundingIds.includes("result:meaning") &&
-      !preservesAnchor(narration.meaning, result.meaning))
+    !narration.headlineGroundingIds.includes("result:headline") ||
+    !preservesAnchor(narration.headline, result.headline)
+  )
+    return { accepted: false, rejectionCode: "NARRATION_GROUNDING_MISSING" };
+  if (
+    !narration.meaningGroundingIds.includes("result:meaning") ||
+    !preservesAnchor(narration.meaning, result.meaning)
   )
     return { accepted: false, rejectionCode: "NARRATION_GROUNDING_MISSING" };
   if (

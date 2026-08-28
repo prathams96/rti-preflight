@@ -32,10 +32,10 @@ function completeNarration(
   overrides: Partial<ProposedNarration> = {},
 ): ProposedNarration {
   return {
-    headline: "The calculation found a reported pattern.",
-    headlineGroundingIds: [id],
-    meaning: "Review the official figures and the calculation below.",
-    meaningGroundingIds: [id],
+    headline: result.headline,
+    headlineGroundingIds: ["result:headline"],
+    meaning: result.meaning,
+    meaningGroundingIds: ["result:meaning"],
     sentences: [
       {
         text: "Calculated from official figures—not directly stated by NCRB.",
@@ -297,6 +297,33 @@ describe("citizen-visible narration verification", () => {
       meaningGroundingIds: ["result:meaning"],
     });
     expect(verifyNarration(proposed, need, result).accepted).toBe(false);
+  });
+
+  it("rejects an inverted headline that grounds only to a need anchor", async () => {
+    const { need, result } = await railwayContext();
+    const proposed = completeNarration("result:headline", result, {
+      headline: "A reliable finding was returned from the checked snapshot.",
+      headlineGroundingIds: ["need:canonicalNeed"],
+    });
+    expect(verifyNarration(proposed, need, result).accepted).toBe(false);
+  });
+
+  it("rejects an inverted meaning that grounds only to the search scope", async () => {
+    const { need, result } = await railwayContext();
+    const proposed = completeNarration("result:headline", result, {
+      meaning: "These records are available and published.",
+      meaningGroundingIds: ["result:searchScope"],
+    });
+    expect(verifyNarration(proposed, need, result).accepted).toBe(false);
+  });
+
+  it("accepts a rewritten headline that still owns result:headline", async () => {
+    const { need, result } = await railwayContext();
+    const proposed = completeNarration("result:headline", result, {
+      headline: "No reliable finding came back from the checked snapshot.",
+      headlineGroundingIds: ["result:headline"],
+    });
+    expect(verifyNarration(proposed, need, result).accepted).toBe(true);
   });
 });
 

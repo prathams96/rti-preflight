@@ -9,6 +9,7 @@ import {
   restoreSavedPreflightForLanguage,
   shouldDiscardDraftResponse,
   isStaleRequest,
+  shouldSupersedeInterpretation,
   languageSwitchDecision,
 } from "./PreflightApp";
 import {
@@ -426,6 +427,30 @@ describe("request generation guard", () => {
     expect(isStaleRequest(3, 3)).toBe(false);
     expect(isStaleRequest(3, 4)).toBe(true);
   });
+
+  it("supersedes an in-flight interpretation when the Ask text changes", () => {
+    expect(
+      shouldSupersedeInterpretation({
+        value: "Question B",
+        currentText: "Question A",
+        isInterpreting: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSupersedeInterpretation({
+        value: "Question A",
+        currentText: "Question A",
+        isInterpreting: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldSupersedeInterpretation({
+        value: "Question B",
+        currentText: "Question A",
+        isInterpreting: false,
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("language switch decision", () => {
@@ -479,6 +504,45 @@ describe("language switch decision", () => {
         draftUntouched: true,
       }),
     ).toBe("request-draft");
+  });
+
+  it("does nothing for an edited draft even with a mismatched verified narration", () => {
+    expect(
+      languageSwitchDecision({
+        phase: "draft",
+        narration: "verified_model",
+        narrationLanguage: "en",
+        nextLanguage: "hi",
+        hasNeed: true,
+        draftUntouched: false,
+      }),
+    ).toBe("none");
+  });
+
+  it("does nothing when switching language from the File phase", () => {
+    expect(
+      languageSwitchDecision({
+        phase: "file",
+        narration: "verified_model",
+        narrationLanguage: "en",
+        nextLanguage: "hi",
+        hasNeed: true,
+        draftUntouched: false,
+      }),
+    ).toBe("none");
+  });
+
+  it("does nothing when switching language from the Acknowledgement phase", () => {
+    expect(
+      languageSwitchDecision({
+        phase: "acknowledgement",
+        narration: "verified_model",
+        narrationLanguage: "en",
+        nextLanguage: "hi",
+        hasNeed: true,
+        draftUntouched: false,
+      }),
+    ).toBe("none");
   });
 
   it("does nothing for deterministic narration or non-research phases", () => {

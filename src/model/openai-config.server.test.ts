@@ -14,7 +14,7 @@ describe("shared OpenAI runtime configuration", () => {
   it("defaults to GPT-5.6 Luna with low reasoning effort and a non-brittle timeout", () => {
     expect(OPENAI_MODEL).toBe("gpt-5.6-luna");
     expect(OPENAI_REASONING).toEqual({ effort: "low" });
-    expect(OPENAI_TIMEOUT_MS).toBe(15_000);
+    expect(OPENAI_TIMEOUT_MS).toBe(60_000);
   });
 });
 
