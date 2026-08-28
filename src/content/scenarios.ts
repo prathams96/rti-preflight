@@ -4,6 +4,7 @@ import type {
   ScenarioId,
 } from "../domain/types";
 import { resolveAuthorityName } from "../model/authority-registry";
+import { classifyEpfoRecordSubject } from "../service/epfo-route";
 
 export const SCENARIO_PROMPTS = [
   {
@@ -29,13 +30,50 @@ export const SCENARIO_PROMPTS = [
     label: "Check an EPF claim",
     prompt: "What is the status of my EPF claim?",
   },
-  {
-    id: "cpcb-conflict" as const,
-    label: "Compare official publications",
-    prompt:
-      "Compare the air-quality metric represented differently in two CPCB publications.",
-  },
 ] satisfies ReadonlyArray<{ id: ScenarioId; label: string; prompt: string }>;
+
+export const CPCB_CONFLICT_DECISION = {
+  status: "cut" as const,
+  decidedAt: "2026-08-27",
+  reason:
+    "No pair of official CPCB publications has been approved as materially conflicting, scope-compatible evidence for this prototype. The scenario is disabled until that evidence gate passes.",
+  reviewedSources: [
+    {
+      url: "https://cpcb.nic.in/publications-3/",
+      retrievedAt: "2026-08-27",
+      authority: "Central Pollution Control Board",
+      measure: "Publication and air-quality-data catalogue",
+      geography: "Not a measurement representation",
+      period: "Not specified",
+      unit: "Not specified",
+      methodology: "Index/navigation page",
+      applicability: "Not comparable evidence for a material conflict",
+    },
+    {
+      url: "https://cpcb.nic.in/Introduction/",
+      retrievedAt: "2026-08-27",
+      authority: "Central Pollution Control Board",
+      measure: "National Air Monitoring Programme description",
+      geography: "National programme and an ITO example",
+      period: "Not specified",
+      unit: "Not specified",
+      methodology: "Programme description, not a paired publication value",
+      applicability: "Not comparable evidence for a material conflict",
+    },
+    {
+      url: "https://cpcb.nic.in/openpdffile.php?id=UmVwb3J0RmlsZXMvMTY2OV8xNzI3NDE0NTc1X21lZGlhcGhvdG8yOTAyNy5wZGY%3D",
+      retrievedAt: "2026-08-27",
+      authority: "Central Pollution Control Board",
+      measure: "Ambient air quality monitoring and annual pollutant values",
+      geography: "Million-plus cities and monitoring stations",
+      period: "2022–23",
+      unit: "µg/m³ for reported criteria pollutants",
+      methodology: "NAMP and CAAQMS contexts are described separately",
+      applicability:
+        "Single official report; no compatible disagreeing counterpart approved",
+    },
+  ],
+} as const;
 
 const DEFAULT_PREFERENCE = "unsure" as const;
 
@@ -57,8 +95,11 @@ export function scenarioForText(text: string): ScenarioId {
   ) {
     return "epfo-status";
   }
+  // The CPCB conflict gate is explicitly cut until two compatible official
+  // representations are approved. Never turn a free-text query into a
+  // fabricated conflict scenario.
   if (normalized.includes("cpcb") || normalized.includes("air quality"))
-    return "cpcb-conflict";
+    return "unsupported";
   if (normalized.includes("earlier rti") || normalized.includes("previous rti"))
     return "previous-rti";
   return "unsupported";
@@ -103,16 +144,43 @@ function needForScenario(
         informationHolder: "Northern Railway",
         informationHolderStatus: "verified",
       };
-    case "epfo-status":
+    case "epfo-status": {
+      const subject = classifyEpfoRecordSubject(text);
+      const recordSubject =
+        subject === "own-record"
+          ? "own"
+          : subject === "another-person"
+            ? "another"
+            : "unspecified";
+      const subjectFields =
+        recordSubject === "own"
+          ? {
+              canonicalNeed: "The status of the citizen's own EPF claim.",
+              measure: "Status of my EPF claim",
+              geography: "My EPFO account",
+            }
+          : recordSubject === "another"
+            ? {
+                canonicalNeed:
+                  "A record concerning another person's EPF claim, subject to lawful access.",
+                measure: "Status of another person's EPF claim",
+                geography: "Another person's EPFO account",
+              }
+            : {
+                canonicalNeed:
+                  "An EPF claim record whose subject must be confirmed.",
+                measure: "Status of an EPF claim",
+                geography: "EPFO account subject to confirmation",
+              };
       return {
         ...common,
-        canonicalNeed: "The status of the citizen's own EPF claim.",
-        measure: "Status of my EPF claim",
-        geography: "My EPFO account",
+        ...subjectFields,
         period: "Current claim",
         informationHolder: "Employees' Provident Fund Organisation",
         informationHolderStatus: "verified",
+        recordSubject,
       };
+    }
     case "previous-rti":
       return {
         ...common,
@@ -144,7 +212,7 @@ function needForScenario(
         period: "Not yet specified",
         informationHolder: "To be confirmed",
         unresolvedClarifications: [
-          "What specific public information, place, and period should be checked?",
+          "Which municipal corporation or city, and which financial year should be checked?",
         ],
       };
   }

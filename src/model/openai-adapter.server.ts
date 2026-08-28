@@ -5,7 +5,11 @@ import type {
 } from "../domain/types";
 import type { InterpretationAdapter } from "./adapter";
 import { redactSensitiveIdentifiers } from "./redaction";
-import { clarificationsForNeeds, scenarioForText } from "../content/scenarios";
+import {
+  clarificationsForNeeds,
+  interpretWithFixture,
+  scenarioForText,
+} from "../content/scenarios";
 import { resolveAuthorityName } from "./authority-registry";
 
 type OpenAIResponse = {
@@ -67,6 +71,22 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
     traceId: string;
   }): Promise<NeedInterpretation> {
     const { redacted } = redactSensitiveIdentifiers(input.text);
+    const seededNeeds = interpretWithFixture(redacted);
+    if (
+      seededNeeds.length > 0 &&
+      seededNeeds.every((need) => need.scenario !== "unsupported")
+    ) {
+      return {
+        originalText: input.text,
+        redactedText: redacted,
+        needs: seededNeeds.map((need) => ({
+          ...need,
+          originalText: input.text,
+        })),
+        clarifications: clarificationsForNeeds(seededNeeds).slice(0, 2),
+        traceId: input.traceId,
+      };
+    }
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error("PROVIDER_NOT_CONFIGURED");
 

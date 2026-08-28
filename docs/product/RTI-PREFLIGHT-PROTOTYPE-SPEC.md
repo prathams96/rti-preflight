@@ -55,7 +55,7 @@ Preflight asks which outcome is acceptable without asking why the citizen wants 
 - Produce grounded direct, derived, partial, and conflicting results.
 - Preserve an obvious citizen-controlled path to RTI filing.
 - Demonstrate an editable draft, mobile OTP, applicant details, ₹10 mock payment, confirmation, and fictional acknowledgement.
-- Work for the five seeded scenarios and behave honestly for other free-text input.
+- Work for the four currently seeded scenarios and behave honestly for other free-text input. The CPCB conflict scenario is cut pending an evidence-gate decision.
 - Clearly distinguish real, working, curated, synthetic, and simulated components.
 
 ### Explicit non-goals
@@ -115,7 +115,7 @@ This is a minimal fallback, not a separate designed journey.
 | NCRB property recovery | Between 2021 and 2023, which States/UTs reported an increase in property stolen but a decline in recovery percentage? | Derived Finding | Real official CSV |
 | Previous RTI discovery | Find an earlier RTI response relevant to a selected Central information need | Prior-response retrieval | Clearly labelled RTI Response Fixture |
 | EPFO personal status | What is the status of my EPF claim? | Official Service Route instead of RTI | Real route metadata; synthetic identity |
-| CPCB disagreement | Ask for a metric represented differently in two applicable official publications | Evidence Conflict → Partially Resolved | Must use two real official sources; content to assemble |
+| CPCB disagreement | Ask for a metric represented differently in two applicable official publications | Cut → Outside Snapshot Coverage | Scenario disabled until [the CPCB evidence gate](CPCB-EVIDENCE-GATE.md) approves two compatible official sources |
 | Northern Railway filing | How much was spent maintaining lifts and escalators at New Delhi Railway Station during FY 2024–25, and which contractors received the work? | No Reliable Finding → complete filing | Curated in-scope no-finding fixture, visible execution receipt, and verified Central route metadata |
 
 ### Content integrity rule
@@ -705,7 +705,7 @@ Make the following accessible from every screen through a compact “Prototype d
 | Snapshot retrieval | Working |
 | Filtering and calculations | Working deterministic code |
 | Previous RTI response | Synthetic fixture |
-| CPCB conflict | Real sources required before shipping |
+| CPCB conflict | Cut pending evidence-gate approval |
 | OTP | Simulated |
 | Applicant identity | Fictional |
 | Payment | Simulated |

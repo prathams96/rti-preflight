@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { RTIPreflightModule } from "../../../preflight/module";
-import {
-  DeterministicInterpretationAdapter,
-  traceIdFor,
-} from "../../../model/fake-adapter";
+import { DeterministicInterpretationAdapter } from "../../../model/fake-adapter";
 import { OpenAIInterpretationAdapter } from "../../../model/openai-adapter.server";
+import { normalizeTraceId } from "../../../observability";
 
 export const runtime = "nodejs";
 
@@ -24,14 +22,28 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const traceId = traceIdFor(body.text);
-    const adapter = process.env.OPENAI_API_KEY
-      ? new OpenAIInterpretationAdapter()
-      : new DeterministicInterpretationAdapter();
-    const interpretation = await new RTIPreflightModule(adapter).interpret({
-      text: body.text,
-      traceId,
-    });
+    const traceId = normalizeTraceId(request.headers.get("x-rti-trace-id"));
+    const deterministic = new DeterministicInterpretationAdapter();
+    let interpretation;
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        interpretation = await new RTIPreflightModule(
+          new OpenAIInterpretationAdapter(),
+        ).interpret({ text: body.text, traceId });
+      } catch {
+        // Provider degradation is recoverable: retain the citizen wording and
+        // use the same redacting, deterministic adapter used offline.
+        interpretation = await new RTIPreflightModule(deterministic).interpret({
+          text: body.text,
+          traceId,
+        });
+      }
+    } else {
+      interpretation = await new RTIPreflightModule(deterministic).interpret({
+        text: body.text,
+        traceId,
+      });
+    }
     return NextResponse.json(interpretation);
   } catch {
     return NextResponse.json(
