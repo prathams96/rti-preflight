@@ -13,6 +13,14 @@ import { detectDraftDivergence } from "../../../filing/validation";
 import { normaliseNeedPhrase } from "../../../filing/phrase";
 import { localizeFilingDraft } from "../../../ui/localization";
 import { redactSensitiveIdentifiers } from "../../../model/redaction";
+import {
+  OPENAI_MODEL,
+  OPENAI_REASONING,
+  OPENAI_TIMEOUT_MS,
+  isProviderTimeout,
+  providerFailure,
+  PROVIDER_TIMEOUT,
+} from "../../../model/openai-config.server";
 import type {
   ConfirmedFilingNeed,
   PortalProfile,
@@ -177,54 +185,65 @@ export async function POST(request: Request) {
     if (!apiKey) return fallbackResponse("PROVIDER_NOT_CONFIGURED");
 
     try {
-      const response = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: process.env.OPENAI_MODEL ?? "gpt-5-mini",
-          store: false,
-          input: [
-            {
-              role: "system",
-              content: `Draft an RTI request, not an answer. ${language === "hi" ? "The draft must be natural Hindi." : "The draft must be natural English."} Ask for records. Do not invent facts, statutory promises, deadlines, record availability, a public authority, or a new Information Need. Do not state that records exist or are unavailable. Respect the supplied scope and the maximum character count. Return draft text only through the schema field.`,
-            },
-            {
-              role: "user",
-              content: JSON.stringify({
-                confirmedCanonicalNeed: providerNeed(body.need),
-                verifiedRoute: guidedCoverage
-                  ? {
-                      authority: NORTHERN_RAILWAY_ROUTE.authority.canonicalName,
-                      routeId: NORTHERN_RAILWAY_ROUTE.id,
-                      maxChars,
-                      newlinesPermitted:
-                        NORTHERN_RAILWAY_ROUTE.profile.text.newlinesPermitted,
-                    }
-                  : null,
-                maxChars,
-              }),
-            },
-          ],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "filing_draft",
-              strict: true,
-              schema: {
-                type: "object",
-                additionalProperties: false,
-                properties: { text: { type: "string" } },
-                required: ["text"],
+      let response: Response;
+      try {
+        response = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: OPENAI_MODEL,
+            store: false,
+            reasoning: OPENAI_REASONING,
+            input: [
+              {
+                role: "system",
+                content: `Draft an RTI request, not an answer. ${language === "hi" ? "The draft must be natural Hindi." : "The draft must be natural English."} Ask for records. Do not invent facts, statutory promises, deadlines, record availability, a public authority, or a new Information Need. Do not state that records exist or are unavailable. Respect the supplied scope and the maximum character count. Return draft text only through the schema field.`,
+              },
+              {
+                role: "user",
+                content: JSON.stringify({
+                  confirmedCanonicalNeed: providerNeed(body.need),
+                  verifiedRoute: guidedCoverage
+                    ? {
+                        authority:
+                          NORTHERN_RAILWAY_ROUTE.authority.canonicalName,
+                        routeId: NORTHERN_RAILWAY_ROUTE.id,
+                        maxChars,
+                        newlinesPermitted:
+                          NORTHERN_RAILWAY_ROUTE.profile.text.newlinesPermitted,
+                      }
+                    : null,
+                  maxChars,
+                }),
+              },
+            ],
+            text: {
+              format: {
+                type: "json_schema",
+                name: "filing_draft",
+                strict: true,
+                schema: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: { text: { type: "string" } },
+                  required: ["text"],
+                },
               },
             },
-          },
-        }),
-        signal: AbortSignal.timeout(8_000),
-      });
-      if (!response.ok) throw new Error("PROVIDER_REFUSED");
+          }),
+          signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
+        });
+      } catch (error) {
+        if (isProviderTimeout(error)) throw new Error(PROVIDER_TIMEOUT);
+        throw error;
+      }
+      if (!response.ok) {
+        const { code } = await providerFailure("draft", response);
+        throw new Error(code);
+      }
       const raw = outputText((await response.json()) as ResponsePayload);
       if (!raw) throw new Error("DRAFT_SCHEMA_MISMATCH");
       const parsed = JSON.parse(raw) as { text?: unknown };

@@ -98,8 +98,20 @@ export function preservesPresentationField(input: {
   language: Language;
 }): boolean {
   const { field, canonical, presentation, language } = input;
-  if (field === "informationHolder" && resolveAuthorityName(presentation))
-    return true;
+  if (field === "informationHolder") {
+    // Registered authority names and approved abbreviations may remain in
+    // Roman script in Hindi mode, but only when the presentation resolves to
+    // the *same* registered authority as the canonical value. A registered
+    // authority must never masquerade as a different one.
+    const canonicalAuthority = resolveAuthorityName(canonical);
+    const displayAuthority = resolveAuthorityName(presentation);
+    if (
+      canonicalAuthority &&
+      displayAuthority &&
+      canonicalAuthority.id === displayAuthority.id
+    )
+      return true;
+  }
   if (!matchesLanguage(presentation, language)) return false;
   if (
     normalizedNumbers(canonical).some(

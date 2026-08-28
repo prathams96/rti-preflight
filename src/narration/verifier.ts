@@ -418,6 +418,13 @@ export function verifyNarration(
   )
     return { accepted: false, rejectionCode: "NARRATION_GROUNDING_MISSING" };
   if (
+    (narration.headlineGroundingIds.includes("result:headline") &&
+      !preservesAnchor(narration.headline, result.headline)) ||
+    (narration.meaningGroundingIds.includes("result:meaning") &&
+      !preservesAnchor(narration.meaning, result.meaning))
+  )
+    return { accepted: false, rejectionCode: "NARRATION_GROUNDING_MISSING" };
+  if (
     narration.gaps.length !== result.gaps.length ||
     narration.gaps.length !== narration.gapsGroundingIds.length ||
     narration.gaps.some(

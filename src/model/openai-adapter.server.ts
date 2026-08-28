@@ -19,6 +19,14 @@ import {
   preservesPresentationField,
   type PresentationField,
 } from "./language";
+import {
+  OPENAI_MODEL,
+  OPENAI_REASONING,
+  OPENAI_TIMEOUT_MS,
+  isProviderTimeout,
+  providerFailure,
+  PROVIDER_TIMEOUT,
+} from "./openai-config.server";
 
 type OpenAIResponse = {
   output_text?: string;
@@ -201,102 +209,112 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error("PROVIDER_NOT_CONFIGURED");
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL ?? "gpt-5-mini",
-        store: false,
-        input: [
-          {
-            role: "system",
-            content: `Interpret the citizen's request using only schema-constrained fields. Canonical fields must be stable English/canonical values for deterministic application logic. ${input.language === "hi" ? "All display fields and clarification wording must be natural Hindi." : "All display fields and clarification wording must be natural English."} Do not infer the selected language from the citizen's text. Never provide facts, evidence, figures, or URLs.`,
-          },
-          { role: "user", content: redacted },
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "information_need_interpretation",
-            strict: true,
-            schema: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                needs: {
-                  type: "array",
-                  maxItems: 5,
-                  items: {
-                    type: "object",
-                    additionalProperties: false,
-                    properties: {
-                      canonicalNeed: { type: "string" },
-                      measure: { type: "string" },
-                      geography: { type: "string" },
-                      period: { type: "string" },
-                      breakdown: { type: "string" },
-                      informationHolder: { type: "string" },
-                      resolutionPreference: {
-                        type: "string",
-                        enum: ["published", "formal", "unsure"],
-                      },
-                      unresolvedClarifications: {
-                        type: "array",
-                        maxItems: 2,
-                        items: { type: "string" },
-                      },
-                      display: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: {
-                          canonicalNeed: { type: "string" },
-                          measure: { type: "string" },
-                          geography: { type: "string" },
-                          period: { type: "string" },
-                          breakdown: { type: "string" },
-                          informationHolder: { type: "string" },
-                          unresolvedClarifications: {
-                            type: "array",
-                            items: { type: "string" },
-                            maxItems: 2,
-                          },
+    let response: Response;
+    try {
+      response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          store: false,
+          reasoning: OPENAI_REASONING,
+          input: [
+            {
+              role: "system",
+              content: `Interpret the citizen's request using only schema-constrained fields. Canonical fields must be stable English/canonical values for deterministic application logic. ${input.language === "hi" ? "All display fields and clarification wording must be natural Hindi." : "All display fields and clarification wording must be natural English."} Do not infer the selected language from the citizen's text. Never provide facts, evidence, figures, or URLs.`,
+            },
+            { role: "user", content: redacted },
+          ],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "information_need_interpretation",
+              strict: true,
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  needs: {
+                    type: "array",
+                    maxItems: 5,
+                    items: {
+                      type: "object",
+                      additionalProperties: false,
+                      properties: {
+                        canonicalNeed: { type: "string" },
+                        measure: { type: "string" },
+                        geography: { type: "string" },
+                        period: { type: "string" },
+                        breakdown: { type: "string" },
+                        informationHolder: { type: "string" },
+                        resolutionPreference: {
+                          type: "string",
+                          enum: ["published", "formal", "unsure"],
                         },
-                        required: [
-                          "canonicalNeed",
-                          "measure",
-                          "geography",
-                          "period",
-                          "breakdown",
-                          "informationHolder",
-                          "unresolvedClarifications",
-                        ],
+                        unresolvedClarifications: {
+                          type: "array",
+                          maxItems: 2,
+                          items: { type: "string" },
+                        },
+                        display: {
+                          type: "object",
+                          additionalProperties: false,
+                          properties: {
+                            canonicalNeed: { type: "string" },
+                            measure: { type: "string" },
+                            geography: { type: "string" },
+                            period: { type: "string" },
+                            breakdown: { type: "string" },
+                            informationHolder: { type: "string" },
+                            unresolvedClarifications: {
+                              type: "array",
+                              items: { type: "string" },
+                              maxItems: 2,
+                            },
+                          },
+                          required: [
+                            "canonicalNeed",
+                            "measure",
+                            "geography",
+                            "period",
+                            "breakdown",
+                            "informationHolder",
+                            "unresolvedClarifications",
+                          ],
+                        },
                       },
+                      required: [
+                        "canonicalNeed",
+                        "measure",
+                        "geography",
+                        "period",
+                        "breakdown",
+                        "informationHolder",
+                        "resolutionPreference",
+                        "unresolvedClarifications",
+                        "display",
+                      ],
                     },
-                    required: [
-                      "canonicalNeed",
-                      "measure",
-                      "geography",
-                      "period",
-                      "breakdown",
-                      "informationHolder",
-                      "resolutionPreference",
-                      "unresolvedClarifications",
-                      "display",
-                    ],
                   },
                 },
+                required: ["needs"],
               },
-              required: ["needs"],
             },
           },
-        },
-      }),
-      signal: AbortSignal.timeout(8_000),
-    });
-    if (!response.ok) throw new Error("PROVIDER_REFUSED");
+        }),
+        signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
+      });
+    } catch (error) {
+      if (isProviderTimeout(error)) throw new Error(PROVIDER_TIMEOUT);
+      throw error;
+    }
+    if (!response.ok) {
+      const { code } = await providerFailure("interpretation", response);
+      throw new Error(code);
+    }
     const payload = (await response.json()) as OpenAIResponse;
     const raw =
       payload.output_text ??

@@ -8,6 +8,8 @@ import {
   readSessionFilingState,
   restoreSavedPreflightForLanguage,
   shouldDiscardDraftResponse,
+  isStaleRequest,
+  languageSwitchDecision,
 } from "./PreflightApp";
 import {
   createFilingModule,
@@ -401,5 +403,104 @@ describe("Preflight persistence boundaries", () => {
         draftEdited: true,
       }),
     ).toBe(true);
+  });
+
+  it("discards a late draft response after a citizen edit bumped the generation even when the stale closure saw an untouched draft", () => {
+    // handleDraftChange increments draftRequestGeneration on the first edit, so
+    // a request callback that still closes over draftText === draftOriginalText
+    // (draftEdited: false) is nonetheless discarded by the generation change.
+    expect(
+      shouldDiscardDraftResponse({
+        capturedGeneration: 3,
+        currentGeneration: 4,
+        capturedSignature: "need-signature-a",
+        currentSignature: "need-signature-a",
+        draftEdited: false,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("request generation guard", () => {
+  it("discards a response whose request generation is no longer current", () => {
+    expect(isStaleRequest(3, 3)).toBe(false);
+    expect(isStaleRequest(3, 4)).toBe(true);
+  });
+});
+
+describe("language switch decision", () => {
+  it("re-runs resolution when a verified-model narration is in another language", () => {
+    expect(
+      languageSwitchDecision({
+        phase: "result",
+        narration: "verified_model",
+        narrationLanguage: "en",
+        nextLanguage: "hi",
+        hasNeed: true,
+        draftUntouched: false,
+      }),
+    ).toBe("resolve");
+  });
+
+  it("re-runs resolution even when the temporary phase is search", () => {
+    expect(
+      languageSwitchDecision({
+        phase: "search",
+        narration: "verified_model",
+        narrationLanguage: "hi",
+        nextLanguage: "en",
+        hasNeed: true,
+        draftUntouched: false,
+      }),
+    ).toBe("resolve");
+  });
+
+  it("restores the retained result when switching back to its language mid-search", () => {
+    expect(
+      languageSwitchDecision({
+        phase: "search",
+        narration: "verified_model",
+        narrationLanguage: "en",
+        nextLanguage: "en",
+        hasNeed: true,
+        draftUntouched: false,
+      }),
+    ).toBe("restore-result");
+  });
+
+  it("re-drafts an untouched draft instead of re-resolving", () => {
+    expect(
+      languageSwitchDecision({
+        phase: "draft",
+        narration: "verified_model",
+        narrationLanguage: "en",
+        nextLanguage: "hi",
+        hasNeed: true,
+        draftUntouched: true,
+      }),
+    ).toBe("request-draft");
+  });
+
+  it("does nothing for deterministic narration or non-research phases", () => {
+    expect(
+      languageSwitchDecision({
+        phase: "result",
+        narration: "deterministic",
+        narrationLanguage: "en",
+        nextLanguage: "hi",
+        hasNeed: true,
+        draftUntouched: false,
+      }),
+    ).toBe("none");
+    expect(
+      languageSwitchDecision({
+        phase: "start",
+        narration: undefined,
+        narrationLanguage: undefined,
+        nextLanguage: "hi",
+        hasNeed: false,
+        draftUntouched: false,
+      }),
+    ).toBe("none");
   });
 });

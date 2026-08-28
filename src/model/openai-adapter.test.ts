@@ -162,6 +162,54 @@ describe("structured interpretation mapping", () => {
     expect(requestBody.input[0].content).toContain("natural English");
   });
 
+  it("sends the shared GPT-5.6 Luna model with low reasoning effort", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          output_text: JSON.stringify({
+            needs: [
+              {
+                canonicalNeed: "Published city records",
+                measure: "Record register",
+                geography: "The city",
+                period: "2024",
+                breakdown: "By record type",
+                informationHolder: "City records office",
+                resolutionPreference: "published",
+                unresolvedClarifications: [],
+                display: {
+                  canonicalNeed: "Published city records",
+                  measure: "Record register",
+                  geography: "The city",
+                  period: "2024",
+                  breakdown: "By record type",
+                  informationHolder: "City records office",
+                  unresolvedClarifications: [],
+                },
+              },
+            ],
+          }),
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new OpenAIInterpretationAdapter().interpret({
+      text: "Which records does the city publish?",
+      traceId: "trace-config",
+    });
+
+    const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(request.body)) as {
+      model: string;
+      reasoning: { effort: string };
+    };
+    expect(body.model).toBe("gpt-5.6-luna");
+    expect(body.reasoning).toEqual({ effort: "low" });
+  });
+
   it("preserves explicit drafting intent over a model's seeded fixture interpretation", () => {
     const result = modelNeedsToInterpretation({
       originalText: "Please help me prepare an RTI",

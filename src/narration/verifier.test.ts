@@ -270,4 +270,44 @@ describe("citizen-visible narration verification", () => {
     });
     expect(verifyNarration(proposed, need, result).accepted).toBe(false);
   });
+
+  it("rejects English polarity inversion of a deterministic headline anchor", async () => {
+    const { need, result } = await railwayContext();
+    expect(result.outcome).toBe("NO_RELIABLE_FINDING");
+    const proposed = completeNarration("result:headline", result, {
+      headline: "A reliable finding was returned from the checked snapshot.",
+      headlineGroundingIds: ["result:headline"],
+    });
+    expect(verifyNarration(proposed, need, result).accepted).toBe(false);
+  });
+
+  it("rejects Hindi polarity inversion of a deterministic headline anchor", async () => {
+    const { need, result } = await railwayContext();
+    const proposed = completeNarration("result:headline", result, {
+      headline: "जाँचे गए स्नैपशॉट से एक विश्वसनीय निष्कर्ष मिला।",
+      headlineGroundingIds: ["result:headline"],
+    });
+    expect(verifyNarration(proposed, need, result).accepted).toBe(false);
+  });
+
+  it("rejects polarity inversion of a deterministic meaning anchor", async () => {
+    const { need, result } = await railwayContext();
+    const proposed = completeNarration("result:meaning", result, {
+      meaning: "These records are available and published.",
+      meaningGroundingIds: ["result:meaning"],
+    });
+    expect(verifyNarration(proposed, need, result).accepted).toBe(false);
+  });
 });
+
+async function railwayContext() {
+  const preflight = new RTIPreflightModule();
+  const need = (
+    await preflight.interpret({
+      text: "How much was spent maintaining lifts and escalators at New Delhi Railway Station during FY 2024–25?",
+      traceId: "polarity-railway-context",
+    })
+  ).needs[0];
+  const result = await preflight.resolve({ need, snapshot });
+  return { need, result };
+}

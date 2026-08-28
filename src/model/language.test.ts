@@ -79,3 +79,54 @@ describe("field-aware presentation validation", () => {
     ).toBe(true);
   });
 });
+
+describe("registered authority identity preservation", () => {
+  it("allows aliases that resolve to the same registered authority", () => {
+    expect(
+      preservesPresentationField({
+        field: "informationHolder",
+        canonical: "Employees' Provident Fund Organisation",
+        presentation: "EPFO",
+        language: "hi",
+      }),
+    ).toBe(true);
+    expect(
+      preservesPresentationField({
+        field: "informationHolder",
+        canonical: "NCRB",
+        presentation: "National Crime Records Bureau",
+        language: "hi",
+      }),
+    ).toBe(true);
+    expect(
+      preservesPresentationField({
+        field: "informationHolder",
+        canonical: "Northern Railway",
+        presentation: "Northern Railway",
+        language: "hi",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects one registered authority masquerading as another", () => {
+    expect(
+      preservesPresentationField({
+        field: "informationHolder",
+        canonical: "National Crime Records Bureau",
+        presentation: "EPFO",
+        language: "hi",
+      }),
+    ).toBe(false);
+  });
+
+  it("still rejects Roman natural-language authority prose that is not registered", () => {
+    expect(
+      preservesPresentationField({
+        field: "informationHolder",
+        canonical: "A municipal corporation",
+        presentation: "A municipal corporation",
+        language: "hi",
+      }),
+    ).toBe(false);
+  });
+});

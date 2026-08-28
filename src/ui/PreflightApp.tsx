@@ -12,6 +12,7 @@ import Image from "next/image";
 import type {
   InformationNeed,
   Language,
+  NarrationState,
   NeedInterpretation,
   RenderableResolution,
   ResolutionPreference,
@@ -59,7 +60,7 @@ import {
   isUnknownClarification,
 } from "./localization";
 
-type Phase =
+export type Phase =
   | "start"
   | "select"
   | "confirm"
@@ -1271,6 +1272,52 @@ export function shouldDiscardDraftResponse(input: {
   );
 }
 
+/**
+ * Pure generation guard shared by resolution and interpretation. Any
+ * navigation, reset, or language change that increments the corresponding
+ * request generation invalidates an in-flight response.
+ */
+export function isStaleRequest(
+  capturedGeneration: number,
+  currentGeneration: number,
+): boolean {
+  return capturedGeneration !== currentGeneration;
+}
+
+export type LanguageSwitchDecision =
+  "request-draft" | "resolve" | "restore-result" | "none";
+
+/**
+ * Pure decision for what a language switch must do. A retained
+ * `verified_model` narration re-runs resolution for a different selected
+ * language even when the temporary phase is `search` (which a previous switch
+ * may have set); when the retained narration already matches the selected
+ * language it just restores the result instead of re-fetching.
+ */
+export function languageSwitchDecision(input: {
+  phase: Phase;
+  narration: NarrationState | undefined;
+  narrationLanguage: Language | undefined;
+  nextLanguage: Language;
+  hasNeed: boolean;
+  draftUntouched: boolean;
+}): LanguageSwitchDecision {
+  const {
+    phase,
+    narration,
+    narrationLanguage,
+    nextLanguage,
+    hasNeed,
+    draftUntouched,
+  } = input;
+  if (phase === "draft" && hasNeed && draftUntouched) return "request-draft";
+  if (narration === "verified_model") {
+    if (narrationLanguage !== nextLanguage) return "resolve";
+    if (phase === "search") return "restore-result";
+  }
+  return "none";
+}
+
 function Field({
   label,
   value,
@@ -1663,6 +1710,7 @@ export default function PreflightApp() {
   const [savedPreflights, setSavedPreflights] = useState<SavedPreflight[]>([]);
   const draftRequestGeneration = useRef(0);
   const resolveRequestGeneration = useRef(0);
+  const interpretRequestGeneration = useRef(0);
   const separatedDraftCounter = useRef(0);
   const [savedPreflightsLoaded, setSavedPreflightsLoaded] = useState(false);
   const [resumeState, setResumeState] = useState<SavedState | undefined>();
@@ -1706,6 +1754,9 @@ export default function PreflightApp() {
   function changeLanguage(nextLanguage: Language) {
     if (nextLanguage === language) return;
     draftRequestGeneration.current += 1;
+    resolveRequestGeneration.current += 1;
+    interpretRequestGeneration.current += 1;
+    setIsInterpreting(false);
     const feedbackKeys = [
       "briefSaved",
       "briefShared",
@@ -1718,20 +1769,17 @@ export default function PreflightApp() {
     const feedbackKey = feedbackKeys.find((key) => briefFeedback === copy[key]);
     if (feedbackKey) setBriefFeedback(COPY[nextLanguage][feedbackKey]);
     setLanguage(nextLanguage);
-    if (
-      phase === "result" &&
-      result?.narration === "verified_model" &&
-      result.narrationLanguage !== nextLanguage
-    ) {
-      void resolve(nextLanguage);
-    } else if (
-      phase === "draft" &&
-      need &&
-      draftText !== "" &&
-      draftText === draftOriginalText
-    ) {
-      requestDraft(nextLanguage);
-    }
+    const decision = languageSwitchDecision({
+      phase,
+      narration: result?.narration,
+      narrationLanguage: result?.narrationLanguage,
+      nextLanguage,
+      hasNeed: Boolean(need),
+      draftUntouched: draftText !== "" && draftText === draftOriginalText,
+    });
+    if (decision === "request-draft") requestDraft(nextLanguage);
+    else if (decision === "resolve") void resolve(nextLanguage);
+    else if (decision === "restore-result") setPhase("result");
   }
 
   useEffect(() => {
@@ -2033,6 +2081,7 @@ export default function PreflightApp() {
     setError("");
     setResult(undefined);
     invalidatePreparedFiling();
+    resolveRequestGeneration.current += 1;
     setPhase("confirm");
   }
 
@@ -2072,7 +2121,10 @@ export default function PreflightApp() {
   }
 
   function handleDraftChange(value: string) {
-    if (value !== draftText) invalidateFilingConfirmations();
+    if (value !== draftText) {
+      invalidateFilingConfirmations();
+      draftRequestGeneration.current += 1;
+    }
     setDraftText(value);
     setDraftError("");
     setDivergenceChoice("");
@@ -2337,6 +2389,7 @@ export default function PreflightApp() {
   async function interpret() {
     if (!text.trim() || isInterpreting) return;
     setError("");
+    const generation = ++interpretRequestGeneration.current;
     setIsInterpreting(true);
     traceRecorder.record("interpretation.started", journeyTraceId, {
       component: "interpretation-route",
@@ -2360,6 +2413,8 @@ export default function PreflightApp() {
           payload.message ??
             "We couldn’t interpret your request just now. Nothing was submitted.",
         );
+      if (isStaleRequest(generation, interpretRequestGeneration.current))
+        return;
       traceRecorder.record("interpretation.completed", payload.traceId, {
         component: "interpretation-route",
         version: "interpretation-route-v1",
@@ -2370,6 +2425,8 @@ export default function PreflightApp() {
       setNeed(payload.needs[0]);
       setPhase(payload.needs.length > 1 ? "select" : "confirm");
     } catch (caught) {
+      if (isStaleRequest(generation, interpretRequestGeneration.current))
+        return;
       traceRecorder.record("interpretation.completed", journeyTraceId, {
         component: "interpretation-route",
         version: "interpretation-route-v1",
@@ -2385,7 +2442,8 @@ export default function PreflightApp() {
         ),
       );
     } finally {
-      setIsInterpreting(false);
+      if (generation === interpretRequestGeneration.current)
+        setIsInterpreting(false);
     }
   }
   async function resolve(overrideLanguage?: Language) {
@@ -2429,7 +2487,7 @@ export default function PreflightApp() {
           payload.message ??
             "We couldn’t check the prototype snapshot just now.",
         );
-      if (generation !== resolveRequestGeneration.current) return;
+      if (isStaleRequest(generation, resolveRequestGeneration.current)) return;
       traceRecorder.record("resolution.completed", payload.traceId, {
         component: "resolution-route",
         version:
@@ -2450,7 +2508,7 @@ export default function PreflightApp() {
       setChallengeCandidateId("");
       setPhase("result");
     } catch (caught) {
-      if (generation !== resolveRequestGeneration.current) return;
+      if (isStaleRequest(generation, resolveRequestGeneration.current)) return;
       traceRecorder.record("resolution.completed", journeyTraceId, {
         component: "resolution-route",
         version: "resolution-route-v1",
@@ -2470,6 +2528,9 @@ export default function PreflightApp() {
   }
   function reset() {
     draftRequestGeneration.current += 1;
+    resolveRequestGeneration.current += 1;
+    interpretRequestGeneration.current += 1;
+    setIsInterpreting(false);
     setPhase("start");
     setText("");
     setNeeds([]);
@@ -2506,9 +2567,12 @@ export default function PreflightApp() {
     setPhase(draftReturnPhase(Boolean(result)));
   }
 
-  /** Navigate back to Ask while invalidating any in-flight draft request. */
+  /** Navigate back to Ask while invalidating any in-flight draft or resolution request. */
   function returnToAsk() {
     draftRequestGeneration.current += 1;
+    resolveRequestGeneration.current += 1;
+    interpretRequestGeneration.current += 1;
+    setIsInterpreting(false);
     setPhase("start");
   }
   const citationReview: CitationReviewState = challengeCandidateId
