@@ -1671,7 +1671,7 @@ export default function PreflightApp() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "rti-preflight-evidence-brief.json";
+      link.download = "rti-tathya-evidence-brief.json";
       link.style.display = "none";
       document.body.appendChild(link);
       link.click();

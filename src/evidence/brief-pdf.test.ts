@@ -45,7 +45,7 @@ describe("Evidence Brief PDF export", () => {
     expect(text).toContain("Search date: 2026-08-27");
     expect(text).not.toMatch(/trace-pdf|traceId|rawModel|filingProfile/);
     expect(evidenceBriefPdfFilename(SEARCH_DATE)).toBe(
-      "rti-preflight-evidence-brief-2026-08-27.pdf",
+      "rti-tathya-evidence-brief-2026-08-27.pdf",
     );
   });
 

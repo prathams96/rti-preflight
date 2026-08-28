@@ -10,7 +10,7 @@ import {
 } from "./brief";
 
 export const EVIDENCE_BRIEF_PDF_MIME = "application/pdf" as const;
-export const EVIDENCE_BRIEF_PDF_FILENAME = "rti-preflight-evidence-brief";
+export const EVIDENCE_BRIEF_PDF_FILENAME = "rti-tathya-evidence-brief";
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
@@ -180,7 +180,7 @@ class BriefPdfLayout {
       COLORS.muted,
     );
     this.text(
-      "rti-preflight",
+      "rti-tathya",
       PAGE_WIDTH - MARGIN - 54,
       FOOTER_Y,
       7.5,
