@@ -33,8 +33,8 @@ export function resultForCitationReview(
 
   const reviewNote =
     review.status === "awaiting-confirmation"
-      ? "A citation problem report is awaiting confirmation; the original result remains visible."
-      : "This result was downgraded to partially resolved pending source revalidation after a citation problem report.";
+      ? "A source problem report is awaiting review; the original result remains visible."
+      : "This result is shown as partial until the source is checked again after a source problem report.";
 
   return {
     ...result,
@@ -50,47 +50,43 @@ export function resultForCitationReview(
 
 export const RESULT_STAGE_COPY = {
   en: {
-    resultStage: "Research result",
-    researchNotice: "Research result — no RTI has been filed.",
-    draftStage: "Draft an RTI",
-    draftTitle: "Review your RTI Filing Draft",
-    draftIntro:
-      "This is an editable Filing Draft. It is not an RTI filing and has not been sent to a government system.",
+    resultStage: "What we found",
+    researchNotice: "What we found — no RTI has been filed.",
+    draftStage: "RTI draft",
+    draftTitle: "Your RTI draft",
+    draftIntro: "Review and edit the request before continuing.",
     fileStage: "Filing demo",
     fileTitle: "Try the RTI filing demo",
     fileIntro:
-      "This is a simulated filing journey. Nothing is sent to a government system, and this demo does not file an RTI.",
+      "This is a simulated filing journey. Nothing is sent to a government system.",
     acknowledgementTitle: "Filing demo complete",
-    outsideHeadline:
-      "We couldn’t verify this from the sources available in this prototype.",
+    outsideHeadline: "We couldn’t find a reliable public answer",
     outsideMeaning:
-      "This does not mean the information is unavailable or unpublished. We cannot claim an answer because the sources available in this prototype do not cover this request.",
-    outsideEvidenceStatus: "Not verified from available sources",
+      "The government sources checked by this prototype do not fully answer your question. An RTI may help you request the information directly from the relevant authority.",
+    outsideEvidenceStatus: "Not confirmed by the sources checked",
     outsideGap:
-      "No registered source in this prototype covers the requested authority or publication.",
+      "The sources checked by this prototype did not provide a reliable answer for this question.",
     outsideScope:
-      "The prototype checked its Capability Manifest and found no registered source for this need.",
+      "This prototype checks a limited set of saved government sources. It is not searching government systems live.",
   },
   hi: {
-    resultStage: "शोध नतीजा",
-    researchNotice: "शोध नतीजा — कोई RTI दाखिल नहीं की गई है।",
-    draftStage: "RTI ड्राफ्ट तैयार करें",
-    draftTitle: "अपने RTI आवेदन ड्राफ्ट की समीक्षा करें",
-    draftIntro:
-      "यह बदलाव योग्य आवेदन ड्राफ्ट है। यह RTI फाइलिंग नहीं है और किसी सरकारी सिस्टम को नहीं भेजा गया है।",
+    resultStage: "हमें क्या मिला",
+    researchNotice: "हमें क्या मिला — कोई RTI दाखिल नहीं की गई है।",
+    draftStage: "RTI ड्राफ्ट",
+    draftTitle: "आपका RTI ड्राफ्ट",
+    draftIntro: "आगे बढ़ने से पहले अनुरोध की समीक्षा करें और उसमें बदलाव करें।",
     fileStage: "फाइलिंग डेमो",
     fileTitle: "RTI फाइलिंग डेमो आज़माएँ",
     fileIntro:
-      "यह आवेदन दाखिल करने की अनुकरण यात्रा है। किसी सरकारी सिस्टम को कुछ नहीं भेजा जाता और इस डेमो से RTI दाखिल नहीं होती।",
+      "यह फाइलिंग की अनुकरण यात्रा है। किसी सरकारी सिस्टम को कुछ नहीं भेजा जाता।",
     acknowledgementTitle: "फाइलिंग डेमो पूरा",
-    outsideHeadline:
-      "इस प्रोटोटाइप में उपलब्ध स्रोतों से हम इसकी पुष्टि नहीं कर सके।",
+    outsideHeadline: "हमें विश्वसनीय सार्वजनिक उत्तर नहीं मिला",
     outsideMeaning:
-      "इसका मतलब यह नहीं है कि जानकारी उपलब्ध या अप्रकाशित है। हम उत्तर का दावा नहीं कर सकते क्योंकि इस प्रोटोटाइप में उपलब्ध स्रोत इस अनुरोध को कवर नहीं करते।",
-    outsideEvidenceStatus: "उपलब्ध स्रोतों से पुष्टि नहीं हुई",
+      "इस प्रोटोटाइप में जाँचे गए सरकारी स्रोत आपके सवाल का पूरा जवाब नहीं देते। संबंधित प्राधिकरण से सीधे जानकारी माँगने के लिए RTI मदद कर सकती है।",
+    outsideEvidenceStatus: "जाँचे गए स्रोतों से पुष्टि नहीं हुई",
     outsideGap:
-      "इस प्रोटोटाइप में मांगे गए प्राधिकरण या प्रकाशन के लिए कोई पंजीकृत स्रोत नहीं है।",
+      "इस प्रोटोटाइप में जाँचे गए स्रोतों से इस सवाल का विश्वसनीय जवाब नहीं मिला।",
     outsideScope:
-      "प्रोटोटाइप के Capability Manifest में इस ज़रूरत के लिए कोई पंजीकृत स्रोत नहीं मिला।",
+      "यह प्रोटोटाइप सीमित संख्या में सहेजे गए सरकारी स्रोतों को जाँचता है। यह सरकारी सिस्टम को लाइव नहीं खोज रहा है।",
   },
 } as const;

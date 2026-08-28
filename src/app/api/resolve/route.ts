@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           code: "INVALID_NEED",
-          message: "Confirm the Information Need before searching.",
+          message: "Confirm the question before searching.",
         },
         { status: 400 },
       );

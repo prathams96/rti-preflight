@@ -274,7 +274,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         code: "DRAFT_UNAVAILABLE",
-        message: "We couldn’t prepare a filing draft just now.",
+        message: "We couldn’t prepare an RTI draft just now.",
       },
       { status: 503 },
     );

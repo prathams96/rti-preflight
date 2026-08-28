@@ -21,8 +21,9 @@ export const SCENARIO_PROMPTS = [
     label: "Find an earlier RTI response",
     hiLabel: "पिछला RTI उत्तर खोजें",
     prompt:
-      "Find an earlier RTI response relevant to a selected Central information need.",
-    hiPrompt: "चुनी गई केंद्रीय सूचना-ज़रूरत से संबंधित पिछला RTI उत्तर खोजें।",
+      "Has a similar RTI already been answered by a Central Government authority?",
+    hiPrompt:
+      "क्या किसी Central Government authority ने ऐसी RTI का पहले जवाब दिया है?",
   },
   {
     id: "railway-filing" as const,

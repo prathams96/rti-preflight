@@ -7,36 +7,89 @@ import type { DisclosureEntry } from "../disclosure/ledger";
 import type { FictionalFilingProfile } from "../filing/types";
 
 const HINDI_TEXT: Record<string, string> = {
+  "We couldn’t prepare an RTI draft just now.":
+    "अभी RTI ड्राफ्ट तैयार नहीं हो सका।",
+  "Enter the information you are looking for to continue.":
+    "जारी रखने के लिए वह जानकारी लिखें जिसे आप ढूँढ रहे हैं।",
+  "Confirm the question before searching.":
+    "खोज शुरू करने से पहले सवाल की पुष्टि करें।",
+  "We found an answer using official government data":
+    "हमें आधिकारिक सरकारी डेटा से एक उत्तर मिला",
+  "The answer below was calculated from published NCRB figures for 2021 and 2023.":
+    "नीचे दिया गया उत्तर 2021 और 2023 के प्रकाशित NCRB आँकड़ों से निकाला गया है।",
+  "Calculated from official data": "आधिकारिक डेटा से गणना की गई",
+  "We couldn’t find a reliable public answer":
+    "हमें विश्वसनीय सार्वजनिक उत्तर नहीं मिला",
+  "The government sources checked by this prototype do not fully answer your question. An RTI may help you request the information directly from the relevant authority.":
+    "इस प्रोटोटाइप में जाँचे गए सरकारी स्रोत आपके सवाल का पूरा जवाब नहीं देते। संबंधित प्राधिकरण से सीधे जानकारी माँगने के लिए RTI मदद कर सकती है।",
+  "The sources checked did not provide a reliable answer":
+    "जाँचे गए स्रोतों से विश्वसनीय उत्तर नहीं मिला",
+  "We found a similar earlier RTI response":
+    "हमें ऐसी ही एक पिछली RTI का जवाब मिला",
+  "An earlier response may help answer your question before you file a new RTI.":
+    "नई RTI दाखिल करने से पहले पिछला जवाब आपके सवाल का उत्तर देने में मदद कर सकता है।",
+  "Prototype example — this is not a real RTI response.":
+    "प्रोटोटाइप उदाहरण — यह वास्तविक RTI उत्तर नहीं है।",
+  "You may not need an RTI for this":
+    "इसके लिए आपको RTI की ज़रूरत नहीं पड़ सकती",
+  "EPF claim status can be checked through an official EPFO service. For personal claim status, using the official service is usually quicker than filing an RTI.":
+    "EPF दावे की स्थिति आधिकारिक EPFO सेवा से जाँची जा सकती है। अपने दावे की स्थिति के लिए आधिकारिक सेवा का इस्तेमाल आमतौर पर RTI दाखिल करने से जल्दी होता है।",
+  "Official service available": "आधिकारिक सेवा उपलब्ध है",
+  "We found part of the information": "हमें कुछ जानकारी मिली",
+  "Official sources answer part of your question, but some information is still missing.":
+    "आधिकारिक स्रोत आपके सवाल का कुछ हिस्सा बताते हैं, लेकिन कुछ जानकारी अभी बाकी है।",
+  "Official sources show different figures":
+    "आधिकारिक स्रोतों में अलग-अलग आँकड़े हैं",
+  "We found two official sources that report this differently. We therefore cannot confirm one figure as the correct answer.":
+    "हमें दो आधिकारिक स्रोत मिले जो अलग-अलग आँकड़े बताते हैं। इसलिए हम किसी एक आँकड़े को सही उत्तर के रूप में पक्का नहीं कर सकते।",
+  "Available from an official source": "आधिकारिक स्रोत पर उपलब्ध",
+  "It is available from an official government source, so you may not need to file an RTI for this information.":
+    "यह आधिकारिक सरकारी स्रोत पर उपलब्ध है, इसलिए इस जानकारी के लिए आपको RTI दाखिल करने की ज़रूरत नहीं पड़ सकती।",
+  "Part of the information was found": "कुछ जानकारी मिली",
+  "Official sources report different figures":
+    "आधिकारिक स्रोत अलग-अलग आँकड़े बताते हैं",
+  "A written reply can be requested through RTI":
+    "RTI के ज़रिए लिखित उत्तर माँगा जा सकता है",
+  "You can ask the relevant government authority for a written reply":
+    "आप संबंधित सरकारी प्राधिकरण से लिखित उत्तर माँग सकते हैं",
+  "You chose a written reply, so you can prepare an RTI draft for the relevant authority.":
+    "आपने लिखित उत्तर चुना है, इसलिए आप संबंधित प्राधिकरण के लिए RTI ड्राफ्ट तैयार कर सकते हैं।",
+  "Earlier RTI response example": "पिछली RTI के जवाब का उदाहरण",
+  "Prototype example": "प्रोटोटाइप उदाहरण",
+  "This is a fictional, identity-free example about a generic public programme. It is not a real RTI response and does not reproduce a government record.":
+    "यह एक सामान्य सार्वजनिक कार्यक्रम के बारे में काल्पनिक, पहचान-रहित उदाहरण है। यह वास्तविक RTI उत्तर नहीं है और किसी सरकारी रिकॉर्ड की प्रति नहीं है।",
+  "This prototype checks a limited set of saved government sources. It is not searching government systems live.":
+    "यह प्रोटोटाइप सीमित संख्या में सहेजे गए सरकारी स्रोतों को जाँचता है। यह सरकारी सिस्टम को लाइव नहीं खोज रहा है।",
   "Calculated from official figures—not directly stated by NCRB.":
     "आधिकारिक आँकड़ों से गणना की गई — NCRB ने इसे सीधे नहीं बताया है।",
   "No reliable finding from the checked snapshot":
-    "जाँचे गए प्रमाण स्नैपशॉट में विश्वसनीय निष्कर्ष नहीं मिला",
+    "जाँचे गए सरकारी स्रोतों से विश्वसनीय उत्तर नहीं मिला",
   "Outside the prototype Evidence Snapshot":
-    "प्रोटोटाइप के प्रमाण स्नैपशॉट के दायरे से बाहर",
+    "जाँचे गए सरकारी स्रोतों के दायरे से बाहर",
   "The checked snapshot did not support a reliable finding.":
-    "जाँचे गए प्रमाण स्नैपशॉट से विश्वसनीय निष्कर्ष नहीं निकला।",
+    "जाँचे गए सरकारी स्रोतों से विश्वसनीय उत्तर नहीं मिला।",
   "This does not establish that the records are unavailable or unpublished. You can prepare a focused RTI for the missing records.":
-    "इससे यह साबित नहीं होता कि रिकॉर्ड उपलब्ध या अप्रकाशित हैं। गुम रिकॉर्ड के लिए केंद्रित RTI तैयार की जा सकती है।",
+    "यह इस बात की पुष्टि नहीं करता कि रिकॉर्ड उपलब्ध हैं या नहीं। गुम जानकारी के लिए केंद्रित RTI तैयार की जा सकती है।",
   "The prototype Evidence Snapshot checked its registered Northern Railway filing fixture and found no supporting records.":
-    "प्रोटोटाइप प्रमाण स्नैपशॉट ने पंजीकृत Northern Railway फाइलिंग फ़िक्स्चर को जाँचा और कोई सहायक रिकॉर्ड नहीं पाया।",
+    "इस प्रोटोटाइप ने Northern Railway से जुड़े जाँचे गए स्रोतों को देखा, लेकिन सहायक रिकॉर्ड नहीं मिला।",
   "Prepare a focused RTI asking for the missing records.":
     "गुम रिकॉर्ड माँगने वाली केंद्रित RTI तैयार करें।",
   "The snapshot contains no supporting expenditure statement, ledger extract, work order, or contractor record for this need.":
-    "स्नैपशॉट में इस ज़रूरत के लिए कोई सहायक व्यय विवरण, लेजर अंश, कार्यादेश या ठेकेदार रिकॉर्ड नहीं है।",
+    "जाँचे गए स्रोतों में इस सवाल के लिए व्यय विवरण, लेजर अंश, कार्यादेश या ठेकेदार की जानकारी नहीं मिली।",
   "Review the formal-response path and prepare a Filing Draft when ready.":
-    "औपचारिक उत्तर का मार्ग देखें और तैयार होने पर फाइलिंग ड्राफ्ट बनाएँ।",
+    "लिखित उत्तर का विकल्प देखें और तैयार होने पर RTI ड्राफ्ट बनाएँ।",
   "Prepare a records-focused Filing Draft asking for orders, notes, reports, or correspondence rather than an explanation of why.":
-    "कारण बताने के बजाय आदेश, नोट, रिपोर्ट या पत्राचार माँगने वाला रिकॉर्ड-केंद्रित फाइलिंग ड्राफ्ट तैयार करें।",
+    "कारण बताने के बजाय आदेश, नोट, रिपोर्ट या पत्राचार माँगने वाला RTI ड्राफ्ट तैयार करें।",
   "Review Search Scope, edit the Information Need, or prepare a Filing Draft.":
-    "खोज दायरा देखें, सूचना-ज़रूरत बदलें या फाइलिंग ड्राफ्ट तैयार करें।",
+    "क्या जाँचा गया देखें, सवाल बदलें या RTI ड्राफ्ट तैयार करें।",
   "The requested authority or publication is not registered in this snapshot.":
-    "माँगा गया प्राधिकरण या प्रकाशन इस स्नैपशॉट में पंजीकृत नहीं है।",
+    "माँगा गया प्राधिकरण या प्रकाशन यहाँ जाँचे गए स्रोतों में शामिल नहीं है।",
   "A new written response remains available for this Information Need.":
-    "इस सूचना-ज़रूरत के लिए नया लिखित उत्तर अभी भी उपलब्ध है।",
+    "इस सवाल के लिए नया लिखित उत्तर माँगा जा सकता है।",
   "This is an independent research assistant—not an official RTI response.":
     "यह स्वतंत्र शोध सहायक है — आधिकारिक RTI उत्तर नहीं।",
   "The prototype checked the registered Northern Railway in-scope no-finding fixture and found no supporting records.":
-    "प्रोटोटाइप ने पंजीकृत Northern Railway निष्कर्ष-रहित फ़िक्स्चर को जाँचा और कोई सहायक रिकॉर्ड नहीं पाया।",
+    "इस प्रोटोटाइप ने Northern Railway से जुड़े जाँचे गए स्रोतों को देखा, लेकिन सहायक रिकॉर्ड नहीं मिला।",
   "Which municipal corporation or city, and which financial year should be checked?":
     "किस नगरपालिका या शहर और किस वित्तीय वर्ष की जाँच की जानी चाहिए?",
   "Review the calculation and save the finding, or prepare an RTI if you still need an official response.":
@@ -48,11 +101,11 @@ const HINDI_TEXT: Record<string, string> = {
   "The prototype checked its Capability Manifest and found no registered source for this need.":
     "प्रोटोटाइप ने अपनी क्षमता सूची जाँची और इस ज़रूरत के लिए कोई पंजीकृत स्रोत नहीं पाया।",
   "A synthetic earlier RTI response fixture is available.":
-    "पहले के RTI उत्तर का एक सिंथेटिक फ़िक्स्चर उपलब्ध है।",
+    "पहले के RTI उत्तर का एक प्रोटोटाइप उदाहरण उपलब्ध है।",
   "This example demonstrates how a previous response could be displayed. It is fictional and does not represent an official response.":
     "यह उदाहरण दिखाता है कि पिछला उत्तर कैसे दिखाया जा सकता है। यह काल्पनिक है और आधिकारिक उत्तर नहीं है।",
   "Found through a Fictional RTI Response Fixture—not an official response":
-    "काल्पनिक RTI उत्तर फ़िक्स्चर में मिला — यह आधिकारिक उत्तर नहीं है",
+    "RTI उत्तर के प्रोटोटाइप उदाहरण में मिला — यह आधिकारिक उत्तर नहीं है",
   "Review the fixture, or prepare a new RTI.":
     "फ़िक्स्चर देखें या नई RTI तैयार करें।",
   "This looks like your own personal EPF record.":
@@ -60,7 +113,7 @@ const HINDI_TEXT: Record<string, string> = {
   "The official EPFO claim-status route is intended for a member’s own claim. This prototype does not enter credentials, access a record, or promise a status.":
     "आधिकारिक EPFO दावा-स्थिति मार्ग सदस्य के अपने दावे के लिए है। यह प्रोटोटाइप कोई क्रेडेंशियल दर्ज नहीं करता, रिकॉर्ड नहीं खोलता और स्थिति का वादा नहीं करता।",
   "Official service route—not a retrieved finding":
-    "आधिकारिक सेवा मार्ग — प्राप्त निष्कर्ष नहीं",
+    "आधिकारिक सेवा — इससे कोई व्यक्तिगत रिकॉर्ड प्राप्त नहीं हुआ",
   "Check the status of an EPF claim": "EPF दावे की स्थिति जाँचें",
   "Use the official EPFO route yourself for your own claim. No account details are requested or transmitted by this prototype.":
     "अपने दावे के लिए आधिकारिक EPFO मार्ग का स्वयं उपयोग करें। यह प्रोटोटाइप खाते का कोई विवरण माँगता या भेजता नहीं है।",
@@ -74,13 +127,13 @@ const HINDI_TEXT: Record<string, string> = {
   "Confirm whose EPF claim you need before choosing a route.":
     "मार्ग चुनने से पहले पुष्टि करें कि आपको किसका EPF दावा चाहिए।",
   "Possessing another person’s identifier is not permission to access their record. This prototype does not request an account number, Aadhaar, PAN, OTP, or government login. You can prepare a records-focused Filing Draft without a promise that the authority will disclose the record.":
-    "किसी दूसरे व्यक्ति का पहचानकर्ता होना उसके रिकॉर्ड तक पहुँच की अनुमति नहीं है। यह प्रोटोटाइप खाता नंबर, आधार, PAN, OTP या सरकारी लॉगिन नहीं माँगता। प्राधिकरण रिकॉर्ड बताएगा, इसका वादा किए बिना रिकॉर्ड-केंद्रित फाइलिंग ड्राफ्ट तैयार किया जा सकता है।",
+    "किसी दूसरे व्यक्ति का पहचानकर्ता होना उसके रिकॉर्ड तक पहुँच की अनुमति नहीं है। यह प्रोटोटाइप खाता नंबर, आधार, PAN, OTP या सरकारी लॉगिन नहीं माँगता। प्राधिकरण रिकॉर्ड बताएगा, इसका वादा किए बिना रिकॉर्ड माँगने वाला RTI ड्राफ्ट तैयार किया जा सकता है।",
   "Prepare a conservative Filing Draft asking for records, if appropriate.":
-    "उचित हो तो रिकॉर्ड माँगने वाला सावधान फाइलिंग ड्राफ्ट तैयार करें।",
+    "उचित हो तो रिकॉर्ड माँगने वाला RTI ड्राफ्ट तैयार करें।",
   "This request is outside the prototype Evidence Snapshot.":
-    "यह अनुरोध प्रोटोटाइप के प्रमाण स्नैपशॉट के दायरे से बाहर है।",
+    "यह अनुरोध यहाँ जाँचे गए सरकारी स्रोतों के दायरे से बाहर है।",
   "The prototype cannot claim that the information is unavailable or unpublished. You can review the scope, edit the need, or prepare a Filing Draft.":
-    "प्रोटोटाइप यह दावा नहीं कर सकता कि जानकारी उपलब्ध या अप्रकाशित है। आप दायरा देख सकते हैं, ज़रूरत बदल सकते हैं या फाइलिंग ड्राफ्ट तैयार कर सकते हैं।",
+    "यह प्रोटोटाइप इस बात की पुष्टि नहीं कर सकता कि जानकारी उपलब्ध है या नहीं। आप क्या जाँचा गया देखें, सवाल बदलें या RTI ड्राफ्ट तैयार करें।",
   "Only registered authorities, measures, periods, and source types were checked.":
     "केवल पंजीकृत प्राधिकरण, माप, अवधियाँ और स्रोत प्रकार जाँचे गए।",
   "State/UT-wise Value of Property Stolen and Recovered, 2021–2023":
@@ -92,27 +145,27 @@ const HINDI_TEXT: Record<string, string> = {
   "Employees' Provident Fund Organisation": "कर्मचारी भविष्य निधि संगठन",
   "Current own-record claim status": "वर्तमान अपने रिकॉर्ड के दावे की स्थिति",
   "EPFO Member Passbook": "EPFO सदस्य पासबुक",
-  "Fictional RTI Response Fixture": "काल्पनिक RTI उत्तर फ़िक्स्चर",
+  "Fictional RTI Response Fixture": "RTI उत्तर का प्रोटोटाइप उदाहरण",
   "Synthetic demonstration authority": "सिंथेटिक प्रदर्शन प्राधिकरण",
   "Fictional RTI Response Fixture—not an official response.":
-    "काल्पनिक RTI उत्तर फ़िक्स्चर — यह आधिकारिक उत्तर नहीं है।",
+    "RTI उत्तर का प्रोटोटाइप उदाहरण — यह आधिकारिक उत्तर नहीं है।",
   "A wholly fictional, identity-free demonstration response about a generic public programme. It is not a real response and does not reconstruct any government record.":
     "एक सामान्य सार्वजनिक कार्यक्रम के बारे में पूरी तरह काल्पनिक, पहचान-रहित प्रदर्शन उत्तर। यह वास्तविक उत्तर नहीं है और किसी सरकारी रिकॉर्ड का पुनर्निर्माण नहीं करता।",
   "Northern Railway in-scope no-finding fixture":
-    "Northern Railway के दायरे में निष्कर्ष-रहित फ़िक्स्चर",
-  "Synthetic demonstration fixture": "सिंथेटिक प्रदर्शन फ़िक्स्चर",
+    "Northern Railway से जुड़े जाँचे गए स्रोत",
+  "Synthetic demonstration fixture": "प्रोटोटाइप उदाहरण",
   "Fictional curated no-finding fixture—not a statement that records are unavailable or unpublished.":
-    "काल्पनिक चुना हुआ निष्कर्ष-रहित फ़िक्स्चर — यह नहीं कहता कि रिकॉर्ड उपलब्ध या अप्रकाशित हैं।",
+    "काल्पनिक चुना हुआ प्रोटोटाइप उदाहरण — यह रिकॉर्ड उपलब्ध हैं या नहीं, इसकी पुष्टि नहीं करता।",
   "This fixture records that the prototype has no supporting expenditure statement, ledger extract, work order, or contractor record for the confirmed need.":
-    "यह फ़िक्स्चर दर्ज करता है कि पुष्ट ज़रूरत के लिए प्रोटोटाइप में कोई सहायक व्यय विवरण, लेजर अंश, कार्यादेश या ठेकेदार रिकॉर्ड नहीं है।",
+    "यह प्रोटोटाइप बताता है कि जाँचे गए स्रोतों में पुष्ट सवाल के लिए व्यय विवरण, लेजर अंश, कार्यादेश या ठेकेदार की जानकारी नहीं मिली।",
   "The confirmed Information Need selected a new written response.":
-    "पुष्टि की गई सूचना-ज़रूरत में नया लिखित उत्तर चुना गया।",
+    "पुष्ट सवाल के लिए नया लिखित उत्तर चुना गया।",
   "Official table values are compared deterministically for each individual State/UT.":
     "हर अलग राज्य/केंद्र शासित प्रदेश के लिए आधिकारिक तालिका के मानों की तय नियमों से तुलना की जाती है।",
   "The reported value of property stolen increased while the reported recovery percentage declined between 2021 and 2023.":
     "2021 और 2023 के बीच रिपोर्ट की गई चोरी की संपत्ति का मूल्य बढ़ा, जबकि बरामदगी का रिपोर्ट किया गया प्रतिशत घटा।",
   "The prototype Evidence Snapshot checked the NCRB Table 20A.1 CSV for 2021–2023 and excluded three declared aggregate rows.":
-    "प्रोटोटाइप प्रमाण स्नैपशॉट ने 2021–2023 के लिए NCRB तालिका 20A.1 CSV जाँची और घोषित कुल वाली तीन पंक्तियाँ हटा दीं।",
+    "इस प्रोटोटाइप ने 2021–2023 के लिए NCRB तालिका 20A.1 CSV जाँची और घोषित कुल वाली तीन पंक्तियाँ हटा दीं।",
   "Compare 2021 and 2023 stolen values and recovery percentages for each individual State/UT.":
     "हर अलग राज्य/केंद्र शासित प्रदेश के लिए 2021 और 2023 की चोरी की संपत्ति के मूल्य तथा बरामदगी प्रतिशत की तुलना करें।",
   "2023 stolen value > 2021 stolen value":
@@ -128,7 +181,7 @@ const HINDI_TEXT: Record<string, string> = {
     "वास्तविक आधिकारिक सार्वजनिक डेटा, संस्करणित स्रोत प्रति से जोड़ा गया है।",
   "Evidence Snapshot": "प्रमाण स्नैपशॉट",
   "Curated, immutable prototype snapshot; not live or exhaustive.":
-    "चुना हुआ, अपरिवर्तनीय प्रोटोटाइप स्नैपशॉट; लाइव या संपूर्ण नहीं।",
+    "सीमित संख्या में सहेजे गए सरकारी स्रोत; लाइव या संपूर्ण खोज नहीं।",
   "Free-text interpretation": "मुक्त-पाठ व्याख्या",
   "Working deterministic adapter; OpenAI is server-only when configured.":
     "कार्यशील नियतात्मक अडैप्टर; कॉन्फ़िगर किए जाने पर OpenAI केवल सर्वर पर चलता है।",
@@ -140,7 +193,7 @@ const HINDI_TEXT: Record<string, string> = {
   bytes: "बाइट",
   "Previous RTI response": "पिछला RTI उत्तर",
   "Synthetic fixture only—not an official response.":
-    "केवल सिंथेटिक फ़िक्स्चर — यह आधिकारिक उत्तर नहीं है।",
+    "केवल प्रोटोटाइप उदाहरण — यह आधिकारिक उत्तर नहीं है।",
   "OTP, identity, payment, filing": "OTP, पहचान, भुगतान, फाइलिंग",
   "Simulated demonstration; no government integration.":
     "अनुकरण किया गया प्रदर्शन; कोई सरकारी एकीकरण नहीं।",
@@ -154,11 +207,11 @@ const HINDI_TEXT: Record<string, string> = {
   "Northern Railway RTI contact and authority page":
     "Northern Railway RTI संपर्क और प्राधिकरण पृष्ठ",
   "The record subject is not clear enough to select an own-record service route.":
-    "अपने रिकॉर्ड का सेवा मार्ग चुनने के लिए रिकॉर्ड का विषय पर्याप्त रूप से स्पष्ट नहीं है।",
-  "A citation problem report is awaiting confirmation; the original result remains visible.":
-    "उद्धरण की समस्या की रिपोर्ट पुष्टि की प्रतीक्षा में है; मूल नतीजा दिखाई दे रहा है।",
-  "This result was downgraded to partially resolved pending source revalidation after a citation problem report.":
-    "उद्धरण की समस्या की रिपोर्ट के बाद स्रोत के फिर से सत्यापन तक यह नतीजा आंशिक रूप से हल किया गया है।",
+    "अपने रिकॉर्ड की आधिकारिक सेवा चुनने के लिए रिकॉर्ड का विषय पर्याप्त रूप से स्पष्ट नहीं है।",
+  "A source problem report is awaiting review; the original result remains visible.":
+    "स्रोत की समस्या की रिपोर्ट की समीक्षा बाकी है; मूल नतीजा दिखाई दे रहा है।",
+  "This result is shown as partial until the source is checked again after a source problem report.":
+    "स्रोत की समस्या की रिपोर्ट के बाद स्रोत की फिर से जाँच होने तक यह नतीजा कुछ जानकारी के रूप में दिखाया गया है।",
 };
 
 const NEED_TEXT: Record<string, string> = {
@@ -229,12 +282,12 @@ export function clarificationQuestion(value: string): string {
 function translateText(text: string, language: Language): string {
   if (language === "en") return text;
   const formalSuffix =
-    " You chose a formal response, so the related Research Finding is preserved while you decide whether to prepare a Filing Draft.";
+    " You chose a written reply, so you can prepare an RTI draft for the relevant authority.";
   if (text.endsWith(formalSuffix))
-    return `${translateText(text.slice(0, -formalSuffix.length), language)} आपने औपचारिक उत्तर चुना है, इसलिए संबंधित शोध निष्कर्ष सुरक्षित है; अब आप तय कर सकते हैं कि फाइलिंग ड्राफ्ट तैयार करना है या नहीं।`;
+    return `${translateText(text.slice(0, -formalSuffix.length), language)} आपने लिखित उत्तर चुना है, इसलिए संबंधित प्राधिकरण के लिए RTI ड्राफ्ट तैयार कर सकते हैं।`;
   for (const citationSuffix of [
-    "A citation problem report is awaiting confirmation; the original result remains visible.",
-    "This result was downgraded to partially resolved pending source revalidation after a citation problem report.",
+    "A source problem report is awaiting review; the original result remains visible.",
+    "This result is shown as partial until the source is checked again after a source problem report.",
   ]) {
     const suffix = ` ${citationSuffix}`;
     if (text.endsWith(suffix))
@@ -380,13 +433,10 @@ export function localizeMessage(message: string, language: Language): string {
     return "डेमो OTP 123456 डालें। कोई SMS नहीं भेजा गया।";
   if (message === "Only the fictional demo profile is accepted.")
     return "केवल काल्पनिक डेमो प्रोफ़ाइल स्वीकार की जाती है।";
-  if (
-    message ===
-    "Review and explicitly confirm the Filing Package before payment."
-  )
-    return "भुगतान से पहले पूरे फाइलिंग पैकेज की समीक्षा और स्पष्ट पुष्टि करें।";
-  if (message === "Only the simulated ₹10 Demo UPI payment is accepted.")
-    return "केवल अनुकरण किया गया ₹10 डेमो UPI भुगतान स्वीकार है।";
+  if (message === "Review and confirm the RTI details before payment.")
+    return "भुगतान से पहले RTI का विवरण देखें और पुष्टि करें।";
+  if (message === "Only the simulated ₹10 demo payment is accepted.")
+    return "केवल अनुकरण किया गया ₹10 डेमो भुगतान स्वीकार है।";
   if (message === "Explicit confirmation is required.")
     return "स्पष्ट पुष्टि आवश्यक है।";
   if (message.includes("characters. Remove")) {
@@ -399,15 +449,15 @@ export function localizeMessage(message: string, language: Language): string {
   }
   if (message === "Newlines are not permitted by this route profile.")
     return "इस मार्ग प्रोफ़ाइल में नई पंक्तियाँ स्वीकार नहीं हैं।";
+  if (message === "The RTI draft is not tied to the confirmed question.")
+    return "RTI ड्राफ्ट पुष्ट सवाल से जुड़ा नहीं है।";
   if (
     message ===
-    "The Filing Draft is not tied to the confirmed Information Need."
+    "The government authority in the RTI draft does not match the selected RTI channel."
   )
-    return "फाइलिंग ड्राफ्ट पुष्ट की गई सूचना-ज़रूरत से जुड़ा नहीं है।";
-  if (message === "The Filing Draft holder does not match the selected route.")
-    return "फाइलिंग ड्राफ्ट का सूचना-धारक चुने गए मार्ग से मेल नहीं खाता।";
-  if (message === "The Filing Draft route does not match the validated route.")
-    return "फाइलिंग ड्राफ्ट का मार्ग सत्यापित मार्ग से मेल नहीं खाता।";
+    return "RTI ड्राफ्ट में दिया गया सरकारी प्राधिकरण चुने गए RTI चैनल से मेल नहीं खाता।";
+  if (message === "The RTI channel does not match the checked channel.")
+    return "RTI चैनल जाँचे गए चैनल से मेल नहीं खाता।";
   if (
     message ===
     "Only the verified Central Filing Route is available for Demo Submission."

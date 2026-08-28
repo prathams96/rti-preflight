@@ -467,6 +467,9 @@ select:focus {
 
 .action-button,
 .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: var(--control-height);
   padding: 0.7rem 1rem;
   border: 1px solid var(--ink-strong);

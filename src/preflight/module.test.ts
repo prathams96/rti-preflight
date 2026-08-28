@@ -42,7 +42,7 @@ describe("PreflightModule public seam", () => {
       recoveryDelta: "−15.2 pp",
     });
     expect(gujarat?.lineage).toHaveLength(5);
-    expect(result.evidenceStatus).toContain("not directly stated");
+    expect(result.evidenceStatus).toBe("Calculated from official data");
   });
 
   it("keeps in-snapshot no-finding distinct from outside coverage", async () => {
@@ -70,11 +70,11 @@ describe("PreflightModule public seam", () => {
     expect(outside.coverageManifest?.capabilityManifestHash).toBe(
       snapshot.capabilityManifest.hash,
     );
-    expect(outside.headline).toBe(
-      "We couldn’t verify this from the sources available in this prototype.",
+    expect(outside.headline).toBe("We couldn’t find a reliable public answer");
+    expect(outside.evidenceStatus).toBe(
+      "The sources checked did not provide a reliable answer",
     );
-    expect(outside.evidenceStatus).toBe("Not verified from available sources");
-    expect(outside.meaning).toContain("cannot claim");
+    expect(outside.meaning).toContain("do not fully answer");
   });
 
   it("preserves a supported research finding when formal response is selected", async () => {
@@ -132,9 +132,11 @@ describe("PreflightModule public seam", () => {
       ).needs[0];
       const result = await preflight.resolve({ need, snapshot });
       expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
-      expect(result.searchScope).toContain("Capability Manifest");
-      expect(result.recommendedAction).toContain("Filing Draft");
-      expect(result.meaning).toContain("cannot claim");
+      expect(result.searchScope).toContain("saved government sources");
+      expect(result.recommendedAction).toMatch(
+        /Prepare an RTI|prepare an RTI/i,
+      );
+      expect(result.meaning).toContain("do not fully answer");
     }
   });
 
@@ -148,7 +150,7 @@ describe("PreflightModule public seam", () => {
     ).needs[0];
     const result = await preflight.resolve({ need, snapshot });
     expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
-    expect(result.recommendedAction).toContain("records-focused");
+    expect(result.recommendedAction).toContain("Prepare an RTI asking");
     expect(result.meaning).not.toMatch(/the reason|why it failed/i);
   });
 
@@ -204,7 +206,7 @@ describe("PreflightModule public seam", () => {
     expect(need.recordSubject).toBe("another");
     expect(result.outcome).toBe("FORMAL_RESPONSE_REQUIRED");
     expect(result.evidence).toEqual([]);
-    expect(result.meaning).toContain("not permission");
+    expect(result.meaning).toContain("not give permission");
     expect(result.meaning).not.toContain("123456789012");
   });
 
@@ -220,7 +222,7 @@ describe("PreflightModule public seam", () => {
     expect(result.outcome).toBe("SOURCE_RESOLVED");
     expect(result.evidence[0]).toMatchObject({
       sourceType: "rti_response_fixture",
-      syntheticDisclosure: expect.stringContaining("not an official response"),
+      syntheticDisclosure: expect.stringContaining("not a real RTI response"),
     });
     expect(result.evidence[0].url).toBeUndefined();
     expect(result.evidence[0].grounding.length).toBeGreaterThanOrEqual(3);
@@ -228,7 +230,7 @@ describe("PreflightModule public seam", () => {
       expect(grounding.locator.kind).toBe("jsonPointer");
       expect(grounding.locatedContentHash).toMatch(/^[a-f0-9]{64}$/);
     }
-    expect(result.evidenceStatus).toContain("Fictional");
+    expect(result.evidenceStatus).toContain("Prototype example");
   });
 
   it("keeps the CPCB conflict cut outside the snapshot and never emits a conflict", async () => {
@@ -244,7 +246,7 @@ describe("PreflightModule public seam", () => {
     });
     expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
     expect(result.outcome).not.toBe("EVIDENCE_CONFLICT");
-    expect(result.meaning).toContain("cannot claim");
+    expect(result.meaning).toContain("do not fully answer");
   });
 
   it("keeps custom geography and period edits conservative", async () => {
@@ -265,7 +267,7 @@ describe("PreflightModule public seam", () => {
     });
     expect(result.outcome).toBe("OUTSIDE_SNAPSHOT_COVERAGE");
     expect(result.rows).toEqual([]);
-    expect(result.meaning).toContain("cannot claim");
+    expect(result.meaning).toContain("do not fully answer");
   });
 
   it("rejects an empty structured edit before retrieval", async () => {

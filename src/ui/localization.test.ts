@@ -94,21 +94,23 @@ describe("Hindi journey localization", () => {
     });
     const hindiResult = localizeResolution(result, "hi");
 
-    expect(hindiResult.headline).toContain("राज्य/केंद्र शासित प्रदेश");
-    expect(hindiResult.meaning).toContain("बरामदगी");
+    expect(hindiResult.headline).toBe(
+      "हमें आधिकारिक सरकारी डेटा से एक उत्तर मिला",
+    );
+    expect(hindiResult.meaning).toContain("NCRB");
     expect(hindiResult.evidence[0].extract).toContain("आधिकारिक तालिका");
     expect(hindiResult.calculation?.filters[0]).toContain("चोरी की संपत्ति");
 
     const challengedResult = localizeResolution(
       {
         ...result,
-        evidenceStatus: `${result.evidenceStatus} This result was downgraded to partially resolved pending source revalidation after a citation problem report.`,
+        evidenceStatus: `${result.evidenceStatus} This result is shown as partial until the source is checked again after a source problem report.`,
       },
       "hi",
     );
-    expect(challengedResult.evidenceStatus).toContain("उद्धरण की समस्या");
+    expect(challengedResult.evidenceStatus).toContain("स्रोत की समस्या");
     expect(challengedResult.evidenceStatus).not.toContain(
-      "This result was downgraded",
+      "This result is shown as partial",
     );
 
     const prepared = await createFilingModule().prepare({

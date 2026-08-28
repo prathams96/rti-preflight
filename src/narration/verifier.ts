@@ -227,7 +227,15 @@ function hasUnsupportedEntity(text: string, allowed: string): boolean {
   );
 }
 
-const ABSENCE_EN = [/\bno\b/i, /\bnot\b/i, /\bnone\b/i, /\babsence\b/i];
+const ABSENCE_EN = [
+  /\bno\b/i,
+  /\bnot\b/i,
+  /\bnone\b/i,
+  /\babsence\b/i,
+  /couldn['’]t find/i,
+  /did not provide/i,
+  /could not/i,
+];
 
 const ABSENCE_HI = [/नहीं/u, /अभाव/u, /कमी/u];
 

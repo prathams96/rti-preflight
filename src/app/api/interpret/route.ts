@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           code: "INVALID_INPUT",
-          message: "Enter an information need to continue.",
+          message: "Enter the information you are looking for to continue.",
         },
         { status: 400 },
       );

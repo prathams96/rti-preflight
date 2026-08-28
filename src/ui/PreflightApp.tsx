@@ -556,47 +556,54 @@ export const COPY = {
     supporting: ASK_SCREEN_COPY.en.supporting,
     label: "What public information are you looking for?",
     privacy:
-      "Do not enter passwords, OTPs, Aadhaar, PAN, EPIC, or account numbers.",
+      "Please do not enter passwords, OTPs, Aadhaar, PAN, EPIC or account numbers.",
     submit: ASK_SCREEN_COPY.en.submit,
     details: "Prototype details",
-    examples: "Try one of these",
-    confirm: "Is this what you're asking for?",
-    search: "Search published sources",
-    edit: "Edit",
+    examples: "Try an example",
+    confirm: "Check what we understood",
+    search: "Looks right — search",
+    edit: "Edit details",
     restart: "Start over",
     result: RESULT_STAGE_COPY.en.resultStage,
     researchNotice: RESULT_STAGE_COPY.en.researchNotice,
-    searching: "Checking published government records",
-    searchingDetail: "No government system is being accessed.",
-    back: "Back to confirmed need",
+    searching: "Checking available government information",
+    searchingDetail:
+      "This prototype checks a limited set of saved government sources. It is not searching government systems live.",
+    back: "Back to results",
     askStage: "Step 1 of 3 · Ask",
     multipleStage: "Ask · Multiple needs",
     confirmStage: "Step 2 of 3 · Check",
     searchStage: "Step 3 of 3 · Searching",
     resultStage: RESULT_STAGE_COPY.en.resultStage,
-    selectTitle: "Choose one Information Need to continue",
+    selectTitle: "Choose one question to continue",
     selectIntro:
       "We kept your original wording and separated the needs so each one can be checked clearly.",
     oneNeed:
       "Only one need is active at a time. You can start another Preflight later.",
-    measure: "What you're asking for",
-    geography: "For",
-    period: "Period",
-    breakdown: "Breakdown by",
-    holder: "Likely department to ask",
-    preference: "What kind of answer do you need?",
-    prefPublished: "Reliable information from a published government source",
-    prefFormal: "A new written response from a public authority",
-    prefUnsure: "I'm not sure — help me decide",
-    clarification: "Material clarification",
+    measure: "Information requested",
+    geography: "Area",
+    period: "Time period",
+    breakdown: "Breakdown needed",
+    holder: "Likely government authority",
+    preference: "What would work for you?",
+    prefPublished: "Information from an official government source is enough",
+    prefFormal: "I need a written reply from a government authority",
+    prefUnsure: "I’m not sure — help me decide",
+    clarification: "One detail to confirm",
     unsure: "I’m not sure",
     calculation: "Calculation",
     matching: "matching rows",
     unresolved: "What remains unresolved",
-    scope: "Search based on the prototype Evidence Snapshot · View scope",
-    evidence: "Supporting evidence",
-    officialRoute: "Official service route",
-    syntheticFixture: "Synthetic fixture",
+    whatFound: "What we found",
+    whatMissing: "What is still missing",
+    nextSteps: "What you can do next",
+    conflictNext:
+      "You can ask the relevant authority to confirm which figure should be used.",
+    scope: "What we checked",
+    evidence: "Official information checked",
+    prototypeWarning: "Prototype example — this is not a real RTI response.",
+    officialRoute: "Official service",
+    syntheticFixture: "Example source",
     verifiedWord: "verified",
     officialSource: "Official source",
     pinnedCsv: "Open pinned CSV",
@@ -605,147 +612,166 @@ export const COPY = {
     stolenColumn: "Stolen 2021 → 2023",
     changeColumn: "Change",
     recoveryColumn: "Recovery 2021 → 2023",
-    inspectEvidence: "Inspect evidence details",
+    inspectEvidence: "View source details",
     inspectRow: (geography: string) =>
-      `Inspect ${geography} operands and source cells`,
-    viewPlan: "View the registered calculation plan",
-    saveBrief: "Download Evidence Brief (PDF)",
-    briefSaved: "Evidence Brief PDF downloaded.",
+      `View ${geography} figures and source cells`,
+    viewPlan: "How this was calculated",
+    saveBrief: "Download information summary (PDF)",
+    briefSaved: "Information summary PDF downloaded.",
     briefFailed:
-      "We couldn’t download this Evidence Brief. The result remains available here.",
-    sourceData: "Real official public data",
-    publisher: "Publisher",
-    applicablePeriod: "Applicable period",
-    locatedValues: "Located values",
-    openSource: "Open official source",
-    prepare: "Prepare an RTI Draft",
-    prepareAnyway: "Prepare an RTI Draft anyway",
-    citizenOverride: "Still need an official response? Prepare an RTI Draft",
-    openRoute: "Open official service route",
-    clarifyHolder: "Clarify the likely department first",
+      "We couldn’t download this information summary. The result remains available here.",
+    sourceData: "Government source",
+    source: "Source",
+    publisher: "Published by",
+    applicablePeriod: "Period covered",
+    publishedUpdated: "Published / updated",
+    informationUsed: "Information used",
+    notSpecified: "Not specified",
+    locatedValues: "Source references",
+    openSource: "View official source",
+    openRoute: "Go to official service",
+    viewSource: "View source",
+    viewEarlierResponse: "View the earlier response",
+    viewCalculation: "View calculation",
+    seeWhatChecked: "See what we checked",
+    goToOfficialService: "Go to the official EPFO service",
+    prepareMissing: "Prepare an RTI for the missing information",
+    prepareClarification: "Prepare an RTI asking for clarification",
+    compareSources: "Compare the sources",
+    prepare: "Prepare an RTI",
+    prepareAnyway: "Prepare an RTI anyway",
+    citizenOverride: "I still want to prepare an RTI",
+    clarifyHolder: "Confirm the likely authority first",
     footer:
       "Your research is anonymous. Nothing is filed unless you enter the separate filing demo.",
     language: "हिन्दी",
     draftStage: RESULT_STAGE_COPY.en.draftStage,
     draftTitle: RESULT_STAGE_COPY.en.draftTitle,
     draftIntro: RESULT_STAGE_COPY.en.draftIntro,
-    to: "Information Holder",
-    request: "Request",
-    route: "Official Filing Route",
+    to: "Government authority",
+    request: "RTI request",
+    route: "RTI channel",
     verified: "Last checked",
-    characters: "characters",
+    characters: "Character limit",
     continueFiling: "Continue to filing demo",
-    saveDraft: "Save this draft",
-    savedDraft: "Saved Filing Draft",
-    returnResult: "Return to result",
+    saveDraft: "Save draft",
+    savedDraft: "Saved RTI draft",
+    returnResult: "Back to results",
     guidedUnavailable:
-      "A Filing Package could not be prepared for this question yet. You can copy the draft and verify the authority's own RTI channel before filing.",
-    divergenceTitle: "This edit may add another Information Need",
+      "A complete filing demo is not available for this question yet. You can copy the draft and verify the authority’s own RTI channel before filing.",
+    divergenceTitle: "This edit may add a second question",
     divergenceBody:
       "Choose how to keep control of the draft. Nothing will be truncated or silently rewritten.",
     keepWritten: "Keep as written",
-    separateNeed: "Separate into another Saved Preflight",
+    separateNeed: "Save as a separate check",
     undoChanges: "Undo changes",
     fileStage: RESULT_STAGE_COPY.en.fileStage,
     fileTitle: RESULT_STAGE_COPY.en.fileTitle,
     fileIntro: RESULT_STAGE_COPY.en.fileIntro,
-    stepOtp: "1. Verify",
-    stepIdentity: "2. Your details",
+    stepOtp: "1. OTP",
+    stepIdentity: "2. Applicant details",
     stepReview: "3. Review",
-    stepPayment: "4. Pay fee",
-    otpPrompt: "Hackathon prototype: use OTP 123456. No SMS was sent.",
-    verifyOtp: "Verify demo OTP",
-    identityPrompt: "These details are fictional and stay in session state.",
+    stepPayment: "4. Payment",
+    otpTitle: "Demo only",
+    applicantTitle: "Applicant details",
+    reviewTitle: "Review your RTI",
+    paymentTitle: "Demo payment",
+    reviewWarning:
+      "This is a prototype. Nothing will be submitted to a government website.",
+    otpPrompt: "Use OTP 123456 to continue. No SMS has been sent.",
+    verifyOtp: "Verify and continue",
+    identityPrompt:
+      "The details shown here are fictional and are used only for this demo.",
     continue: "Continue",
-    reviewPrompt: "Review the complete Filing Package before payment.",
-    confirmPackage: "I confirm this complete Filing Package",
-    paymentPrompt: "Demo Payment: ₹10 · Demo UPI",
+    reviewPrompt:
+      "Check the authority, request and applicant details before continuing.",
+    confirmPackage: "I have checked these details",
+    paymentPrompt: "RTI application fee: ₹10",
     noRealPayment: "No real payment will be made.",
-    confirmDemo: "Complete simulated filing",
+    confirmDemo: "Complete demo payment",
     acknowledgementStage: "Done",
     acknowledgementTitle: RESULT_STAGE_COPY.en.acknowledgementTitle,
-    fictionalRegistration: "Fictional registration",
+    fictionalRegistration: "Demo reference",
     noGovernment:
-      "No request, payment, or personal information was sent to a government system.",
-    downloadPackage: "Download demo Filing Package",
-    packageSaved: "Demo Filing Package PDF downloaded.",
+      "No RTI, payment or personal information was sent to a government system.",
+    downloadPackage: "Download RTI draft",
+    packageSaved: "RTI draft PDF downloaded.",
     packageFailed:
-      "We couldn’t save this Filing Package PDF. The acknowledgement remains available here.",
-    startAnother: "Ask something else",
-    correction: "This isn’t what I asked",
-    challenge: "Report a citation problem",
+      "We couldn’t save this RTI draft PDF. The demo result remains available here.",
+    startAnother: "Start another check",
+    correction: "Change my question",
+    challenge: "Report a source problem",
     challengePending:
-      "You reported a citation problem. The result stays visible below, but it is downgraded to partially resolved until this source is revalidated. You can still prepare an RTI Draft.",
-    challengeDialogTitle: "Report a citation problem?",
+      "You reported a problem with this source. The result stays visible, but we’ll show it as partial until the source is checked again. You can still prepare an RTI.",
+    challengeDialogTitle: "Report a source problem?",
     challengeDialogBody: (sourceTitle: string) =>
       `You are reporting that “${sourceTitle}” may not support this result.`,
     challengeDialogConsequence:
-      "After you confirm, the original result and evidence will stay visible, but its status will be downgraded pending revalidation.",
-    confirmChallenge: "Report problem and downgrade",
+      "After you confirm, the original result and source information will stay visible, but we’ll mark the result as partial until it is checked again.",
+    confirmChallenge: "Report problem and mark result partial",
     cancel: "Cancel",
-    draftLabel: "Filing Draft",
-    routeNotVerified: "Route information not verified in this prototype",
+    draftLabel: "RTI request",
+    routeNotVerified:
+      "Route information has not been checked in this prototype",
     routeVerification:
-      "Validated against route information last checked on this date; external acceptance is not guaranteed.",
+      "This route information was last checked on this date; a government website may have changed.",
     unverified: "Unverified",
     draftHelp:
-      "Edit this freely — we won't rewrite your words. It asks for records rather than reasons, which is what the RTI Act entitles you to.",
+      "Edit this freely — we won’t rewrite your words. The request asks for records, not explanations.",
     divergenceSaved:
-      "The draft remains saved for editing, but filing stays blocked until the additional need is removed or separated.",
-    editDraft: "Edit Filing Draft",
-    demoOtp: "Demo OTP",
+      "The draft remains saved for editing, but continuing is paused until the second question is removed or saved separately.",
+    editDraft: "Edit RTI draft",
+    demoOtp: "OTP",
     name: "Name",
     email: "Email",
     address: "Address",
     state: "State",
     pin: "PIN",
     routeLine: "Route",
-    fictionalApplicant: "Applicant",
+    fictionalApplicant: "Applicant details",
     mockFee: "Fee",
     componentSummary:
-      "Working: route validation. Simulated: OTP, identity, payment, filing, and acknowledgement.",
+      "Route information is checked. OTP, applicant details, payment and filing are simulated.",
     genericComponentSummary:
-      "Simulated: route selection, OTP, identity, payment, filing, and acknowledgement. Verify the authority and portal before any real filing.",
+      "Route selection, OTP, applicant details, payment and filing are simulated. Verify the authority and portal before any real filing.",
     paymentCredentials:
       "No UPI ID, card, CVV, bank, or payment credential is collected.",
-    paymentCheck: "I understand this is a simulated payment step.",
-    fictionalTime: "Fictional submission time",
-    submittedDraft: "Submitted draft snapshot",
-    draftAria: "Filing Draft",
+    paymentCheck: "I understand this is a demo payment step.",
+    fictionalTime: "Demo time",
+    submittedDraft: "RTI draft in this demo",
+    draftAria: "RTI draft",
     stepperAria: "Simulated filing steps",
-    prepareFailure: "We couldn’t prepare this Filing Draft right now.",
+    prepareFailure: "We couldn’t prepare this RTI draft right now.",
     revalidationError:
-      "This Filing Draft needs revalidation before filing. Undo the added need or separate it into another Saved Preflight.",
+      "This RTI draft needs to be checked again before continuing. Remove the added question or save it as a separate check.",
     divergenceSeparate:
-      "The edited text is kept here and marked for a separate Saved Preflight.",
-    savedPreflights: "Saved Preflights",
+      "The edited text is kept here and marked for a separate saved check.",
+    savedPreflights: "Saved checks",
     resume: "Resume",
-    originalNeed: "Original confirmed Information Need",
-    separatedDraft: "Separated draft to interpret",
+    originalNeed: "Original confirmed question",
+    separatedDraft: "Second question to review",
     cpcbCut:
-      "Air-quality results are withheld until two compatible official sources agree. We'd rather show you nothing than show you a number we can't stand behind.",
+      "Air-quality results are not shown until two compatible official sources agree. We will not show a figure that cannot be confirmed.",
     askReassurance: ASK_SCREEN_COPY.en.reassurance,
-    confirmIntro:
-      "We rewrote your question so it can be checked against official records. Correct anything that's wrong — this is exactly what we'll search for.",
+    confirmIntro: "Make sure these details are correct before we search.",
     responseProcess:
-      "In a real filing, the official route provides the applicable response process.",
-    realWorldNext:
-      "In a real filing, the government portal would provide its own acknowledgement and the applicable response timeline.",
+      "In a real filing, the authority’s own channel sets out the response process.",
+    realWorldNext: "You have completed the simulated RTI filing process.",
     provenance: (count: number, date: string) =>
-      `Checked against ${count} official values · last verified ${date}`,
+      `Information checked against ${count} official values · last checked ${date}`,
     customOption: "Other / custom — type your own",
     customHelp: "Choose a common value or type your own.",
     customAccepted: "Custom value accepted.",
     invalidNeed:
-      "Complete each Information Need field before checking. You can type a custom geography or period.",
+      "Complete each field before checking. You can type a custom area or time period.",
     disclosure: "Disclosure",
     closeDetails: "Close prototype details",
-    verifiedRouteProfile: "Verified Filing Route profile",
-    epfoRouteDetails: "EPFO Official Service Route",
+    verifiedRouteProfile: "Northern Railway route information",
+    epfoRouteDetails: "EPFO service information",
     cpcbScenario: "CPCB conflict scenario",
     routeMetadataNote:
-      "Purpose and verification date are metadata; the primary route is the link above.",
-    resumeTitle: "Resume previous Preflight",
+      "The purpose and date shown here describe the service information; use the link above for the official service.",
+    resumeTitle: "Resume previous check",
     resumeBody: "Your saved prototype journey is ready to continue.",
     startFresh: "Start fresh",
     askAria: "Ask for public information",
@@ -754,36 +780,38 @@ export const COPY = {
     interpreting: "Interpreting your need",
     aiThinking: {
       interpretation: {
-        eyebrow: "Assisted interpretation",
-        title: "Making your question checkable",
+        eyebrow: "Understanding your question",
+        title: "Making your question clear",
         detail:
-          "We’re reading your wording and mapping it to one clear Information Need.",
+          "We’re reading your wording and preparing the details for you to check.",
         stages: [
-          "Reading your wording",
-          "Separating the Information Need",
-          "Preparing a confirmation card",
+          "Reading your question",
+          "Identifying the information requested",
+          "Preparing the details for you to check",
         ],
       },
       resolution: {
-        eyebrow: "Evidence check in progress",
-        title: "Checking the evidence",
+        eyebrow: "Government information check in progress",
+        title: "Checking available government information",
         detail:
-          "We’re checking only the registered Evidence Snapshot and preparing a grounded result.",
+          "This prototype checks a limited set of saved government sources. It is not searching government systems live.",
         stages: [
-          "Confirming the selected need",
-          "Checking registered sources",
-          "Preparing a grounded result",
+          "Finding the relevant government authority",
+          "Checking official data and reports",
+          "Checking available RTI responses",
+          "Matching the dates and location",
+          "Checking the supporting information",
         ],
       },
       draft: {
-        eyebrow: "Draft preparation in progress",
-        title: "Preparing your Filing Draft",
+        eyebrow: "RTI draft preparation in progress",
+        title: "Preparing your RTI draft",
         detail:
-          "We’re keeping your confirmed scope intact while shaping an editable records request.",
+          "We’re keeping your confirmed details intact while preparing an editable RTI request.",
         stages: [
-          "Reading the confirmed need",
-          "Keeping your scope intact",
-          "Preparing an editable draft",
+          "Reading the details you confirmed",
+          "Keeping your question intact",
+          "Preparing an editable RTI draft",
         ],
       },
       note: "These work areas describe this step; they are not a live progress report.",
@@ -792,26 +820,26 @@ export const COPY = {
     unknownClarification:
       "Answer using the fields above, or retain this one detail as unknown.",
     rowDetail: (row: string, values: string) =>
-      `Inspect ${row} operands and source cells: ${values}`,
+      `View ${row} figures and source cells: ${values}`,
     changeLabel: "change",
     recoveryLabel: "Recovery",
     crore: "crore",
-    plan: "Plan",
-    engine: "Engine",
-    policy: "Policy",
-    demoUpi: "Demo UPI",
-    noPersonalRecord: "Route metadata; no personal record was retrieved",
+    plan: "Calculation plan",
+    engine: "Calculation method",
+    policy: "Checking rules",
+    demoUpi: "Demo payment",
+    noPersonalRecord: "No personal record was retrieved",
     immutableReferences: (count: number) =>
-      `${count} immutable references with content hashes`,
-    progressNeed: "Confirmed Information Need",
-    progressNcrb: "Checked NCRB Table 20A.1 in the prototype Evidence Snapshot",
+      `${count} source references checked`,
+    progressNeed: "Question confirmed",
+    progressNcrb: "Checked the saved NCRB table",
     progressNcrbDone: "Applied deterministic filters and validated grounding",
-    progressCapabilities: "Checked registered Evidence Snapshot capabilities",
-    progressResult: "Prepared the supported result state",
+    progressCapabilities: "Checked the saved government sources available here",
+    progressResult: "Prepared the result",
     demoSubmissionFailure:
-      "The Filing Package must be valid and explicitly confirmed before Demo Submission.",
+      "The RTI details must be valid and confirmed before the filing demo.",
     recheckChallenge:
-      "Change and reconfirm the Information Need before rechecking this challenged source.",
+      "Change and confirm your question before checking this source again.",
     recoveryNotice:
       "Your previous prototype session could not be restored. Start a new Preflight.",
     independentDetails:
@@ -821,9 +849,9 @@ export const COPY = {
     routeMetadataDetails: (purpose: string, date: string) =>
       `${purpose}; verified ${date}. This is route metadata, not a retrieved personal record.`,
     unknownRetained:
-      "Kept as unknown; this limitation stays visible in the result and Filing Draft.",
+      "Kept as unknown; this limitation stays visible in the result and RTI draft.",
     cpcbDecision: (date: string) =>
-      `Decision recorded ${date}; no conflict evidence is registered.`,
+      `Decision recorded ${date}; no conflicting sources have been added.`,
   },
   hi: {
     independent: "स्वतंत्र प्रोटोटाइप — कोई सरकारी सेवा नहीं।",
@@ -834,43 +862,50 @@ export const COPY = {
     submit: ASK_SCREEN_COPY.hi.submit,
     details: "प्रोटोटाइप विवरण",
     examples: "इनमें से कोई आज़माएँ",
-    confirm: "क्या आप यही पूछना चाहते हैं?",
-    search: "प्रकाशित स्रोत खोजें",
+    confirm: "हमने क्या समझा",
+    search: "सही है — जाँचें",
     edit: "बदलें",
     restart: "फिर से शुरू करें",
     result: RESULT_STAGE_COPY.hi.resultStage,
     researchNotice: RESULT_STAGE_COPY.hi.researchNotice,
-    searching: "प्रकाशित सरकारी रिकॉर्ड देख रहे हैं",
-    searchingDetail: "किसी सरकारी सिस्टम को नहीं देखा जा रहा है।",
-    back: "पुष्टि की गई ज़रूरत पर लौटें",
+    searching: "उपलब्ध सरकारी जानकारी जाँच रहे हैं",
+    searchingDetail:
+      "यह प्रोटोटाइप सीमित संख्या में सहेजे गए सरकारी स्रोतों को जाँचता है। यह सरकारी सिस्टम को लाइव नहीं खोज रहा है।",
+    back: "नतीजे पर लौटें",
     askStage: "चरण 1/3 · पूछें",
     multipleStage: "पूछें · कई ज़रूरतें",
     confirmStage: "चरण 2/3 · जाँचें",
     searchStage: "चरण 3/3 · खोज रहे हैं",
     resultStage: RESULT_STAGE_COPY.hi.resultStage,
-    selectTitle: "जारी रखने के लिए एक सूचना-ज़रूरत चुनें",
+    selectTitle: "जारी रखने के लिए एक सवाल चुनें",
     selectIntro:
       "हमने आपके मूल शब्द रखे हैं और ज़रूरतों को अलग किया है ताकि हर ज़रूरत को स्पष्ट रूप से जाँचा जा सके।",
     oneNeed:
       "एक समय में केवल एक ज़रूरत सक्रिय है। बाद में एक और जाँच शुरू कर सकते हैं।",
-    measure: "आप क्या माँग रहे हैं",
-    geography: "किसके लिए / कहाँ",
-    period: "अवधि",
-    breakdown: "किस आधार पर",
-    holder: "किस विभाग से पूछें",
-    preference: "आपको किस तरह का उत्तर चाहिए?",
-    prefPublished: "प्रकाशित सरकारी स्रोत से विश्वसनीय जानकारी",
-    prefFormal: "किसी लोक प्राधिकरण से नया लिखित उत्तर",
+    measure: "माँगी गई जानकारी",
+    geography: "क्षेत्र",
+    period: "समय अवधि",
+    breakdown: "कौन-सा विभाजन चाहिए",
+    holder: "संभावित सरकारी प्राधिकरण",
+    preference: "आपके लिए क्या ठीक रहेगा?",
+    prefPublished: "आधिकारिक सरकारी स्रोत की जानकारी पर्याप्त है",
+    prefFormal: "मुझे सरकारी प्राधिकरण से लिखित उत्तर चाहिए",
     prefUnsure: "मुझे नहीं पता — तय करने में मदद करें",
-    clarification: "महत्वपूर्ण स्पष्टीकरण",
+    clarification: "एक विवरण की पुष्टि करें",
     unsure: "मैं निश्चित नहीं हूँ",
     calculation: "गणना",
     matching: "मिलती पंक्तियाँ",
     unresolved: "क्या अभी अनसुलझा है",
-    scope: "प्रोटोटाइप प्रमाण स्नैपशॉट पर आधारित खोज · दायरा देखें",
-    evidence: "सहायक प्रमाण",
-    officialRoute: "आधिकारिक सेवा मार्ग",
-    syntheticFixture: "सिंथेटिक फ़िक्स्चर",
+    whatFound: "हमें क्या मिला",
+    whatMissing: "क्या अभी बाकी है",
+    nextSteps: "आप आगे क्या कर सकते हैं",
+    conflictNext:
+      "आप संबंधित प्राधिकरण से पूछ सकते हैं कि किस आँकड़े का इस्तेमाल किया जाना चाहिए।",
+    scope: "हमने क्या जाँचा",
+    evidence: "जाँची गई आधिकारिक जानकारी",
+    prototypeWarning: "प्रोटोटाइप उदाहरण — यह वास्तविक RTI उत्तर नहीं है।",
+    officialRoute: "आधिकारिक सेवा",
+    syntheticFixture: "उदाहरण स्रोत",
     verifiedWord: "सत्यापित",
     officialSource: "आधिकारिक स्रोत खोलें",
     pinnedCsv: "पिन किया गया CSV खोलें",
@@ -879,39 +914,52 @@ export const COPY = {
     stolenColumn: "चोरी 2021 → 2023",
     changeColumn: "बदलाव",
     recoveryColumn: "बरामदगी 2021 → 2023",
-    inspectEvidence: "पंक्ति के प्रमाण देखें",
-    inspectRow: (geography: string) => `${geography} के मान और स्रोत सेल देखें`,
-    viewPlan: "पंजीकृत गणना योजना देखें",
-    saveBrief: "प्रमाण सारांश (PDF) डाउनलोड करें",
-    briefSaved: "प्रमाण सारांश PDF डाउनलोड हो गया।",
-    briefFailed: "प्रमाण सारांश डाउनलोड नहीं हो सका। नतीजा यहाँ उपलब्ध है।",
-    sourceData: "वास्तविक आधिकारिक सार्वजनिक डेटा",
-    publisher: "प्रकाशक",
-    applicablePeriod: "लागू अवधि",
-    locatedValues: "स्थित मान",
-    openSource: "आधिकारिक स्रोत खोलें",
-    prepare: "RTI ड्राफ्ट तैयार करें",
-    prepareAnyway: "फिर भी RTI ड्राफ्ट तैयार करें",
-    citizenOverride: "फिर भी आधिकारिक उत्तर चाहिए? RTI ड्राफ्ट तैयार करें",
-    openRoute: "आधिकारिक सेवा मार्ग खोलें",
-    clarifyHolder: "पहले संभावित विभाग स्पष्ट करें",
+    inspectEvidence: "स्रोत का विवरण देखें",
+    inspectRow: (geography: string) =>
+      `${geography} के आँकड़े और स्रोत सेल देखें`,
+    viewPlan: "यह कैसे निकाला गया",
+    saveBrief: "जानकारी का सारांश (PDF) डाउनलोड करें",
+    briefSaved: "जानकारी का सारांश PDF डाउनलोड हो गया।",
+    briefFailed: "जानकारी का सारांश डाउनलोड नहीं हो सका। नतीजा यहाँ उपलब्ध है।",
+    sourceData: "सरकारी स्रोत",
+    source: "स्रोत",
+    publisher: "प्रकाशित किया",
+    applicablePeriod: "कवर की गई अवधि",
+    publishedUpdated: "प्रकाशित / अपडेट किया गया",
+    informationUsed: "इस्तेमाल की गई जानकारी",
+    notSpecified: "निर्दिष्ट नहीं",
+    locatedValues: "स्रोत संदर्भ",
+    openSource: "आधिकारिक स्रोत देखें",
+    openRoute: "आधिकारिक सेवा पर जाएँ",
+    viewSource: "स्रोत देखें",
+    viewEarlierResponse: "पहला उत्तर देखें",
+    viewCalculation: "गणना देखें",
+    seeWhatChecked: "हमने क्या जाँचा देखें",
+    goToOfficialService: "आधिकारिक EPFO सेवा पर जाएँ",
+    prepareMissing: "गुम जानकारी के लिए RTI तैयार करें",
+    prepareClarification: "स्पष्टीकरण माँगने वाली RTI तैयार करें",
+    compareSources: "स्रोतों की तुलना करें",
+    prepare: "RTI तैयार करें",
+    prepareAnyway: "फिर भी RTI तैयार करें",
+    citizenOverride: "मैं फिर भी RTI तैयार करना चाहता/चाहती हूँ",
+    clarifyHolder: "पहले संभावित प्राधिकरण की पुष्टि करें",
     footer:
       "आपका शोध गुमनाम है। अलग फाइलिंग डेमो में जाने तक कुछ दाखिल नहीं होता।",
     language: "English",
     draftStage: RESULT_STAGE_COPY.hi.draftStage,
     draftTitle: RESULT_STAGE_COPY.hi.draftTitle,
     draftIntro: RESULT_STAGE_COPY.hi.draftIntro,
-    to: "सूचना-धारक",
-    request: "अनुरोध",
-    route: "आधिकारिक फाइलिंग मार्ग",
+    to: "सरकारी प्राधिकरण",
+    request: "RTI अनुरोध",
+    route: "RTI चैनल",
     verified: "अंतिम जाँच",
-    characters: "अक्षर",
+    characters: "अक्षर सीमा",
     continueFiling: "फाइलिंग डेमो पर जाएँ",
     saveDraft: "ड्राफ्ट सहेजें",
-    savedDraft: "सहेजा गया आवेदन ड्राफ्ट",
+    savedDraft: "सहेजा गया RTI ड्राफ्ट",
     returnResult: "नतीजे पर लौटें",
     guidedUnavailable:
-      "इस प्रश्न के लिए अभी फाइलिंग पैकेज तैयार नहीं हो सका। ड्राफ्ट कॉपी करके फाइल करने से पहले प्राधिकरण का अपना RTI चैनल सत्यापित करें।",
+      "इस सवाल के लिए अभी पूरा फाइलिंग डेमो उपलब्ध नहीं है। ड्राफ्ट कॉपी करके फाइल करने से पहले प्राधिकरण का अपना RTI चैनल सत्यापित करें।",
     divergenceTitle: "यह बदलाव दूसरी सूचना-ज़रूरत जोड़ सकता है",
     divergenceBody:
       "ड्राफ्ट पर नियंत्रण रखने का तरीका चुनें। कुछ भी छोटा या चुपचाप बदला नहीं जाएगा।",
@@ -921,41 +969,49 @@ export const COPY = {
     fileStage: RESULT_STAGE_COPY.hi.fileStage,
     fileTitle: RESULT_STAGE_COPY.hi.fileTitle,
     fileIntro: RESULT_STAGE_COPY.hi.fileIntro,
-    stepOtp: "1. सत्यापन",
-    stepIdentity: "2. आपका विवरण",
+    stepOtp: "1. OTP",
+    stepIdentity: "2. आवेदक का विवरण",
     stepReview: "3. समीक्षा",
-    stepPayment: "4. शुल्क",
-    otpPrompt: "हैकाथॉन प्रोटोटाइप: OTP 123456 डालें। कोई SMS नहीं भेजा गया।",
-    verifyOtp: "डेमो OTP सत्यापित करें",
-    identityPrompt: "ये विवरण काल्पनिक हैं और सत्र की स्थिति में रहते हैं।",
+    stepPayment: "4. भुगतान",
+    otpTitle: "केवल डेमो",
+    applicantTitle: "आवेदक का विवरण",
+    reviewTitle: "अपनी RTI की समीक्षा करें",
+    paymentTitle: "डेमो भुगतान",
+    reviewWarning:
+      "यह प्रोटोटाइप है। सरकारी वेबसाइट पर कुछ भी जमा नहीं किया जाएगा।",
+    otpPrompt: "जारी रखने के लिए OTP 123456 डालें। कोई SMS नहीं भेजा गया है।",
+    verifyOtp: "सत्यापित करें और आगे बढ़ें",
+    identityPrompt:
+      "यहाँ दिखाए गए विवरण काल्पनिक हैं और केवल इस डेमो के लिए हैं।",
     continue: "जारी रखें",
-    reviewPrompt: "भुगतान से पहले पूरे फाइलिंग पैकेज की समीक्षा करें।",
-    confirmPackage: "मैं इस पूरे आवेदन पैकेज की पुष्टि करता/करती हूँ",
-    paymentPrompt: "डेमो भुगतान: ₹10 · डेमो UPI",
+    reviewPrompt:
+      "आगे बढ़ने से पहले प्राधिकरण, अनुरोध और आवेदक के विवरण जाँचें।",
+    confirmPackage: "मैंने इन विवरणों को जाँच लिया है",
+    paymentPrompt: "RTI आवेदन शुल्क: ₹10",
     noRealPayment: "कोई वास्तविक भुगतान नहीं होगा।",
-    confirmDemo: "डेमो सबमिशन की पुष्टि करें",
+    confirmDemo: "डेमो भुगतान पूरा करें",
     acknowledgementStage: "पूरा हुआ",
     acknowledgementTitle: RESULT_STAGE_COPY.hi.acknowledgementTitle,
-    fictionalRegistration: "काल्पनिक पंजीकरण",
+    fictionalRegistration: "डेमो संदर्भ",
     noGovernment:
-      "किसी सरकारी सिस्टम को अनुरोध, भुगतान या व्यक्तिगत जानकारी नहीं भेजी गई।",
-    downloadPackage: "डेमो फाइलिंग पैकेज डाउनलोड करें",
-    packageSaved: "डेमो फाइलिंग पैकेज PDF डाउनलोड हो गया।",
+      "किसी सरकारी सिस्टम को RTI, भुगतान या व्यक्तिगत जानकारी नहीं भेजी गई।",
+    downloadPackage: "RTI ड्राफ्ट डाउनलोड करें",
+    packageSaved: "RTI ड्राफ्ट PDF डाउनलोड हो गया।",
     packageFailed:
       "डेमो फाइलिंग पैकेज PDF सहेजा नहीं जा सका। पावती यहाँ उपलब्ध है।",
-    startAnother: "कुछ और पूछें",
-    correction: "यह वह नहीं है जो मैंने पूछा था",
-    challenge: "उद्धरण की समस्या रिपोर्ट करें",
+    startAnother: "एक और जाँच शुरू करें",
+    correction: "अपना सवाल बदलें",
+    challenge: "स्रोत की समस्या रिपोर्ट करें",
     challengePending:
       "इस उद्धरण की समस्या रिपोर्ट की गई है। मूल नतीजा दिखता रहेगा, लेकिन इस स्रोत के दोबारा सत्यापन तक इसकी स्थिति आंशिक रूप से हल की गई होगी। आप फिर भी RTI ड्राफ्ट तैयार कर सकते हैं।",
-    challengeDialogTitle: "उद्धरण की समस्या रिपोर्ट करें?",
+    challengeDialogTitle: "स्रोत की समस्या रिपोर्ट करें?",
     challengeDialogBody: (sourceTitle: string) =>
       `आप रिपोर्ट कर रहे हैं कि “${sourceTitle}” इस नतीजे का समर्थन नहीं कर सकता।`,
     challengeDialogConsequence:
       "पुष्टि करने के बाद मूल नतीजा और प्रमाण दिखते रहेंगे, लेकिन दोबारा सत्यापन तक इसका स्तर घटेगा।",
     confirmChallenge: "समस्या रिपोर्ट करके स्तर घटाएँ",
     cancel: "रद्द करें",
-    draftLabel: "फाइलिंग ड्राफ्ट",
+    draftLabel: "RTI अनुरोध",
     routeNotVerified: "इस प्रोटोटाइप में मार्ग की जानकारी सत्यापित नहीं है",
     routeVerification:
       "इस तारीख को अंतिम बार जाँची गई मार्ग जानकारी के आधार पर सत्यापित; बाहरी स्वीकृति की गारंटी नहीं है।",
@@ -963,46 +1019,44 @@ export const COPY = {
     draftHelp:
       "इसे बेझिझक बदलें — हम आपके शब्द नहीं बदलेंगे। यह कारण नहीं, रिकॉर्ड माँगता है, जिसका आपको RTI अधिनियम के तहत अधिकार है।",
     divergenceSaved:
-      "ड्राफ्ट संपादन के लिए सहेजा गया है, लेकिन अतिरिक्त ज़रूरत हटाने या अलग करने तक फाइलिंग रोकी गई है।",
-    editDraft: "फाइलिंग ड्राफ्ट बदलें",
-    demoOtp: "डेमो OTP",
+      "ड्राफ्ट बदलाव के लिए सहेजा गया है, लेकिन दूसरा सवाल हटाने या अलग जाँच के रूप में सहेजने तक आगे बढ़ना रुका है।",
+    editDraft: "RTI ड्राफ्ट बदलें",
+    demoOtp: "OTP",
     name: "नाम",
     email: "ईमेल",
     address: "पता",
     state: "राज्य",
     pin: "PIN",
     routeLine: "मार्ग",
-    fictionalApplicant: "आवेदक",
+    fictionalApplicant: "आवेदक का विवरण",
     mockFee: "शुल्क",
     componentSummary:
-      "कार्यशील: मार्ग सत्यापन। अनुकरण: OTP, पहचान, भुगतान, फाइलिंग और पावती।",
+      "मार्ग की जानकारी जाँची जाती है। OTP, आवेदक का विवरण, भुगतान और फाइलिंग अनुकरण किए गए हैं।",
     genericComponentSummary:
-      "अनुकरण: मार्ग चयन, OTP, पहचान, भुगतान, फाइलिंग और पावती। वास्तविक फाइलिंग से पहले प्राधिकरण और पोर्टल सत्यापित करें।",
+      "मार्ग चयन, OTP, आवेदक का विवरण, भुगतान और फाइलिंग अनुकरण किए गए हैं। वास्तविक फाइलिंग से पहले प्राधिकरण और पोर्टल सत्यापित करें।",
     paymentCredentials:
       "कोई UPI ID, कार्ड, CVV, बैंक या भुगतान क्रेडेंशियल नहीं लिया जाता।",
-    paymentCheck: "मैं समझता/समझती हूँ कि यह अनुकरण किया गया भुगतान चरण है।",
-    fictionalTime: "काल्पनिक सबमिशन समय",
-    submittedDraft: "जमा किए गए ड्राफ्ट का स्नैपशॉट",
-    draftAria: "फाइलिंग ड्राफ्ट",
+    paymentCheck: "मैं समझता/समझती हूँ कि यह डेमो भुगतान चरण है।",
+    fictionalTime: "डेमो समय",
+    submittedDraft: "इस डेमो का RTI ड्राफ्ट",
+    draftAria: "RTI ड्राफ्ट",
     stepperAria: "अनुकरण किए गए फाइलिंग चरण",
-    prepareFailure: "अभी फाइलिंग ड्राफ्ट तैयार नहीं हो सका।",
+    prepareFailure: "अभी RTI ड्राफ्ट तैयार नहीं हो सका।",
     revalidationError:
-      "फाइलिंग से पहले इस फाइलिंग ड्राफ्ट का फिर से सत्यापन ज़रूरी है। अतिरिक्त ज़रूरत हटाएँ या उसे दूसरी सहेजी गई जाँच में अलग करें।",
+      "आगे बढ़ने से पहले इस RTI ड्राफ्ट को फिर से जाँचना ज़रूरी है। जोड़ा गया सवाल हटाएँ या उसे अलग जाँच के रूप में सहेजें।",
     divergenceSeparate:
       "बदला हुआ पाठ यहाँ रखा गया है और अलग सहेजी गई जाँच के लिए चिह्नित है।",
     savedPreflights: "सहेजी गई जाँचें",
     resume: "फिर शुरू करें",
-    originalNeed: "मूल पुष्ट की गई सूचना-ज़रूरत",
-    separatedDraft: "अलग किए गए ड्राफ्ट को समझें",
+    originalNeed: "मूल पुष्ट सवाल",
+    separatedDraft: "दूसरे सवाल की समीक्षा करें",
     cpcbCut:
-      "जब तक दो संगत आधिकारिक स्रोत सहमत नहीं होते, वायु-गुणवत्ता के नतीजे नहीं दिखाए जाते। ऐसा आँकड़ा दिखाने से बेहतर है कुछ न दिखाना जिस पर हम भरोसा न कर सकें।",
+      "जब तक दो संगत आधिकारिक स्रोत सहमत नहीं होते, वायु-गुणवत्ता के नतीजे नहीं दिखाए जाते। जिस आँकड़े की पुष्टि न हो, वह नहीं दिखाया जाएगा।",
     askReassurance: ASK_SCREEN_COPY.hi.reassurance,
-    confirmIntro:
-      "हमने आपके प्रश्न को इस तरह लिखा है कि उसे आधिकारिक रिकॉर्ड से जाँचा जा सके। कुछ ग़लत हो तो सुधार लें — हम बिलकुल यही खोजेंगे।",
+    confirmIntro: "जाँच शुरू करने से पहले पक्का करें कि ये विवरण सही हैं।",
     responseProcess:
-      "असली फाइलिंग में आधिकारिक मार्ग लागू प्रतिक्रिया प्रक्रिया बताएगा।",
-    realWorldNext:
-      "असली फाइलिंग में सरकारी पोर्टल अपनी पावती और लागू प्रतिक्रिया समय-सीमा बताएगा।",
+      "असली फाइलिंग में प्राधिकरण का अपना चैनल प्रतिक्रिया प्रक्रिया बताएगा।",
+    realWorldNext: "आपने RTI फाइलिंग की अनुकरण प्रक्रिया पूरी कर ली है।",
     provenance: (count: number, date: string) =>
       `${count} आधिकारिक मानों से मिलान किया गया · अंतिम सत्यापन ${date}`,
     customOption: "अन्य / अपनी जानकारी लिखें",
@@ -1012,11 +1066,11 @@ export const COPY = {
       "जाँचने से पहले सूचना-ज़रूरत के सभी फ़ील्ड भरें। आप अपनी जगह या अवधि लिख सकते हैं।",
     disclosure: "प्रकटीकरण",
     closeDetails: "प्रोटोटाइप विवरण बंद करें",
-    verifiedRouteProfile: "सत्यापित फाइलिंग मार्ग प्रोफ़ाइल",
-    epfoRouteDetails: "EPFO आधिकारिक सेवा मार्ग",
+    verifiedRouteProfile: "Northern Railway मार्ग की जानकारी",
+    epfoRouteDetails: "EPFO सेवा की जानकारी",
     cpcbScenario: "CPCB विरोधाभास परिदृश्य",
     routeMetadataNote:
-      "उद्देश्य और सत्यापन की तारीख मेटाडेटा हैं; मुख्य मार्ग ऊपर दिया गया लिंक है।",
+      "यहाँ दिया गया उद्देश्य और दिनांक सेवा की जानकारी है; आधिकारिक सेवा के लिए ऊपर दिए लिंक का इस्तेमाल करें।",
     resumeTitle: "पिछली जाँच फिर शुरू करें",
     resumeBody: "आपकी सहेजी गई प्रोटोटाइप यात्रा जारी रखने के लिए तैयार है।",
     startFresh: "नई शुरुआत करें",
@@ -1026,36 +1080,37 @@ export const COPY = {
     interpreting: "आपकी ज़रूरत समझी जा रही है",
     aiThinking: {
       interpretation: {
-        eyebrow: "सहायता से समझ रहे हैं",
-        title: "आपके सवाल को जाँचने योग्य बना रहे हैं",
-        detail:
-          "हम आपके शब्द पढ़कर उन्हें एक स्पष्ट सूचना-ज़रूरत में बदल रहे हैं।",
+        eyebrow: "आपका सवाल समझ रहे हैं",
+        title: "आपके सवाल को स्पष्ट बना रहे हैं",
+        detail: "हम आपके शब्द पढ़कर जाँचने के लिए विवरण तैयार कर रहे हैं।",
         stages: [
           "आपके शब्द पढ़ रहे हैं",
-          "सूचना-ज़रूरत अलग कर रहे हैं",
-          "पुष्टि कार्ड तैयार कर रहे हैं",
+          "माँगी गई जानकारी पहचान रहे हैं",
+          "जाँचने के लिए विवरण तैयार कर रहे हैं",
         ],
       },
       resolution: {
-        eyebrow: "प्रमाण की जाँच जारी है",
-        title: "प्रमाण की जाँच कर रहे हैं",
+        eyebrow: "सरकारी जानकारी की जाँच जारी है",
+        title: "उपलब्ध सरकारी जानकारी जाँच रहे हैं",
         detail:
-          "हम केवल पंजीकृत प्रमाण स्नैपशॉट जाँचकर प्रमाण-आधारित नतीजा तैयार कर रहे हैं।",
+          "यह प्रोटोटाइप सीमित संख्या में सहेजे गए सरकारी स्रोतों को जाँचता है। यह सरकारी सिस्टम को लाइव नहीं खोज रहा है।",
         stages: [
-          "चुनी गई ज़रूरत की पुष्टि कर रहे हैं",
-          "पंजीकृत स्रोत जाँच रहे हैं",
-          "प्रमाण-आधारित नतीजा तैयार कर रहे हैं",
+          "संभावित सरकारी प्राधिकरण खोज रहे हैं",
+          "आधिकारिक डेटा और रिपोर्ट जाँच रहे हैं",
+          "उपलब्ध RTI जवाब जाँच रहे हैं",
+          "तारीख और जगह मिला रहे हैं",
+          "सहायक जानकारी जाँच रहे हैं",
         ],
       },
       draft: {
-        eyebrow: "ड्राफ्ट तैयार किया जा रहा है",
-        title: "आपका फाइलिंग ड्राफ्ट तैयार कर रहे हैं",
+        eyebrow: "RTI ड्राफ्ट तैयार किया जा रहा है",
+        title: "आपका RTI ड्राफ्ट तैयार कर रहे हैं",
         detail:
-          "हम आपकी पुष्ट दायरे को बनाए रखते हुए रिकॉर्ड माँगने वाला बदलाव योग्य ड्राफ्ट बना रहे हैं।",
+          "हम आपके पुष्ट विवरण बनाए रखते हुए बदलाव योग्य RTI अनुरोध तैयार कर रहे हैं।",
         stages: [
-          "पुष्ट ज़रूरत पढ़ रहे हैं",
-          "आपका दायरा बनाए रख रहे हैं",
-          "बदलाव योग्य ड्राफ्ट तैयार कर रहे हैं",
+          "आपके पुष्ट विवरण पढ़ रहे हैं",
+          "आपका सवाल बनाए रख रहे हैं",
+          "बदलाव योग्य RTI ड्राफ्ट तैयार कर रहे हैं",
         ],
       },
       note: "ये चरण इस काम के हिस्से बताते हैं; यह लाइव प्रगति रिपोर्ट नहीं है।",
@@ -1068,22 +1123,21 @@ export const COPY = {
     changeLabel: "बदलाव",
     recoveryLabel: "बरामदगी",
     crore: "करोड़",
-    plan: "योजना",
-    engine: "इंजन",
-    policy: "नीति",
-    demoUpi: "डेमो UPI",
-    noPersonalRecord: "मार्ग मेटाडेटा; कोई व्यक्तिगत रिकॉर्ड प्राप्त नहीं हुआ",
-    immutableReferences: (count: number) =>
-      `${count} अपरिवर्तनीय संदर्भ, जिनमें सामग्री हैश हैं`,
-    progressNeed: "पुष्ट की गई सूचना-ज़रूरत",
-    progressNcrb: "प्रोटोटाइप प्रमाण स्नैपशॉट में NCRB तालिका 20A.1 जाँची",
+    plan: "गणना योजना",
+    engine: "गणना का तरीका",
+    policy: "जाँच के नियम",
+    demoUpi: "डेमो भुगतान",
+    noPersonalRecord: "कोई व्यक्तिगत रिकॉर्ड प्राप्त नहीं हुआ",
+    immutableReferences: (count: number) => `${count} स्रोत संदर्भ जाँचे गए`,
+    progressNeed: "सवाल की पुष्टि की गई",
+    progressNcrb: "सहेजी गई NCRB तालिका जाँची",
     progressNcrbDone: "तय नियमों से फ़िल्टर लगाए और प्रमाण का सत्यापन किया",
-    progressCapabilities: "पंजीकृत प्रमाण स्नैपशॉट की क्षमताएँ जाँचीं",
-    progressResult: "समर्थित नतीजे की स्थिति तैयार की",
+    progressCapabilities: "यहाँ उपलब्ध सहेजे गए सरकारी स्रोत जाँचे",
+    progressResult: "नतीजा तैयार किया",
     demoSubmissionFailure:
-      "डेमो सबमिशन से पहले फाइलिंग पैकेज मान्य और स्पष्ट रूप से पुष्ट होना चाहिए।",
+      "फाइलिंग डेमो से पहले RTI का विवरण मान्य और पुष्ट होना चाहिए।",
     recheckChallenge:
-      "इस चुनौती दिए गए स्रोत को फिर से जाँचने से पहले सूचना-ज़रूरत बदलकर उसकी पुष्टि करें।",
+      "इस स्रोत को फिर से जाँचने से पहले सवाल बदलकर उसकी पुष्टि करें।",
     recoveryNotice:
       "आपका पिछला प्रोटोटाइप सत्र वापस नहीं लाया जा सका। नई जाँच शुरू करें।",
     independentDetails: "यह स्वतंत्र शोध सहायक है — आधिकारिक RTI उत्तर नहीं।",
@@ -1094,7 +1148,7 @@ export const COPY = {
     unknownRetained:
       "अज्ञात के रूप में रखा गया; यह सीमा नतीजे और फाइलिंग ड्राफ्ट में दिखाई देती रहेगी।",
     cpcbDecision: (date: string) =>
-      `निर्णय ${date} को दर्ज किया गया; कोई विरोधाभास प्रमाण पंजीकृत नहीं है।`,
+      `निर्णय ${date} को दर्ज किया गया; कोई विरोधी स्रोत नहीं जोड़ा गया है।`,
   },
 } as const;
 
@@ -1184,24 +1238,25 @@ function AiThinkingScreen({
 }
 
 const outcomeLabel: Record<string, string> = {
-  DERIVED_FINDING: "Calculated from official figures",
-  SOURCE_RESOLVED: "Source-Resolved",
-  NO_RELIABLE_FINDING: "No answer found in the records we checked",
-  OUTSIDE_SNAPSHOT_COVERAGE: "Not verified from available sources",
-  OFFICIAL_SERVICE_ROUTE: "Official Service Route",
-  PARTIALLY_RESOLVED: "Partially Resolved",
-  EVIDENCE_CONFLICT: "Evidence Conflict",
-  FORMAL_RESPONSE_REQUIRED: "Formal Response Required",
+  DERIVED_FINDING: "Calculated from official data",
+  SOURCE_RESOLVED: "Available from an official source",
+  NO_RELIABLE_FINDING: "Sources checked did not provide a reliable answer",
+  OUTSIDE_SNAPSHOT_COVERAGE:
+    "Sources checked did not provide a reliable answer",
+  OFFICIAL_SERVICE_ROUTE: "Official service available",
+  PARTIALLY_RESOLVED: "Part of the information was found",
+  EVIDENCE_CONFLICT: "Official sources show different figures",
+  FORMAL_RESPONSE_REQUIRED: "Written reply available through RTI",
 };
 const outcomeLabelHi: Record<string, string> = {
   DERIVED_FINDING: "आधिकारिक आँकड़ों से गणना की गई",
-  SOURCE_RESOLVED: "स्रोत से हल",
-  NO_RELIABLE_FINDING: "जिन रिकॉर्ड को हमने देखा उनमें उत्तर नहीं मिला",
-  OUTSIDE_SNAPSHOT_COVERAGE: "उपलब्ध स्रोतों से पुष्टि नहीं हुई",
-  OFFICIAL_SERVICE_ROUTE: "आधिकारिक सेवा मार्ग",
-  PARTIALLY_RESOLVED: "आंशिक रूप से हल",
-  EVIDENCE_CONFLICT: "प्रमाण में विरोध",
-  FORMAL_RESPONSE_REQUIRED: "औपचारिक उत्तर ज़रूरी",
+  SOURCE_RESOLVED: "आधिकारिक स्रोत पर उपलब्ध",
+  NO_RELIABLE_FINDING: "जाँचे गए स्रोतों से विश्वसनीय उत्तर नहीं मिला",
+  OUTSIDE_SNAPSHOT_COVERAGE: "जाँचे गए स्रोतों से विश्वसनीय उत्तर नहीं मिला",
+  OFFICIAL_SERVICE_ROUTE: "आधिकारिक सेवा उपलब्ध है",
+  PARTIALLY_RESOLVED: "कुछ जानकारी मिली",
+  EVIDENCE_CONFLICT: "आधिकारिक स्रोतों में अलग-अलग आँकड़े हैं",
+  FORMAL_RESPONSE_REQUIRED: "RTI के ज़रिए लिखित उत्तर माँगा जा सकता है",
 };
 
 export function persist(state: SavedState) {
@@ -1512,6 +1567,82 @@ function Field({
       <input value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
+}
+
+function applyCitizenResultCopy(
+  result: RenderableResolution,
+  language: Language,
+): RenderableResolution {
+  if (language !== "en") return result;
+  const isPreviousRti = result.evidence.some(
+    (item) => item.sourceType === "rti_response_fixture",
+  );
+  const copyByOutcome: Partial<
+    Record<
+      RenderableResolution["outcome"],
+      Pick<RenderableResolution, "headline" | "meaning" | "evidenceStatus">
+    >
+  > = {
+    SOURCE_RESOLVED: isPreviousRti
+      ? {
+          headline: "We found a similar earlier RTI response",
+          meaning:
+            "An earlier response may help answer your question before you file a new RTI.",
+          evidenceStatus:
+            "Prototype example — this is not a real RTI response.",
+        }
+      : {
+          headline: "We found the information you were looking for",
+          meaning:
+            "It is available from an official government source, so you may not need to file an RTI for this information.",
+          evidenceStatus: "Available from an official source",
+        },
+    DERIVED_FINDING: {
+      headline: "We found an answer using official government data",
+      meaning:
+        "The answer below was calculated from published NCRB figures for 2021 and 2023.",
+      evidenceStatus: "Calculated from official data",
+    },
+    OFFICIAL_SERVICE_ROUTE: {
+      headline: "You may not need an RTI for this",
+      meaning:
+        "EPF claim status can be checked through an official EPFO service. For personal claim status, using the official service is usually quicker than filing an RTI.",
+      evidenceStatus: "Official service available",
+    },
+    PARTIALLY_RESOLVED: {
+      headline: "We found part of the information",
+      meaning:
+        "Official sources answer part of your question, but some information is still missing.",
+      evidenceStatus: "Part of the information was found",
+    },
+    EVIDENCE_CONFLICT: {
+      headline: "Official sources show different figures",
+      meaning:
+        "We found two official sources that report this differently. We therefore cannot confirm one figure as the correct answer.",
+      evidenceStatus: "Official sources report different figures",
+    },
+    NO_RELIABLE_FINDING: {
+      headline: "We couldn’t find a reliable public answer",
+      meaning:
+        "The government sources checked by this prototype do not fully answer your question. An RTI may help you request the information directly from the relevant authority.",
+      evidenceStatus: "The sources checked did not provide a reliable answer",
+    },
+    OUTSIDE_SNAPSHOT_COVERAGE: {
+      headline: "We couldn’t find a reliable public answer",
+      meaning:
+        "The government sources checked by this prototype do not fully answer your question. An RTI may help you request the information directly from the relevant authority.",
+      evidenceStatus: "The sources checked did not provide a reliable answer",
+    },
+    FORMAL_RESPONSE_REQUIRED: {
+      headline:
+        "You can ask the relevant government authority for a written reply",
+      meaning:
+        "You chose a written reply, so you can prepare an RTI draft for the relevant authority.",
+      evidenceStatus: "A written reply can be requested through RTI",
+    },
+  };
+  const citizenCopy = copyByOutcome[result.outcome];
+  return citizenCopy ? { ...result, ...citizenCopy } : result;
 }
 
 const COMMON_GEOGRAPHIES = [
@@ -1899,7 +2030,7 @@ export default function PreflightApp() {
   const copy = COPY[language];
   const displayNeed = need ? localizeNeed(need, language) : undefined;
   const displayResult = result
-    ? localizeResolution(result, language)
+    ? applyCitizenResultCopy(localizeResolution(result, language), language)
     : undefined;
   const displayProfile = localizeFilingProfile(profile, language);
   const displayAcknowledgement = acknowledgement
@@ -2634,12 +2765,7 @@ export default function PreflightApp() {
       challengedEvidenceId &&
       challengedNeedSignature === needSignature(need)
     ) {
-      setError(
-        localizeMessage(
-          "Change and reconfirm the Information Need before rechecking this challenged source.",
-          targetLanguage,
-        ),
-      );
+      setError(localizeMessage(copy.recheckChallenge, targetLanguage));
       setPhase("confirm");
       return;
     }
@@ -3127,6 +3253,9 @@ export default function PreflightApp() {
                     ? copy.prepare
                     : copy.search}
               </button>
+              <button className="secondary-button" onClick={reset}>
+                {copy.restart}
+              </button>
             </div>
           </div>
         </section>
@@ -3165,6 +3294,13 @@ export default function PreflightApp() {
             <p className="research-notice" role="status">
               <Icon name="info" /> {copy.researchNotice}
             </p>
+            {result.evidence.some(
+              (item) => item.sourceType === "rti_response_fixture",
+            ) && (
+              <p className="synthetic-watermark" role="alert">
+                {copy.prototypeWarning}
+              </p>
+            )}
             <h2>{displayResult?.headline}</h2>
             <p className="result-meaning">{displayResult?.meaning}</p>
             <p className="evidence-status">{displayResult?.evidenceStatus}</p>
@@ -3186,7 +3322,11 @@ export default function PreflightApp() {
               </p>
             )}
             {result.evidence.length > 0 && (
-              <div className="evidence-list" aria-label={copy.evidence}>
+              <div
+                className="evidence-list"
+                id="source-list"
+                aria-label={copy.evidence}
+              >
                 <h3>{copy.evidence}</h3>
                 {displayResult?.evidence.map((item) => (
                   <article className="evidence-card" key={item.id}>
@@ -3200,11 +3340,14 @@ export default function PreflightApp() {
                     <h3>{item.sourceTitle}</h3>
                     {item.syntheticDisclosure && (
                       <p className="synthetic-watermark" role="note">
-                        {item.syntheticDisclosure}
+                        {copy.prototypeWarning}
                       </p>
                     )}
-                    <p>{item.extract}</p>
                     <dl>
+                      <div>
+                        <dt>{copy.source}</dt>
+                        <dd>{item.sourceTitle}</dd>
+                      </div>
                       <div>
                         <dt>{copy.publisher}</dt>
                         <dd>{item.publisher}</dd>
@@ -3212,6 +3355,14 @@ export default function PreflightApp() {
                       <div>
                         <dt>{copy.applicablePeriod}</dt>
                         <dd>{item.applicablePeriod}</dd>
+                      </div>
+                      <div>
+                        <dt>{copy.publishedUpdated}</dt>
+                        <dd>{item.publicationDate ?? copy.notSpecified}</dd>
+                      </div>
+                      <div>
+                        <dt>{copy.informationUsed}</dt>
+                        <dd>{item.extract}</dd>
                       </div>
                       <div>
                         <dt>{copy.locatedValues}</dt>
@@ -3229,9 +3380,7 @@ export default function PreflightApp() {
                           : copy.openSource}
                       </ExternalLink>
                     ) : (
-                      <p className="supporting-copy">
-                        {item.syntheticDisclosure}
-                      </p>
+                      <p className="supporting-copy">{copy.prototypeWarning}</p>
                     )}
                     {item.sourceType === "official_service_route" &&
                       displayResult?.serviceRoute && (
@@ -3368,7 +3517,10 @@ export default function PreflightApp() {
                     </details>
                   ))}
                 </div>
-                <details className="calculation-details">
+                <details
+                  className="calculation-details"
+                  id="calculation-details"
+                >
                   <summary>{copy.viewPlan}</summary>
                   <p>{displayResult?.calculation?.operation}</p>
                   <ul>
@@ -3388,15 +3540,35 @@ export default function PreflightApp() {
                 <p className="caveat">{displayResult?.calculation?.caveat}</p>
               </>
             )}
+            {displayOutcome === "PARTIALLY_RESOLVED" && (
+              <div className="gap-block">
+                <strong>{copy.whatFound}</strong>
+                <p>{displayResult?.meaning}</p>
+              </div>
+            )}
             {result.gaps.length > 0 && (
               <div className="gap-block">
-                <strong>{copy.unresolved}</strong>
+                <strong>
+                  {displayOutcome === "PARTIALLY_RESOLVED"
+                    ? copy.whatMissing
+                    : copy.unresolved}
+                </strong>
                 {displayResult?.gaps.map((gap) => (
                   <p key={gap}>{gap}</p>
                 ))}
               </div>
             )}
-            <details className="scope" open={result.gaps.length > 0}>
+            {displayOutcome === "EVIDENCE_CONFLICT" && (
+              <div className="gap-block">
+                <strong>{copy.nextSteps}</strong>
+                <p>{copy.conflictNext}</p>
+              </div>
+            )}
+            <details
+              className="scope"
+              id="what-we-checked"
+              open={result.gaps.length > 0}
+            >
               <summary>{copy.scope}</summary>
               <p>{displayResult?.searchScope}</p>
             </details>
@@ -3416,32 +3588,127 @@ export default function PreflightApp() {
                 </p>
               )}
             <div className="result-actions">
-              <button className="action-button" onClick={downloadEvidenceBrief}>
-                {copy.saveBrief}
-              </button>
-              {holderNeedsClarification ? (
+              {displayOutcome === "SOURCE_RESOLVED" &&
+                (displayResult?.evidence[0]?.url ? (
+                  <ExternalLink
+                    className="action-button"
+                    href={displayResult.evidence[0].url}
+                    language={language}
+                  >
+                    {copy.viewSource}
+                  </ExternalLink>
+                ) : (
+                  <button
+                    className="action-button"
+                    onClick={() =>
+                      document
+                        .getElementById("source-list")
+                        ?.scrollIntoView({ behavior: "smooth" })
+                    }
+                  >
+                    {copy.viewEarlierResponse}
+                  </button>
+                ))}
+              {displayOutcome === "DERIVED_FINDING" && (
+                <button
+                  className="action-button"
+                  onClick={() =>
+                    document
+                      .getElementById("calculation-details")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                >
+                  {copy.viewCalculation}
+                </button>
+              )}
+              {displayOutcome === "OFFICIAL_SERVICE_ROUTE" &&
+                displayResult?.serviceRoute && (
+                  <ExternalLink
+                    className="action-button"
+                    href={displayResult.serviceRoute.officialUrl}
+                    language={language}
+                  >
+                    {copy.goToOfficialService}
+                  </ExternalLink>
+                )}
+              {displayOutcome === "PARTIALLY_RESOLVED" && (
+                <button className="action-button" onClick={openDraft}>
+                  {copy.prepareMissing}
+                </button>
+              )}
+              {displayOutcome === "FORMAL_RESPONSE_REQUIRED" && (
+                <button className="action-button" onClick={openDraft}>
+                  {copy.prepare}
+                </button>
+              )}
+              {displayOutcome === "EVIDENCE_CONFLICT" && (
+                <button className="action-button" onClick={openDraft}>
+                  {copy.prepareClarification}
+                </button>
+              )}
+              {(displayOutcome === "NO_RELIABLE_FINDING" ||
+                displayOutcome === "OUTSIDE_SNAPSHOT_COVERAGE") && (
+                <button className="action-button" onClick={openDraft}>
+                  {copy.prepare}
+                </button>
+              )}
+              {holderNeedsClarification && (
                 <button className="action-button" onClick={editConfirmedNeed}>
                   {copy.clarifyHolder}
                 </button>
-              ) : result.outcome !== "OFFICIAL_SERVICE_ROUTE" ? (
-                <button className="action-button" onClick={openDraft}>
-                  {result.outcome === "DERIVED_FINDING" ||
-                  result.outcome === "SOURCE_RESOLVED"
-                    ? copy.citizenOverride
-                    : copy.prepare}
-                </button>
-              ) : (
+              )}
+              {displayOutcome === "SOURCE_RESOLVED" && (
                 <button className="secondary-button" onClick={openDraft}>
-                  {copy.prepare}
+                  {copy.citizenOverride}
+                </button>
+              )}
+              {displayOutcome === "DERIVED_FINDING" && (
+                <button className="secondary-button" onClick={openDraft}>
+                  {copy.prepareAnyway}
+                </button>
+              )}
+              {displayOutcome === "OFFICIAL_SERVICE_ROUTE" && (
+                <button className="secondary-button" onClick={openDraft}>
+                  {copy.citizenOverride}
+                </button>
+              )}
+              {displayOutcome === "EVIDENCE_CONFLICT" && (
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    document
+                      .getElementById("source-list")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                >
+                  {copy.compareSources}
+                </button>
+              )}
+              {displayOutcome === "NO_RELIABLE_FINDING" && (
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    document
+                      .getElementById("what-we-checked")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                >
+                  {copy.seeWhatChecked}
+                </button>
+              )}
+              {displayOutcome === "PARTIALLY_RESOLVED" && (
+                <button
+                  className="secondary-button"
+                  onClick={editConfirmedNeed}
+                >
+                  {copy.correction}
                 </button>
               )}
               <button
                 className="secondary-button"
-                onClick={() => {
-                  editConfirmedNeed();
-                }}
+                onClick={downloadEvidenceBrief}
               >
-                {copy.correction}
+                {copy.saveBrief}
               </button>
             </div>
             {briefFeedback && (
@@ -3555,8 +3822,8 @@ export default function PreflightApp() {
             </label>
             {filingPackage && (
               <p id="draft-count" className="draft-count">
-                {draftValidation()?.characterCount ?? 0}/
-                {filingPackage.route.profile.text.maxChars} {copy.characters}
+                {copy.characters}: {draftValidation()?.characterCount ?? 0}/
+                {filingPackage.route.profile.text.maxChars}
               </p>
             )}
             <p id="draft-help" className="supporting-copy">
@@ -3687,7 +3954,7 @@ export default function PreflightApp() {
           <section className="active-plane filing-plane">
             {filingStep === "otp" && (
               <div>
-                <h2>{copy.stepOtp}</h2>
+                <h2>{copy.otpTitle}</h2>
                 <p className="supporting-copy">{copy.otpPrompt}</p>
                 <label className="field" htmlFor="demo-otp">
                   <span>{copy.demoOtp}</span>
@@ -3730,7 +3997,7 @@ export default function PreflightApp() {
             )}
             {filingStep === "identity" && (
               <div>
-                <h2>{copy.stepIdentity}</h2>
+                <h2>{copy.applicantTitle}</h2>
                 <p className="supporting-copy">{copy.identityPrompt}</p>
                 <dl className="fictional-profile">
                   <div>
@@ -3778,26 +4045,39 @@ export default function PreflightApp() {
             )}
             {filingStep === "review" && (
               <div>
-                <h2>{copy.stepReview}</h2>
+                <h2>{copy.reviewTitle}</h2>
                 <p className="supporting-copy">{copy.reviewPrompt}</p>
                 <div className="review-summary">
-                  <strong>
-                    {localizeText(filingPackage.holder.canonicalName, language)}
-                  </strong>
-                  <p>{filingPackage.draft.text}</p>
-                  <p>
-                    {copy.routeLine}:{" "}
-                    {localizeText(
-                      filingPackage.route.authority.portalNames[
-                        filingPackage.route.id
-                      ],
-                      language,
-                    )}
+                  <p className="error-message" role="note">
+                    <Icon name="info" /> {copy.reviewWarning}
                   </p>
-                  <p>
-                    {copy.fictionalApplicant}: {displayProfile.fullName} ·{" "}
-                    {copy.mockFee} ₹10
-                  </p>
+                  <dl>
+                    <div>
+                      <dt>{copy.request}</dt>
+                      <dd>{filingPackage.draft.text}</dd>
+                    </div>
+                    <div>
+                      <dt>{copy.to}</dt>
+                      <dd>
+                        {localizeText(
+                          filingPackage.holder.canonicalName,
+                          language,
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{copy.fictionalApplicant}</dt>
+                      <dd>
+                        {displayProfile.fullName}, {displayProfile.email},{" "}
+                        {displayProfile.address}, {displayProfile.state},{" "}
+                        {displayProfile.pinCode}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{copy.mockFee}</dt>
+                      <dd>₹10</dd>
+                    </div>
+                  </dl>
                   <p>
                     {filingPackage.route.officialUrl
                       ? copy.componentSummary
@@ -3843,7 +4123,7 @@ export default function PreflightApp() {
             )}
             {filingStep === "payment" && (
               <div>
-                <h2>{copy.stepPayment}</h2>
+                <h2>{copy.paymentTitle}</h2>
                 <p className="payment-amount">{copy.paymentPrompt}</p>
                 <p className="no-payment">
                   <span aria-hidden="true">ⓘ</span> {copy.noRealPayment}

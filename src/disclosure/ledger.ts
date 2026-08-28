@@ -17,42 +17,40 @@ export const DISCLOSURE_LEDGER: readonly DisclosureEntry[] = [
   },
   {
     id: "evidence-snapshot",
-    label: "Evidence Snapshot",
+    label: "Government information checked",
     status: "curated",
     disclosure:
-      "Curated, immutable prototype snapshot; not live or exhaustive.",
+      "A limited set of saved government sources; not live or exhaustive.",
   },
   {
     id: "interpretation",
-    label: "Free-text interpretation",
+    label: "Question understanding",
     status: "working",
-    disclosure:
-      "Working deterministic adapter; OpenAI is server-only when configured.",
+    disclosure: "Working prototype assistance; any OpenAI use is server-side.",
   },
   {
     id: "calculation",
-    label: "Filtering and calculations",
+    label: "Calculations",
     status: "working",
-    disclosure: "Working deterministic registered-table calculation engine.",
+    disclosure: "Calculations use the saved government figures shown here.",
   },
   {
     id: "previous-rti",
-    label: "Previous RTI response",
+    label: "Earlier RTI response example",
     status: "synthetic",
-    disclosure: "Synthetic fixture only—not an official response.",
+    disclosure: "Prototype example only — this is not a real RTI response.",
   },
   {
     id: "filing-flow",
-    label: "OTP, identity, payment, filing",
+    label: "Filing demo",
     status: "simulated",
-    disclosure: "Simulated demonstration; no government integration.",
+    disclosure: "Demo only; nothing is sent to a government system.",
   },
   {
     id: "government-integration",
-    label: "Government integration",
+    label: "Government systems",
     status: "absent",
-    disclosure:
-      "Absent. No request, payment, or personal information is transmitted.",
+    disclosure: "No request, payment, or personal information is sent.",
   },
 ];
 
