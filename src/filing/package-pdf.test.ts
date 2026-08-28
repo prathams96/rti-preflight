@@ -102,6 +102,9 @@ describe("Filing Package PDF export", () => {
 
   it("renders the final filing draft and acknowledgement in Hindi", async () => {
     const input = await confirmedInput();
+    const marker = "CITIZEN-EDIT-MARKER";
+    input.package.draft.text = `${input.package.draft.text} ${marker}`;
+    input.acknowledgement.submittedDraft = input.package.draft.text;
     const plan = buildFilingPackagePdfPlan(input, "hi");
     const planText = plan
       .flatMap((page) => page.commands)
@@ -115,6 +118,13 @@ describe("Filing Package PDF export", () => {
     expect(planText).toContain("फाइलिंग ड्राफ्ट");
     expect(planText).toContain("डेमो UPI");
     expect(planText).toContain("काल्पनिक सबमिशन समय");
+    expect(planText).toContain(marker);
+    expect(
+      buildFilingPackageArtifact(input).filingPackage.draft.text,
+    ).toContain(marker);
+    expect(
+      buildFilingPackageArtifact(input).acknowledgement.submittedDraft,
+    ).toContain(marker);
     expect(text).toContain("/Subtype /Type0");
     expect(text).toContain("/ToUnicode");
   });

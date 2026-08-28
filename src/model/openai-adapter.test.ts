@@ -59,6 +59,15 @@ describe("structured interpretation mapping", () => {
                 informationHolder: "EPFO",
                 resolutionPreference: "published",
                 unresolvedClarifications: [],
+                display: {
+                  canonicalNeed: "मेरे दावे की स्थिति",
+                  measure: "दावे की स्थिति",
+                  geography: "मेरा EPFO खाता",
+                  period: "वर्तमान",
+                  breakdown: "स्थिति",
+                  informationHolder: "EPFO",
+                  unresolvedClarifications: [],
+                },
               },
             ],
           }),
@@ -68,9 +77,10 @@ describe("structured interpretation mapping", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await new OpenAIInterpretationAdapter().interpret({
+    const result = await new OpenAIInterpretationAdapter().interpret({
       text: "Check my claim UAN 123456789012 and email me@example.com",
       traceId: "tr-0123456789abcdef",
+      language: "hi",
     });
 
     const [url, request] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -83,16 +93,51 @@ describe("structured interpretation mapping", () => {
     expect(body.store).toBe(false);
     expect(body.input[1].content).not.toContain("123456789012");
     expect(body.input[1].content).not.toContain("me@example.com");
+    expect(body.input[0].content).toContain("natural Hindi");
     expect(request.headers).toMatchObject({ authorization: "Bearer test-key" });
+    expect(result.needs[0]).toMatchObject({
+      canonicalNeed: "My claim status",
+      presentation: {
+        language: "hi",
+        canonicalNeed: "मेरे दावे की स्थिति",
+      },
+    });
   });
 
-  it("keeps registered scenario routing provider-independent", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => {
-        throw new Error("seeded scenarios must not call the provider");
-      }),
+  it("does not bypass the configured provider for a registered scenario", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          output_text: JSON.stringify({
+            needs: [
+              {
+                canonicalNeed:
+                  "Identify individual States/UTs where reported property stolen increased and recovery percentage declined between 2021 and 2023.",
+                measure: "Provider paraphrase of the requested measures",
+                geography: "All States/UTs",
+                period: "2021 versus 2023",
+                breakdown: "State / UT",
+                informationHolder: "National Crime Records Bureau",
+                resolutionPreference: "published",
+                unresolvedClarifications: [],
+                display: {
+                  canonicalNeed: "Mocked provider interpretation",
+                  measure: "Mocked provider measure",
+                  geography: "Mocked provider geography",
+                  period: "Mocked provider period",
+                  breakdown: "Mocked provider breakdown",
+                  informationHolder: "NCRB",
+                  unresolvedClarifications: [],
+                },
+              },
+            ],
+          }),
+        }),
+        { status: 200 },
+      ),
     );
+    vi.stubGlobal("fetch", fetchMock);
 
     const result = await new OpenAIInterpretationAdapter().interpret({
       text: SCENARIO_PROMPTS[0].prompt,
@@ -103,8 +148,16 @@ describe("structured interpretation mapping", () => {
       scenario: "ncrb-property",
       informationHolder: "National Crime Records Bureau",
       geography: "All States/UTs",
+      measure: "Value of property stolen and percentage recovered",
     });
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(result.needs[0].presentation?.canonicalNeed).toBe(
+      "Mocked provider interpretation",
+    );
+    const requestBody = JSON.parse(
+      String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body),
+    ) as { input: Array<{ content: string }> };
+    expect(requestBody.input[0].content).toContain("natural English");
   });
 
   it("preserves explicit drafting intent over a model's seeded fixture interpretation", () => {

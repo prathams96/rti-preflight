@@ -319,6 +319,19 @@ export function localizeNeed(
   need: InformationNeed,
   language: Language,
 ): InformationNeed {
+  if (need.presentation?.language === language) {
+    return {
+      ...need,
+      canonicalNeed: need.presentation.canonicalNeed,
+      measure: need.presentation.measure,
+      geography: need.presentation.geography,
+      period: need.presentation.period,
+      breakdown: need.presentation.breakdown,
+      informationHolder: need.presentation.informationHolder,
+      unresolvedClarifications:
+        need.presentation.unresolvedClarifications.slice(),
+    };
+  }
   if (language === "en") return need;
   return {
     ...need,
@@ -398,25 +411,11 @@ export function localizeMessage(message: string, language: Language): string {
 export function localizeFilingDraft(text: string, language: Language): string {
   const railwayEnglish =
     "Please provide the following records concerning maintenance of lifts and escalators at New Delhi Railway Station during financial year 2024–25: 1. The expenditure statement or relevant ledger extract showing the total amount spent on maintenance of lifts and escalators. 2. Copies of the applicable work orders or contracts, including contractor names and contract values. Please provide the records in electronic form. If these records are held by another public authority, please transfer the application as applicable and inform the applicant.";
-  if (
-    language === "en" &&
-    text.startsWith(
-      "कृपया वित्तीय वर्ष 2024–25 के दौरान नई दिल्ली रेलवे स्टेशन",
-    )
-  )
-    return railwayEnglish;
+  const railwayHindi =
+    "कृपया वित्तीय वर्ष 2024–25 के दौरान नई दिल्ली रेलवे स्टेशन पर लिफ्ट और एस्केलेटर के रखरखाव से संबंधित ये रिकॉर्ड उपलब्ध कराएँ: 1. लिफ्ट और एस्केलेटर के रखरखाव पर खर्च की कुल राशि दिखाने वाला व्यय विवरण या संबंधित लेजर अंश। 2. लागू कार्यादेश या अनुबंधों की प्रतियाँ, जिनमें ठेकेदारों के नाम और अनुबंध मूल्य शामिल हों। रिकॉर्ड इलेक्ट्रॉनिक रूप में उपलब्ध कराएँ। यदि ये रिकॉर्ड किसी दूसरे लोक प्राधिकरण के पास हैं, तो लागू नियमों के अनुसार आवेदन स्थानांतरित करके आवेदक को सूचित करें।";
+  if (language === "en" && text === railwayHindi) return railwayEnglish;
   if (language === "en") return text;
-  if (
-    text.startsWith(
-      "Please provide the following records concerning maintenance of lifts and escalators",
-    )
-  )
-    return "कृपया वित्तीय वर्ष 2024–25 के दौरान नई दिल्ली रेलवे स्टेशन पर लिफ्ट और एस्केलेटर के रखरखाव से संबंधित ये रिकॉर्ड उपलब्ध कराएँ: 1. लिफ्ट और एस्केलेटर के रखरखाव पर खर्च की कुल राशि दिखाने वाला व्यय विवरण या संबंधित लेजर अंश। 2. लागू कार्यादेश या अनुबंधों की प्रतियाँ, जिनमें ठेकेदारों के नाम और अनुबंध मूल्य शामिल हों। रिकॉर्ड इलेक्ट्रॉनिक रूप में उपलब्ध कराएँ। यदि ये रिकॉर्ड किसी दूसरे लोक प्राधिकरण के पास हैं, तो लागू नियमों के अनुसार आवेदन स्थानांतरित करके आवेदक को सूचित करें।";
-  if (text.startsWith("Please provide records showing "))
-    return text.replace(
-      "Please provide records showing",
-      "कृपया निम्नलिखित से संबंधित रिकॉर्ड उपलब्ध कराएँ:",
-    );
+  if (text === railwayEnglish) return railwayHindi;
   return text;
 }
 
@@ -425,14 +424,27 @@ export function localizeResolution(
   language: Language,
 ): RenderableResolution {
   if (language === "en") return result;
+  const modelAuthored = result.narration === "verified_model";
   return {
     ...result,
-    headline: translateText(result.headline, language),
-    meaning: translateText(result.meaning, language),
-    evidenceStatus: translateText(result.evidenceStatus, language),
-    gaps: result.gaps.map((gap) => translateText(gap, language)),
-    searchScope: translateText(result.searchScope, language),
-    recommendedAction: translateText(result.recommendedAction, language),
+    headline: modelAuthored
+      ? result.headline
+      : translateText(result.headline, language),
+    meaning: modelAuthored
+      ? result.meaning
+      : translateText(result.meaning, language),
+    evidenceStatus: modelAuthored
+      ? result.evidenceStatus
+      : translateText(result.evidenceStatus, language),
+    gaps: modelAuthored
+      ? result.gaps.slice()
+      : result.gaps.map((gap) => translateText(gap, language)),
+    searchScope: modelAuthored
+      ? result.searchScope
+      : translateText(result.searchScope, language),
+    recommendedAction: modelAuthored
+      ? result.recommendedAction
+      : translateText(result.recommendedAction, language),
     evidence: result.evidence.map((item) => ({
       ...item,
       sourceTitle: translateText(item.sourceTitle, language),

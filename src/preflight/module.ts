@@ -8,6 +8,7 @@ import type {
   InformationNeed,
   NeedInterpretation,
   RenderableResolution,
+  Language,
 } from "../domain/types";
 import {
   groundingForFixtureValue,
@@ -54,6 +55,7 @@ function validNeed(need: InformationNeed): boolean {
 function redactedInterpretation(
   text: string,
   traceId: string,
+  language: Language = "en",
 ): NeedInterpretation {
   const { redacted } = redactSensitiveIdentifiers(text);
   const needs = interpretWithFixture(redacted);
@@ -63,6 +65,7 @@ function redactedInterpretation(
     needs,
     clarifications: clarificationsForNeeds(needs).slice(0, 2),
     traceId,
+    language,
   };
 }
 
@@ -450,6 +453,7 @@ export class RTIPreflightModule implements PreflightModule {
   interpret(input: {
     text: string;
     traceId: string;
+    language?: Language;
   }): Promise<NeedInterpretation> {
     return this.adapter.interpret(input);
   }
@@ -457,6 +461,7 @@ export class RTIPreflightModule implements PreflightModule {
     need: InformationNeed;
     snapshot: Snapshot;
     traceId?: string;
+    language?: Language;
   }): Promise<RenderableResolution> {
     if (!validNeed(input.need)) throw new Error("INVALID_NEED");
     validateSnapshot(input.snapshot);
@@ -474,13 +479,14 @@ export class RTIPreflightModule implements PreflightModule {
       need: redactedNeed(input.need),
       result,
       traceId: result.traceId,
+      language: input.language,
     });
   }
 }
 
 export function createOfflinePreflightModule(): RTIPreflightModule {
   return new RTIPreflightModule({
-    interpret: async ({ text, traceId }) =>
-      redactedInterpretation(text, traceId),
+    interpret: async ({ text, traceId, language }) =>
+      redactedInterpretation(text, traceId, language),
   });
 }

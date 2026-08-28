@@ -330,13 +330,15 @@ describe("Preflight persistence boundaries", () => {
     expect(sessionStorage.getItem("rti-preflight-filing-v2")).toBeNull();
   });
 
-  it("keeps the selected language while restoring a saved draft", () => {
+  it("keeps the selected language without rewriting an authoritative citizen draft", () => {
+    const marker = "CITIZEN-EDIT-MARKER";
+    const authoritativeDraft = `Please provide records showing the confirmed need. ${marker}`;
     const saved = {
       id: "saved-1",
       label: "Saved draft",
       text: "Please provide records showing the confirmed need.",
       phase: "draft" as const,
-      draftText: "Please provide records showing the confirmed need.",
+      draftText: authoritativeDraft,
       draftOriginalText: "Please provide records showing the confirmed need.",
       language: "en" as const,
     } as Parameters<typeof restoreSavedPreflightForLanguage>[0];
@@ -344,7 +346,10 @@ describe("Preflight persistence boundaries", () => {
     const restored = restoreSavedPreflightForLanguage(saved, "hi");
 
     expect(restored.language).toBe("hi");
-    expect(restored.draftText).toContain("कृपया");
-    expect(restored.draftOriginalText).toContain("कृपया");
+    expect(restored.draftText).toBe(authoritativeDraft);
+    expect(restored.draftText).toContain(marker);
+    expect(restored.draftOriginalText).toBe(
+      "Please provide records showing the confirmed need.",
+    );
   });
 });

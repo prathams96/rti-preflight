@@ -26,7 +26,7 @@ import { DISCLOSURE_LEDGER } from "../disclosure/ledger";
 import {
   createFilingModule,
   detectDraftDivergence,
-  NORTHERN_RAILWAY_HOLDER,
+  isNorthernRailwayGuidedNeed,
   NORTHERN_RAILWAY_ROUTE,
   validateDemoStep,
   validateDraft,
@@ -36,7 +36,6 @@ import {
   type FictionalFilingProfile,
   type ValidatedFilingPackage,
 } from "../filing";
-import { normaliseNeedPhrase } from "../filing/phrase";
 import { EPFO_CLAIM_STATUS_ROUTE } from "../service/epfo-route";
 import { createTraceRecorder, generateTraceId } from "../observability";
 import { ASK_SCREEN_COPY } from "./start-screen-copy";
@@ -49,7 +48,6 @@ import {
 } from "./result-stage";
 import { informationNeedEditErrors } from "../preflight/need-validation";
 import {
-  localizeFilingDraft,
   localizeClarification,
   localizeDisclosureEntry,
   canonicalizeNeedValue,
@@ -338,6 +336,22 @@ function isRenderableResolution(value: unknown): value is RenderableResolution {
   );
 }
 
+const isNeedPresentation = (value: unknown): boolean => {
+  if (!isObject(value)) return false;
+  return (
+    isOneOf(value.language, ["en", "hi"] as const) &&
+    [
+      "canonicalNeed",
+      "measure",
+      "geography",
+      "period",
+      "breakdown",
+      "informationHolder",
+    ].every((key) => isNonEmptyString(value[key])) &&
+    isStringArray(value.unresolvedClarifications)
+  );
+};
+
 const isNeed = (value: unknown): value is InformationNeed =>
   isObject(value) &&
   [
@@ -361,7 +375,8 @@ const isNeed = (value: unknown): value is InformationNeed =>
   (value.draftingIntent === undefined ||
     typeof value.draftingIntent === "boolean") &&
   (value.recordSubject === undefined ||
-    isOneOf(value.recordSubject, ["own", "another", "unspecified"] as const));
+    isOneOf(value.recordSubject, ["own", "another", "unspecified"] as const)) &&
+  (value.presentation === undefined || isNeedPresentation(value.presentation));
 
 export const validSavedState = (value: unknown): value is SavedState => {
   if (
@@ -1198,14 +1213,9 @@ export function restoreSavedPreflightForLanguage(
   saved: SavedPreflight,
   language: Language,
 ): SavedPreflight {
-  const draftText =
-    saved.draftText === undefined
-      ? undefined
-      : localizeFilingDraft(saved.draftText, language);
+  const draftText = saved.draftText;
   const draftOriginalText =
-    saved.draftOriginalText === undefined
-      ? draftText
-      : localizeFilingDraft(saved.draftOriginalText, language);
+    saved.draftOriginalText === undefined ? draftText : saved.draftOriginalText;
   const filingPackage =
     saved.filingPackage && draftText !== undefined
       ? {
@@ -1630,6 +1640,8 @@ export default function PreflightApp() {
   >();
   const [briefFeedback, setBriefFeedback] = useState("");
   const [savedPreflights, setSavedPreflights] = useState<SavedPreflight[]>([]);
+  const draftRequestGeneration = useRef(0);
+  const separatedDraftCounter = useRef(0);
   const [savedPreflightsLoaded, setSavedPreflightsLoaded] = useState(false);
   const [resumeState, setResumeState] = useState<SavedState | undefined>();
   const [recoveryNotice, setRecoveryNotice] = useState(false);
@@ -1643,10 +1655,7 @@ export default function PreflightApp() {
     ? {
         ...acknowledgement,
         holder: localizeText(acknowledgement.holder, language),
-        submittedDraft: localizeFilingDraft(
-          acknowledgement.submittedDraft,
-          language,
-        ),
+        submittedDraft: acknowledgement.submittedDraft,
       }
     : undefined;
 
@@ -1659,6 +1668,7 @@ export default function PreflightApp() {
   }
 
   function invalidatePreparedFiling() {
+    draftRequestGeneration.current += 1;
     invalidateFilingConfirmations();
     setFilingPackage(undefined);
     setDraftText("");
@@ -1673,6 +1683,7 @@ export default function PreflightApp() {
 
   function changeLanguage(nextLanguage: Language) {
     if (nextLanguage === language) return;
+    draftRequestGeneration.current += 1;
     const feedbackKeys = [
       "briefSaved",
       "briefShared",
@@ -1684,24 +1695,6 @@ export default function PreflightApp() {
     ] as const;
     const feedbackKey = feedbackKeys.find((key) => briefFeedback === copy[key]);
     if (feedbackKey) setBriefFeedback(COPY[nextLanguage][feedbackKey]);
-    const documentIsUntouched = draftText === draftOriginalText;
-    if (
-      documentIsUntouched &&
-      (phase === "draft" || phase === "file") &&
-      draftText
-    ) {
-      const nextDraftText = localizeFilingDraft(draftText, nextLanguage);
-      setDraftText(nextDraftText);
-      setDraftOriginalText(nextDraftText);
-      if (nextDraftText !== draftText) invalidateFilingConfirmations();
-      if (filingPackage) {
-        setFilingPackage({
-          ...filingPackage,
-          draft: { ...filingPackage.draft, text: nextDraftText },
-          validation: validateDraft(nextDraftText, filingPackage.route.profile),
-        });
-      }
-    }
     setLanguage(nextLanguage);
   }
 
@@ -1824,6 +1817,7 @@ export default function PreflightApp() {
 
   const updateNeed = (field: keyof InformationNeed, value: string) => {
     if (!need) return;
+    draftRequestGeneration.current += 1;
     const canonicalValue = [
       "measure",
       "geography",
@@ -1835,6 +1829,19 @@ export default function PreflightApp() {
       : value;
     const next = { ...need, [field]: canonicalValue } as InformationNeed;
     if (
+      next.presentation &&
+      [
+        "canonicalNeed",
+        "measure",
+        "geography",
+        "period",
+        "breakdown",
+        "informationHolder",
+      ].includes(field)
+    ) {
+      next.presentation = undefined;
+    }
+    if (
       next.scenario === "unsupported" &&
       next.informationHolder !== "To be confirmed" &&
       next.informationHolder !== "Unknown" &&
@@ -1842,11 +1849,7 @@ export default function PreflightApp() {
       next.period !== "Not yet specified"
     )
       next.unresolvedClarifications = [];
-    if (
-      filingPackage &&
-      filingNeedSignature(filingPackage.confirmedNeed) !==
-        filingNeedSignature(next)
-    ) {
+    if (draftText && filingNeedSignature(need) !== filingNeedSignature(next)) {
       invalidatePreparedFiling();
     }
     if (result) {
@@ -1893,51 +1896,65 @@ export default function PreflightApp() {
       setPhase("draft");
       return;
     }
-    if (need.scenario === "railway-filing") {
-      void filingModule
-        .prepare({
-          need,
-          holder: NORTHERN_RAILWAY_HOLDER,
-          route: NORTHERN_RAILWAY_ROUTE,
-        })
-        .then((prepared) => {
-          const preparedDraftText = localizeFilingDraft(
-            prepared.draft.text,
-            language,
-          );
-          const localizedPackage = {
-            ...prepared,
-            draft: { ...prepared.draft, text: preparedDraftText },
-            validation: validateDraft(
-              preparedDraftText,
-              prepared.route.profile,
-            ),
-          } satisfies ValidatedFilingPackage;
-          traceRecorder.record("route.validated", journeyTraceId, {
-            component: "filing-route",
-            version: prepared.route.profile.version,
-            status: "working",
-            code: prepared.route.id,
-          });
-          setFilingPackage(localizedPackage);
-          setDraftText(preparedDraftText);
-          setDraftOriginalText(preparedDraftText);
-          setFilingError("");
-          setPhase("draft");
-        })
-        .catch(() => {
-          setDraftError(copy.prepareFailure);
-        });
+    if (draftText && draftText !== draftOriginalText) {
+      // The first citizen edit makes the stored draft authoritative.
+      setPhase("draft");
       return;
     }
-    setFilingPackage(undefined);
-    const generatedDraft =
-      language === "hi"
-        ? `कृपया ${displayNeed?.canonicalNeed ?? need.canonicalNeed} से संबंधित रिकॉर्ड उपलब्ध कराएँ।\n\nरिकॉर्ड इलेक्ट्रॉनिक रूप में उपलब्ध कराएँ।`
-        : `Please provide records showing ${normaliseNeedPhrase(need.canonicalNeed)}.\n\nPlease provide the records in electronic form.`;
-    setDraftOriginalText(generatedDraft);
-    setDraftText(generatedDraft);
-    setPhase("draft");
+    const guidedCoverage = isNorthernRailwayGuidedNeed(need);
+    const generation = ++draftRequestGeneration.current;
+    const requestSignature = filingNeedSignature(need);
+    const requestLanguage = language;
+    void fetch("/api/draft", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-rti-trace-id": journeyTraceId,
+      },
+      body: JSON.stringify({
+        need,
+        language,
+        ...(guidedCoverage ? { route: { id: NORTHERN_RAILWAY_ROUTE.id } } : {}),
+        maxChars: guidedCoverage
+          ? NORTHERN_RAILWAY_ROUTE.profile.text.maxChars
+          : 3_000,
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          draft?: { text?: string };
+          filingPackage?: ValidatedFilingPackage;
+          guidedCoverage?: boolean;
+          message?: string;
+        };
+        if (!response.ok || typeof payload.draft?.text !== "string")
+          throw new Error(payload.message ?? copy.prepareFailure);
+        if (
+          generation !== draftRequestGeneration.current ||
+          !need ||
+          filingNeedSignature(need) !== requestSignature ||
+          language !== requestLanguage ||
+          (draftText && draftText !== draftOriginalText)
+        )
+          return;
+        if (payload.guidedCoverage && payload.filingPackage) {
+          traceRecorder.record("route.validated", journeyTraceId, {
+            component: "filing-route",
+            version: payload.filingPackage.route.profile.version,
+            status: "working",
+            code: payload.filingPackage.route.id,
+          });
+        }
+        setFilingPackage(payload.filingPackage);
+        setDraftText(payload.draft.text);
+        setDraftOriginalText(payload.draft.text);
+        setFilingError("");
+        setPhase("draft");
+      })
+      .catch(() => {
+        if (generation !== draftRequestGeneration.current) return;
+        setDraftError(copy.prepareFailure);
+      });
   }
 
   function confirmNeed() {
@@ -2016,6 +2033,7 @@ export default function PreflightApp() {
   }
 
   function separateDraftIntoNewPreflight() {
+    separatedDraftCounter.current += 1;
     const original: SavedPreflight = {
       id: `${need?.id ?? "preflight"}-original`,
       label: copy.originalNeed,
@@ -2029,7 +2047,7 @@ export default function PreflightApp() {
       language,
     };
     const separated: SavedPreflight = {
-      id: `${need?.id ?? "preflight"}-separated-${Date.now()}`,
+      id: `${need?.id ?? "preflight"}-separated-${separatedDraftCounter.current}`,
       label: copy.separatedDraft,
       text: draftText,
       language,
@@ -2286,7 +2304,7 @@ export default function PreflightApp() {
           "content-type": "application/json",
           "x-rti-trace-id": journeyTraceId,
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, language }),
       });
       const payload = (await response.json()) as NeedInterpretation & {
         message?: string;
@@ -2353,7 +2371,7 @@ export default function PreflightApp() {
           "content-type": "application/json",
           "x-rti-trace-id": journeyTraceId,
         },
-        body: JSON.stringify({ need }),
+        body: JSON.stringify({ need, language }),
       });
       const payload = (await response.json()) as RenderableResolution & {
         message?: string;
@@ -2401,6 +2419,7 @@ export default function PreflightApp() {
     }
   }
   function reset() {
+    draftRequestGeneration.current += 1;
     setPhase("start");
     setText("");
     setNeeds([]);
@@ -3457,9 +3476,7 @@ export default function PreflightApp() {
                   <strong>
                     {localizeText(filingPackage.holder.canonicalName, language)}
                   </strong>
-                  <p>
-                    {localizeFilingDraft(filingPackage.draft.text, language)}
-                  </p>
+                  <p>{filingPackage.draft.text}</p>
                   <p>
                     {copy.routeLine}:{" "}
                     {localizeText(

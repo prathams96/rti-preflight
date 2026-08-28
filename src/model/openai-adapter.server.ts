@@ -1,6 +1,7 @@
 import type {
   InformationNeed,
   NeedInterpretation,
+  Language,
   ResolutionPreference,
 } from "../domain/types";
 import type { InterpretationAdapter } from "./adapter";
@@ -9,9 +10,11 @@ import {
   clarificationsForNeeds,
   hasExplicitDraftingIntent,
   interpretWithFixture,
+  SCENARIO_PROMPTS,
   scenarioForText,
 } from "../content/scenarios";
 import { resolveAuthorityName } from "./authority-registry";
+import { matchesLanguageForFields, preservesMeaning } from "./language";
 
 type OpenAIResponse = {
   output_text?: string;
@@ -27,34 +30,137 @@ type ModelNeed = {
   informationHolder: string;
   resolutionPreference: ResolutionPreference;
   unresolvedClarifications: string[];
+  display?: {
+    canonicalNeed: string;
+    measure: string;
+    geography: string;
+    period: string;
+    breakdown: string;
+    informationHolder: string;
+    unresolvedClarifications: string[];
+  };
 };
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
+}
+
+function isModelNeed(value: unknown): value is ModelNeed {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const need = value as Record<string, unknown>;
+  const display = need.display;
+  return (
+    typeof need.canonicalNeed === "string" &&
+    typeof need.measure === "string" &&
+    typeof need.geography === "string" &&
+    typeof need.period === "string" &&
+    typeof need.breakdown === "string" &&
+    typeof need.informationHolder === "string" &&
+    ["published", "formal", "unsure"].includes(
+      String(need.resolutionPreference),
+    ) &&
+    isStringArray(need.unresolvedClarifications) &&
+    Boolean(display) &&
+    typeof display === "object" &&
+    !Array.isArray(display) &&
+    [
+      "canonicalNeed",
+      "measure",
+      "geography",
+      "period",
+      "breakdown",
+      "informationHolder",
+    ].every(
+      (field) =>
+        typeof (display as Record<string, unknown>)[field] === "string",
+    ) &&
+    isStringArray((display as Record<string, unknown>).unresolvedClarifications)
+  );
+}
 
 export function modelNeedsToInterpretation(input: {
   originalText: string;
   redactedText: string;
   needs: ModelNeed[];
   traceId: string;
+  language?: Language;
 }): NeedInterpretation {
   if (input.needs.length === 0 || input.needs.length > 5)
     throw new Error("SCHEMA_MISMATCH");
+  const language = input.language ?? "en";
+  if (
+    input.needs.some(
+      (need) =>
+        need.display !== undefined &&
+        !matchesLanguageForFields(
+          [
+            need.display.canonicalNeed,
+            need.display.measure,
+            need.display.geography,
+            need.display.period,
+            need.display.breakdown,
+            need.display.informationHolder,
+            ...need.display.unresolvedClarifications,
+          ],
+          language,
+        ),
+    )
+  )
+    throw new Error("LANGUAGE_MISMATCH");
+  const normalizedOriginal = input.originalText.trim().toLocaleLowerCase();
+  const seededFixture = SCENARIO_PROMPTS.some(
+    (scenario) =>
+      scenario.prompt.trim().toLocaleLowerCase() === normalizedOriginal ||
+      scenario.hiPrompt.trim().toLocaleLowerCase() === normalizedOriginal,
+  )
+    ? interpretWithFixture(input.originalText)[0]
+    : undefined;
   const needs: InformationNeed[] = input.needs.map((modelNeed, index) => {
-    const holder = resolveAuthorityName(modelNeed.informationHolder);
+    const normalizedNeed =
+      index === 0 && seededFixture ? seededFixture : modelNeed;
+    const holder = resolveAuthorityName(normalizedNeed.informationHolder);
+    if (
+      modelNeed.display &&
+      ![
+        [normalizedNeed.canonicalNeed, modelNeed.display.canonicalNeed],
+        [normalizedNeed.measure, modelNeed.display.measure],
+        [normalizedNeed.geography, modelNeed.display.geography],
+        [normalizedNeed.period, modelNeed.display.period],
+        [normalizedNeed.breakdown, modelNeed.display.breakdown],
+        [holder?.name ?? normalizedNeed.informationHolder, modelNeed.display.informationHolder],
+      ].every(([canonical, display]) =>
+        preservesMeaning(canonical, display, language),
+      )
+    )
+      throw new Error("PRESENTATION_MISMATCH");
     return {
       id: `model-need-${index + 1}`,
       originalText: input.originalText,
-      canonicalNeed: modelNeed.canonicalNeed,
-      measure: modelNeed.measure,
-      geography: modelNeed.geography,
-      period: modelNeed.period,
-      breakdown: modelNeed.breakdown,
-      informationHolder: holder?.name ?? modelNeed.informationHolder,
+      canonicalNeed: normalizedNeed.canonicalNeed,
+      measure: normalizedNeed.measure,
+      geography: normalizedNeed.geography,
+      period: normalizedNeed.period,
+      breakdown: normalizedNeed.breakdown,
+      informationHolder: holder?.name ?? normalizedNeed.informationHolder,
       informationHolderStatus: holder ? "verified" : "unverified",
       resolutionPreference: modelNeed.resolutionPreference,
       unresolvedClarifications: modelNeed.unresolvedClarifications.slice(0, 2),
-      scenario: hasExplicitDraftingIntent(input.originalText)
-        ? scenarioForText(input.originalText)
-        : scenarioForText(`${modelNeed.canonicalNeed} ${modelNeed.measure}`),
+      scenario: index === 0 && seededFixture
+        ? seededFixture.scenario
+        : hasExplicitDraftingIntent(input.originalText)
+          ? scenarioForText(input.originalText)
+          : scenarioForText(`${modelNeed.canonicalNeed} ${modelNeed.measure}`),
       draftingIntent: hasExplicitDraftingIntent(input.originalText),
+      ...(modelNeed.display
+        ? {
+            presentation: {
+              language: input.language ?? "en",
+              ...modelNeed.display,
+            },
+          }
+        : {}),
     };
   });
   return {
@@ -63,6 +169,7 @@ export function modelNeedsToInterpretation(input: {
     needs,
     clarifications: clarificationsForNeeds(needs).slice(0, 2),
     traceId: input.traceId,
+    language: input.language ?? "en",
   };
 }
 
@@ -71,24 +178,9 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
   async interpret(input: {
     text: string;
     traceId: string;
+    language?: Language;
   }): Promise<NeedInterpretation> {
     const { redacted } = redactSensitiveIdentifiers(input.text);
-    const seededNeeds = interpretWithFixture(redacted);
-    if (
-      seededNeeds.length > 0 &&
-      seededNeeds.every((need) => need.scenario !== "unsupported")
-    ) {
-      return {
-        originalText: input.text,
-        redactedText: redacted,
-        needs: seededNeeds.map((need) => ({
-          ...need,
-          originalText: input.text,
-        })),
-        clarifications: clarificationsForNeeds(seededNeeds).slice(0, 2),
-        traceId: input.traceId,
-      };
-    }
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error("PROVIDER_NOT_CONFIGURED");
 
@@ -104,8 +196,7 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
         input: [
           {
             role: "system",
-            content:
-              "Return only schema-constrained interpretation fields. Never provide facts, evidence, figures, or URLs.",
+            content: `Interpret the citizen's request using only schema-constrained fields. Canonical fields must be stable English/canonical values for deterministic application logic. ${input.language === "hi" ? "All display fields and clarification wording must be natural Hindi." : "All display fields and clarification wording must be natural English."} Do not infer the selected language from the citizen's text. Never provide facts, evidence, figures, or URLs.`,
           },
           { role: "user", content: redacted },
         ],
@@ -140,6 +231,32 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
                         maxItems: 2,
                         items: { type: "string" },
                       },
+                      display: {
+                        type: "object",
+                        additionalProperties: false,
+                        properties: {
+                          canonicalNeed: { type: "string" },
+                          measure: { type: "string" },
+                          geography: { type: "string" },
+                          period: { type: "string" },
+                          breakdown: { type: "string" },
+                          informationHolder: { type: "string" },
+                          unresolvedClarifications: {
+                            type: "array",
+                            items: { type: "string" },
+                            maxItems: 2,
+                          },
+                        },
+                        required: [
+                          "canonicalNeed",
+                          "measure",
+                          "geography",
+                          "period",
+                          "breakdown",
+                          "informationHolder",
+                          "unresolvedClarifications",
+                        ],
+                      },
                     },
                     required: [
                       "canonicalNeed",
@@ -150,6 +267,7 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
                       "informationHolder",
                       "resolutionPreference",
                       "unresolvedClarifications",
+                      "display",
                     ],
                   },
                 },
@@ -172,12 +290,17 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
     if (!raw) throw new Error("SCHEMA_MISMATCH");
     try {
       const parsed = JSON.parse(raw) as { needs?: unknown };
-      if (!Array.isArray(parsed.needs)) throw new Error("SCHEMA_MISMATCH");
+      if (
+        !Array.isArray(parsed.needs) ||
+        parsed.needs.some((need) => !isModelNeed(need))
+      )
+        throw new Error("SCHEMA_MISMATCH");
       return modelNeedsToInterpretation({
         originalText: input.text,
         redactedText: redacted,
         needs: parsed.needs as ModelNeed[],
         traceId: input.traceId,
+        language: input.language,
       });
     } catch {
       throw new Error("INVALID_JSON");

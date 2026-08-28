@@ -121,6 +121,42 @@ describe("Hindi journey localization", () => {
     expect(hindiDraft).toContain("ठेकेदारों के नाम");
     expect(hindiDraft).not.toContain("Please provide");
     expect(localizeFilingDraft(hindiDraft, "en")).toBe(prepared.draft.text);
+
+    const marker = "CITIZEN-EDIT-MARKER";
+    expect(localizeFilingDraft(`${prepared.draft.text} ${marker}`, "hi")).toBe(
+      `${prepared.draft.text} ${marker}`,
+    );
+    expect(localizeFilingDraft(`${hindiDraft} ${marker}`, "en")).toBe(
+      `${hindiDraft} ${marker}`,
+    );
+  });
+
+  it("does not dictionary-translate model-authored Hindi result prose", async () => {
+    const need = interpretWithFixture(SCENARIO_PROMPTS[0].prompt)[0];
+    const result = await createOfflinePreflightModule().resolve({
+      need,
+      snapshot,
+      traceId: "model-hindi-presentation",
+    });
+    const modelResult = {
+      ...result,
+      narration: "verified_model" as const,
+      headline: "मॉडल द्वारा लिखा गया स्वाभाविक शीर्षक",
+      meaning: "मॉडल द्वारा लिखा गया स्वाभाविक अर्थ",
+      evidenceStatus: "मॉडल द्वारा लिखी गई साक्ष्य स्थिति",
+      searchScope: "मॉडल द्वारा लिखा गया खोज दायरा",
+      recommendedAction: "मॉडल द्वारा सुझाई गई अगली कार्रवाई",
+      gaps: ["मॉडल द्वारा बताई गई कमी"],
+    };
+
+    expect(localizeResolution(modelResult, "hi")).toMatchObject({
+      headline: modelResult.headline,
+      meaning: modelResult.meaning,
+      evidenceStatus: modelResult.evidenceStatus,
+      searchScope: modelResult.searchScope,
+      recommendedAction: modelResult.recommendedAction,
+      gaps: modelResult.gaps,
+    });
   });
 
   it("translates filing and network errors instead of leaking English into Hindi", () => {

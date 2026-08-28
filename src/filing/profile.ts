@@ -1,4 +1,8 @@
-import type { FilingRouteRef, InformationHolderRef } from "./types";
+import type {
+  ConfirmedFilingNeed,
+  FilingRouteRef,
+  InformationHolderRef,
+} from "./types";
 
 export const NORTHERN_RAILWAY_HOLDER: InformationHolderRef = {
   id: "northern-railway",
@@ -84,3 +88,42 @@ export const NORTHERN_RAILWAY_ROUTE: FilingRouteRef = {
 };
 
 export const FILING_ROUTE_DIRECTORY = [NORTHERN_RAILWAY_ROUTE] as const;
+
+const NORTHERN_RAILWAY_GUIDED_SCOPE = {
+  measure:
+    "Maintenance expenditure, work orders, contracts, and contractor names",
+  geography: "New Delhi Railway Station",
+  period: "Financial year 2024–25",
+  breakdown: "Contractor",
+  informationHolder: "Northern Railway",
+} as const;
+
+function comparable(value: string | undefined): string {
+  return (value ?? "")
+    .normalize("NFKC")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase("en");
+}
+
+/** Guided Filing Coverage is a deterministic registry decision, never a model decision. */
+export function isNorthernRailwayGuidedNeed(
+  need: ConfirmedFilingNeed,
+): boolean {
+  return (
+    need.scenario === "railway-filing" &&
+    need.informationHolderStatus === "verified" &&
+    (need.unresolvedClarifications?.length ?? 0) === 0 &&
+    comparable(need.measure) ===
+      comparable(NORTHERN_RAILWAY_GUIDED_SCOPE.measure) &&
+    comparable(need.geography) ===
+      comparable(NORTHERN_RAILWAY_GUIDED_SCOPE.geography) &&
+    comparable(need.period) ===
+      comparable(NORTHERN_RAILWAY_GUIDED_SCOPE.period) &&
+    comparable(need.breakdown) ===
+      comparable(NORTHERN_RAILWAY_GUIDED_SCOPE.breakdown) &&
+    comparable(need.informationHolder) ===
+      comparable(NORTHERN_RAILWAY_GUIDED_SCOPE.informationHolder)
+  );
+}

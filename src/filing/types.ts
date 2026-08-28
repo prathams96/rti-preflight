@@ -81,6 +81,16 @@ export type ConfirmedFilingNeed = {
   resolutionPreference?: string;
   unresolvedClarifications?: string[];
   scenario?: string;
+  presentation?: {
+    language: "en" | "hi";
+    canonicalNeed: string;
+    measure: string;
+    geography: string;
+    period: string;
+    breakdown: string;
+    informationHolder: string;
+    unresolvedClarifications: string[];
+  };
 };
 
 export type ValidatedFilingPackage = {

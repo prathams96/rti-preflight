@@ -8,7 +8,10 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { text?: unknown };
+    const body = (await request.json()) as {
+      text?: unknown;
+      language?: unknown;
+    };
     if (
       typeof body.text !== "string" ||
       body.text.trim().length === 0 ||
@@ -22,6 +25,16 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    if (
+      body.language !== undefined &&
+      body.language !== "en" &&
+      body.language !== "hi"
+    )
+      return NextResponse.json(
+        { code: "INVALID_LANGUAGE", message: "Language must be en or hi." },
+        { status: 400 },
+      );
+    const language = body.language === "hi" ? "hi" : "en";
     const traceId = normalizeTraceId(request.headers.get("x-rti-trace-id"));
     const deterministic = new DeterministicInterpretationAdapter();
     let interpretation;
@@ -29,18 +42,20 @@ export async function POST(request: Request) {
       try {
         interpretation = await new RTIPreflightModule(
           new OpenAIInterpretationAdapter(),
-        ).interpret({ text: body.text, traceId });
+        ).interpret({ text: body.text, traceId, language });
       } catch {
         // Provider degradation is recoverable: retain the citizen wording and
         // use the same redacting, deterministic adapter used offline.
         interpretation = await new RTIPreflightModule(deterministic).interpret({
           text: body.text,
+          language,
           traceId,
         });
       }
     } else {
       interpretation = await new RTIPreflightModule(deterministic).interpret({
         text: body.text,
+        language,
         traceId,
       });
     }

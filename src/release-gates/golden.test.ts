@@ -176,6 +176,14 @@ describe("release gates", () => {
       headlineGroundingIds: [id],
       meaningGroundingIds: [id],
       sentences: [{ text: "The result is grounded.", groundingIds: [id] }],
+      evidenceStatus: result.evidenceStatus,
+      evidenceStatusGroundingIds: ["result:evidenceStatus"],
+      searchScope: result.searchScope,
+      searchScopeGroundingIds: ["result:searchScope"],
+      recommendedAction: result.recommendedAction,
+      recommendedActionGroundingIds: ["result:recommendedAction"],
+      gaps: result.gaps,
+      gapsGroundingIds: result.gaps.map((_, index) => `result:gap:${index}`),
     };
 
     expect(

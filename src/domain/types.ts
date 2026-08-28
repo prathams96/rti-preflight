@@ -18,6 +18,16 @@ export type InformationNeed = {
   /** The citizen explicitly asked for a new RTI draft or filing journey. */
   draftingIntent?: boolean;
   recordSubject?: "own" | "another" | "unspecified";
+  presentation?: {
+    language: Language;
+    canonicalNeed: string;
+    measure: string;
+    geography: string;
+    period: string;
+    breakdown: string;
+    informationHolder: string;
+    unresolvedClarifications: string[];
+  };
 };
 
 export type ScenarioId =
@@ -34,6 +44,7 @@ export type NeedInterpretation = {
   needs: InformationNeed[];
   clarifications: Clarification[];
   traceId: string;
+  language: Language;
 };
 
 export type Clarification = {

@@ -2,7 +2,7 @@ import "regenerator-runtime/runtime.js";
 import { PDFDocument, PDFString, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { Language } from "../domain/types";
-import { localizeFilingDraft, localizeText } from "../ui/localization";
+import { localizeText } from "../ui/localization";
 import { buildFilingPackageArtifact } from "./module";
 import type {
   FilingPackageArtifact,
@@ -419,14 +419,8 @@ function renderArtifact(
     route.authority.portalNames[route.id] ?? route.authority.canonicalName,
     language,
   );
-  const draftText = localizeFilingDraft(
-    artifact.filingPackage.draft.text,
-    language,
-  );
-  const acknowledgementDraft = localizeFilingDraft(
-    artifact.acknowledgement.submittedDraft,
-    language,
-  );
+  const draftText = artifact.filingPackage.draft.text;
+  const acknowledgementDraft = artifact.acknowledgement.submittedDraft;
 
   layout.title("RTI Tathya", copy.title);
   layout.paragraph(copy.subtitle, { size: 8.5, color: COLORS.muted });

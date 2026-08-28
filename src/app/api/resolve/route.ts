@@ -9,14 +9,22 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       need?: Parameters<RTIPreflightModule["resolve"]>[0]["need"];
+      language?: unknown;
     };
     if (!body.need || typeof body.need !== "object")
       return NextResponse.json({ code: "INVALID_NEED" }, { status: 400 });
+    if (
+      body.language !== undefined &&
+      body.language !== "en" &&
+      body.language !== "hi"
+    )
+      return NextResponse.json({ code: "INVALID_LANGUAGE" }, { status: 400 });
     validateSnapshot();
     const result = await new RTIPreflightModule().resolve({
       need: body.need,
       snapshot,
       traceId: normalizeTraceId(request.headers.get("x-rti-trace-id")),
+      language: body.language === "hi" ? "hi" : "en",
     });
     return NextResponse.json(result);
   } catch (error) {
