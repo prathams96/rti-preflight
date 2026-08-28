@@ -214,10 +214,10 @@ describe("filing draft generation route", () => {
       };
       const response = await POST(request(edited));
       const payload = await response.json();
-      expect(payload.guidedCoverage).toBe(true);
+      expect(payload.guidedCoverage).toBe(false);
       expect(payload.filingPackage.route.id).toBe(GENERIC_RTI_DEMO_ROUTE_ID);
       expect(payload.filingPackage.route.officialUrl).toBeUndefined();
-      expect(payload.filingPackage.route.guidedCoverage).toBe(true);
+      expect(payload.filingPackage.route.guidedCoverage).toBe(false);
       expect(payload.draft.text).toContain("confirmed Information Need");
     },
   );

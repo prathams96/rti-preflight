@@ -514,6 +514,15 @@ function isValidatedFilingPackage(
   const unverifiedConstraints = isObject(profile)
     ? profile.unverifiedConstraints
     : undefined;
+  const guidedRouteIsCurrent =
+    isObject(route) &&
+    route.id === NORTHERN_RAILWAY_ROUTE.id &&
+    route.officialUrl === NORTHERN_RAILWAY_ROUTE.officialUrl &&
+    isObject(profile) &&
+    profile.id === NORTHERN_RAILWAY_ROUTE.profile.id &&
+    profile.version === NORTHERN_RAILWAY_ROUTE.profile.version &&
+    profile.verifiedAt === NORTHERN_RAILWAY_ROUTE.profile.verifiedAt &&
+    isNorthernRailwayGuidedNeed(confirmedNeed as ConfirmedFilingNeed);
   return (
     isObject(draft) &&
     isNonEmptyString(draft.text) &&
@@ -530,6 +539,7 @@ function isValidatedFilingPackage(
     isNonEmptyString(route.id) &&
     (route.officialUrl === undefined || isNonEmptyString(route.officialUrl)) &&
     typeof route.guidedCoverage === "boolean" &&
+    (!route.guidedCoverage || guidedRouteIsCurrent) &&
     isObject(authority) &&
     isNonEmptyString(authority.id) &&
     isNonEmptyString(authority.canonicalName) &&
@@ -693,7 +703,6 @@ export const COPY = {
     openRoute: "Go to official service",
     viewSource: "View source",
     viewEarlierResponse: "View the earlier response",
-    viewCalculation: "View calculation",
     seeWhatChecked: "See what we checked",
     goToOfficialService: "Go to the official EPFO service",
     prepareMissing: "Prepare an RTI for the missing information",
@@ -774,6 +783,7 @@ export const COPY = {
     draftLabel: "RTI request",
     routeNotVerified:
       "Route information has not been checked in this prototype",
+    fallbackRoute: "Simulated fallback route",
     routeVerification:
       "This route information was last checked on this date; a government website may have changed.",
     unverified: "Unverified",
@@ -988,7 +998,6 @@ export const COPY = {
     openRoute: "आधिकारिक सेवा पर जाएँ",
     viewSource: "स्रोत देखें",
     viewEarlierResponse: "पहला उत्तर देखें",
-    viewCalculation: "गणना देखें",
     seeWhatChecked: "हमने क्या जाँचा देखें",
     goToOfficialService: "आधिकारिक EPFO सेवा पर जाएँ",
     prepareMissing: "गुम जानकारी के लिए RTI तैयार करें",
@@ -1068,6 +1077,7 @@ export const COPY = {
     cancel: "रद्द करें",
     draftLabel: "RTI अनुरोध",
     routeNotVerified: "इस प्रोटोटाइप में मार्ग की जानकारी सत्यापित नहीं है",
+    fallbackRoute: "अनुकरण किया गया वैकल्पिक मार्ग",
     routeVerification:
       "इस तारीख को अंतिम बार जाँची गई मार्ग जानकारी के आधार पर सत्यापित; बाहरी स्वीकृति की गारंटी नहीं है।",
     unverified: "असत्यापित",
@@ -2497,6 +2507,10 @@ export default function PreflightApp() {
   }
 
   function continueToFiling() {
+    if (!filingDemoReady) {
+      setDraftError(copy.guidedUnavailable);
+      return;
+    }
     const validation = draftValidation();
     if (!filingPackage || !validation) {
       setDraftError(copy.guidedUnavailable);
@@ -3297,7 +3311,7 @@ export default function PreflightApp() {
                 {copy.invalidNeed}
               </p>
             )}
-            <div className="button-row">
+            <div className="button-row confirm-actions">
               <button
                 className="action-button"
                 disabled={
@@ -3635,18 +3649,6 @@ export default function PreflightApp() {
                     {copy.viewEarlierResponse}
                   </button>
                 ))}
-              {displayOutcome === "DERIVED_FINDING" && (
-                <button
-                  className="action-button"
-                  onClick={() =>
-                    document
-                      .getElementById("calculation-details")
-                      ?.scrollIntoView({ behavior: "smooth" })
-                  }
-                >
-                  {copy.viewCalculation}
-                </button>
-              )}
               {displayOutcome === "OFFICIAL_SERVICE_ROUTE" &&
                 displayResult?.serviceRoute && (
                   <ExternalLink
@@ -3799,7 +3801,7 @@ export default function PreflightApp() {
                       )}
                     </ExternalLink>
                   ) : (
-                    copy.routeNotVerified
+                    copy.fallbackRoute
                   )}
                 </dd>
               </div>
@@ -3813,24 +3815,21 @@ export default function PreflightApp() {
                         {copy.routeVerification}
                       </>
                     ) : (
-                      copy.routeNotVerified
-                    )}
-                    {filingPackage.route.profile.unverifiedConstraints && (
-                      <span className="unverified-note">
-                        <span
-                          className="status-icon inline-status-icon"
-                          aria-hidden="true"
-                        >
-                          ⓘ
-                        </span>{" "}
-                        {copy.unverified}:{" "}
-                        {filingPackage.route.profile.unverifiedConstraints
-                          .map((constraint) =>
-                            localizeText(constraint, language),
-                          )
-                          .join("; ")}
-                        .
-                      </span>
+                      <details className="unverified-disclosure">
+                        <summary>
+                          <Icon name="info" /> {copy.routeNotVerified}
+                        </summary>
+                        {filingPackage.route.profile.unverifiedConstraints && (
+                          <p>
+                            {filingPackage.route.profile.unverifiedConstraints
+                              .map((constraint) =>
+                                localizeText(constraint, language),
+                              )
+                              .join("; ")}
+                            .
+                          </p>
+                        )}
+                      </details>
                     )}
                   </dd>
                 </div>
@@ -3923,22 +3922,31 @@ export default function PreflightApp() {
               </div>
             )}
             {filingPackage ? (
-              <div className="result-actions">
-                <button
-                  className="action-button"
-                  onClick={continueToFiling}
-                  disabled={!filingDemoReady}
-                >
-                  {copy.continueFiling}
-                </button>
-                <button
-                  className="secondary-button"
-                  onClick={saveCurrentDraft}
-                  disabled={draftDiverged || draftIsInvalid}
-                >
-                  {copy.saveDraft}
-                </button>
-              </div>
+              <>
+                <div className="result-actions">
+                  {filingPackage.route.guidedCoverage && (
+                    <button
+                      className="action-button"
+                      onClick={continueToFiling}
+                      disabled={!filingDemoReady}
+                    >
+                      {copy.continueFiling}
+                    </button>
+                  )}
+                  <button
+                    className="secondary-button"
+                    onClick={saveCurrentDraft}
+                    disabled={draftDiverged || draftIsInvalid}
+                  >
+                    {copy.saveDraft}
+                  </button>
+                </div>
+                {!filingPackage.route.guidedCoverage && (
+                  <p className="coverage-note status-partial">
+                    <Icon name="info" /> {copy.guidedUnavailable}
+                  </p>
+                )}
+              </>
             ) : (
               <p className="coverage-note status-partial">
                 <span aria-hidden="true">ⓘ</span> {copy.guidedUnavailable}

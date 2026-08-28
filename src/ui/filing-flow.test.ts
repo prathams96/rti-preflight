@@ -53,7 +53,7 @@ describe("filing demo readiness", () => {
     ).toBe(false);
   });
 
-  it("keeps an interpreted non-directory question ready for the demo flow", async () => {
+  it("keeps an interpreted non-directory question editable but outside filing coverage", async () => {
     const filing = createFilingModule();
     const need: InformationNeed = {
       id: "need-city-budget",
@@ -80,6 +80,6 @@ describe("filing demo readiness", () => {
         draftText: filingPackage.draft.text,
         filingPackage,
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 });

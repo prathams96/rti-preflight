@@ -14,6 +14,7 @@ export function isFilingDemoReady(input: {
     input.filingPackage.route.profile,
   );
   return (
+    input.filingPackage.route.guidedCoverage &&
     validation.valid &&
     !detectDraftDivergence(input.need, input.draftText).diverged
   );
