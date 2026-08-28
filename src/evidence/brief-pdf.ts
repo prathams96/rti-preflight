@@ -226,7 +226,7 @@ const PDF_COPY: Record<Language, PdfCopy> = {
     sourceLink: "Source link",
     evidenceLocations: "Evidence locations",
     extraEvidence: (count) =>
-      `${count} additional evidence locations are preserved in the technical JSON export.`,
+      `${count} additional evidence locations are preserved in the structured evidence record.`,
     tableState: "State/UT",
     tableStolen: "Stolen",
     tableRecovery: "Recovery",

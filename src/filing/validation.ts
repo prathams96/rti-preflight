@@ -44,10 +44,6 @@ export function validateFilingPackage(
     errors.push("The Filing Draft holder does not match the selected route.");
   if (filingPackage.draft.routeId !== filingPackage.route.id)
     errors.push("The Filing Draft route does not match the validated route.");
-  if (filingPackage.route.authority.jurisdiction !== "central")
-    errors.push(
-      "Only the verified Central Filing Route is available for Demo Submission.",
-    );
   return { valid: errors.length === 0, errors };
 }
 
@@ -97,7 +93,8 @@ export function detectDraftDivergence(
   need: { canonicalNeed?: string; originalText?: string },
   draftText: string,
 ) {
-  const base = terms(`${need.canonicalNeed ?? ""} ${need.originalText ?? ""}`);
+  const baseText = `${need.canonicalNeed ?? ""} ${need.originalText ?? ""}`;
+  const base = terms(baseText);
   const draft = terms(draftText);
   const addedTerms = [...draft].filter((term) => !base.has(term));
   const replacedNeed = looksLikeReplacement(
@@ -106,13 +103,26 @@ export function detectDraftDivergence(
   );
   const likelyAddedNeed =
     /\b(also|additionally|unrelated|separate)\b/i.test(draftText) ||
-    /\b(pension|arrears|salary|leave|grievance|budget|parking|water|school|road|hospital|employment|recruitment)\b/i.test(
-      draftText,
+    [
+      "pension",
+      "arrears",
+      "salary",
+      "leave",
+      "grievance",
+      "budget",
+      "parking",
+      "water",
+      "school",
+      "road",
+      "hospital",
+      "employment",
+      "recruitment",
+    ].some(
+      (word) =>
+        new RegExp(`\\b${word}\\b`, "i").test(draftText) &&
+        !new RegExp(`\\b${word}\\b`, "i").test(baseText),
     ) ||
-    addsLikelyHindiNeed(
-      `${need.canonicalNeed ?? ""} ${need.originalText ?? ""}`,
-      draftText,
-    ) ||
+    addsLikelyHindiNeed(baseText, draftText) ||
     replacedNeed;
   return {
     diverged: likelyAddedNeed,

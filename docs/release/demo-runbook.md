@@ -8,7 +8,7 @@ Use a fresh browser session and a 360px viewport when possible. Keep the citizen
 2. Choose **Interpret my need**, review the Information Need Card, and choose **Yes, search**.
 3. Point out the **Derived Finding** status, the calculated-not-directly-stated disclosure, the 16 matching States/UTs, Gujarat's row, and the inspectable source-cell lineage.
 4. Open Search Scope and explain that the prototype checked a frozen Evidence Snapshot; no government system was accessed.
-5. Choose **Save/share Evidence Brief** and show the downloadable JSON artifact, or use the browser's share sheet when available.
+5. Choose **Download Evidence Brief (PDF)** and show the readable, downloadable brief.
 6. Choose **Still need an official response? Prepare an RTI**, review the editable Filing Draft, and show the verified route and 3,000-character boundary.
 
 ## 1:25–2:00 — Trust and boundaries

@@ -76,6 +76,7 @@ type PackageCopy = {
   holder: string;
   route: string;
   officialLink: string;
+  routeNotVerified: string;
   verified: string;
   profile: string;
   name: string;
@@ -118,6 +119,7 @@ const COPY: Record<Language, PackageCopy> = {
     holder: "Information Holder",
     route: "Route name",
     officialLink: "Official link",
+    routeNotVerified: "Official route not verified in this prototype",
     verified: "Verified",
     profile: "Fictional filing profile",
     name: "Name",
@@ -161,6 +163,7 @@ const COPY: Record<Language, PackageCopy> = {
     holder: "सूचना-धारक",
     route: "मार्ग का नाम",
     officialLink: "आधिकारिक लिंक",
+    routeNotVerified: "इस प्रोटोटाइप में आधिकारिक मार्ग सत्यापित नहीं है",
     verified: "सत्यापन",
     profile: "काल्पनिक फाइलिंग प्रोफ़ाइल",
     name: "नाम",
@@ -482,7 +485,11 @@ function renderArtifact(
     localizeText(artifact.filingPackage.holder.canonicalName, language),
   );
   layout.field(copy.route, routeName);
-  layout.link(copy.officialLink, route.officialUrl);
+  if (route.officialUrl) {
+    layout.link(copy.officialLink, route.officialUrl);
+  } else {
+    layout.field(copy.officialLink, copy.routeNotVerified);
+  }
   layout.field(copy.verified, route.profile.verifiedAt);
   layout.field(
     copy.constraints,

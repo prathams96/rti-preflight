@@ -9,6 +9,8 @@ export const NORTHERN_RAILWAY_HOLDER: InformationHolderRef = {
   canonicalName: "Northern Railway",
 };
 
+export const GENERIC_RTI_DEMO_ROUTE_ID = "generic-rti-demo";
+
 const authority = {
   id: "northern-railway",
   canonicalName: "Northern Railway",
@@ -88,6 +90,73 @@ export const NORTHERN_RAILWAY_ROUTE: FilingRouteRef = {
 };
 
 export const FILING_ROUTE_DIRECTORY = [NORTHERN_RAILWAY_ROUTE] as const;
+
+function genericHolderName(need: ConfirmedFilingNeed): string {
+  const candidate = need.informationHolder?.trim();
+  if (
+    !candidate ||
+    /^(unknown|to be confirmed|unspecified|relevant public authority)$/i.test(
+      candidate,
+    )
+  )
+    return "Relevant public authority";
+  return candidate.slice(0, 120);
+}
+
+function genericHolderId(name: string): string {
+  const slug = name
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 72);
+  return `demo-holder-${slug || "relevant-public-authority"}`;
+}
+
+/**
+ * Creates a simulated fallback route for interpreted needs that are not in the
+ * verified route directory. It deliberately carries no official route URL.
+ */
+export function createGenericRtiDemoRoute(need: ConfirmedFilingNeed): {
+  holder: InformationHolderRef;
+  route: FilingRouteRef;
+} {
+  const holderName = genericHolderName(need);
+  const holder = {
+    id: genericHolderId(holderName),
+    canonicalName: holderName,
+  };
+  const route: FilingRouteRef = {
+    id: GENERIC_RTI_DEMO_ROUTE_ID,
+    authority: {
+      id: "generic-rti-demo-authority",
+      canonicalName: holderName,
+      portalNames: {
+        [GENERIC_RTI_DEMO_ROUTE_ID]: "Generic RTI demo route (not verified)",
+      },
+      jurisdiction: "unknown",
+      aliases: [],
+      lastVerified: "Not verified",
+      verifiedBy: "RTI Tathya demo fallback",
+    },
+    profile: {
+      id: "generic-draft-v1",
+      version: "1.0.0",
+      verifiedAt: "Not verified",
+      text: { maxChars: 3_000, overflowStrategy: "reject" },
+      identity: { fieldsRequired: [], fieldsProhibited: [] },
+      jurisdictionRule:
+        "The official filing authority and route must be verified before real filing.",
+      sourceUrl: "https://rtionline.gov.in/",
+      sourceUrls: ["https://rtionline.gov.in/"],
+      unverifiedConstraints: [
+        "This is a simulated fallback route; portal, authority, fee, and eligibility details are not verified.",
+      ],
+      submission: "demo",
+    },
+    guidedCoverage: true,
+  };
+  return { holder, route };
+}
 
 const NORTHERN_RAILWAY_GUIDED_SCOPE = {
   measure:

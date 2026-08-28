@@ -6,12 +6,15 @@ export interface FilingAdapter {
 
 export class DemoAdapter implements FilingAdapter {
   async submit(input: CitizenConfirmed): Promise<DemoAcknowledgement> {
+    const routeName =
+      input.package.route.authority.portalNames[input.package.route.id] ??
+      input.package.route.authority.canonicalName;
     return {
       registrationNumber: "DEMO-RTI-2026-0042",
       disclosure:
         "No request, payment, or personal information was sent to a government system.",
       holder: input.package.holder.canonicalName,
-      route: input.package.route.officialUrl,
+      route: input.package.route.officialUrl ?? routeName,
       submittedDraft: input.package.draft.text,
       fee: input.confirmation.payment,
       submittedAt: "2026-08-27T00:00:00.000Z",

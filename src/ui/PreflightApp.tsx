@@ -59,6 +59,7 @@ import {
   localizeText,
   isUnknownClarification,
 } from "./localization";
+import { isFilingDemoReady } from "./filing-flow";
 
 export type Phase =
   | "start"
@@ -463,7 +464,7 @@ function isValidatedFilingPackage(
     isNonEmptyString(holder.canonicalName) &&
     isObject(route) &&
     isNonEmptyString(route.id) &&
-    isNonEmptyString(route.officialUrl) &&
+    (route.officialUrl === undefined || isNonEmptyString(route.officialUrl)) &&
     typeof route.guidedCoverage === "boolean" &&
     isObject(authority) &&
     isNonEmptyString(authority.id) &&
@@ -609,13 +610,9 @@ export const COPY = {
       `Inspect ${geography} operands and source cells`,
     viewPlan: "View the registered calculation plan",
     saveBrief: "Download Evidence Brief (PDF)",
-    downloadTechnicalBrief: "Download technical JSON",
     briefSaved: "Evidence Brief PDF downloaded.",
-    briefShared: "Evidence Brief PDF shared.",
-    technicalBriefSaved: "Technical Evidence Brief JSON downloaded.",
-    briefCancelled: "Sharing was cancelled. The result remains available here.",
     briefFailed:
-      "We couldn’t save this Evidence Brief. The result remains available here.",
+      "We couldn’t download this Evidence Brief. The result remains available here.",
     sourceData: "Real official public data",
     publisher: "Publisher",
     applicablePeriod: "Applicable period",
@@ -642,7 +639,7 @@ export const COPY = {
     savedDraft: "Saved Filing Draft",
     returnResult: "Return to result",
     guidedUnavailable:
-      "Guided filing isn't available for this authority in the prototype. You can copy this draft and file it yourself through the authority's own RTI channel.",
+      "A Filing Package could not be prepared for this question yet. You can copy the draft and verify the authority's own RTI channel before filing.",
     divergenceTitle: "This edit may add another Information Need",
     divergenceBody:
       "Choose how to keep control of the draft. Nothing will be truncated or silently rewritten.",
@@ -707,6 +704,8 @@ export const COPY = {
     mockFee: "Fee",
     componentSummary:
       "Working: route validation. Simulated: OTP, identity, payment, filing, and acknowledgement.",
+    genericComponentSummary:
+      "Simulated: route selection, OTP, identity, payment, filing, and acknowledgement. Verify the authority and portal before any real filing.",
     paymentCredentials:
       "No UPI ID, card, CVV, bank, or payment credential is collected.",
     paymentCheck: "I understand this is a simulated payment step.",
@@ -884,12 +883,8 @@ export const COPY = {
     inspectRow: (geography: string) => `${geography} के मान और स्रोत सेल देखें`,
     viewPlan: "पंजीकृत गणना योजना देखें",
     saveBrief: "प्रमाण सारांश (PDF) डाउनलोड करें",
-    downloadTechnicalBrief: "तकनीकी JSON डाउनलोड करें",
     briefSaved: "प्रमाण सारांश PDF डाउनलोड हो गया।",
-    briefShared: "प्रमाण सारांश PDF साझा हो गया।",
-    technicalBriefSaved: "तकनीकी प्रमाण सारांश JSON डाउनलोड हो गया।",
-    briefCancelled: "साझा करना रद्द किया गया। नतीजा यहाँ उपलब्ध है।",
-    briefFailed: "प्रमाण सारांश सहेजा नहीं जा सका। नतीजा यहाँ उपलब्ध है।",
+    briefFailed: "प्रमाण सारांश डाउनलोड नहीं हो सका। नतीजा यहाँ उपलब्ध है।",
     sourceData: "वास्तविक आधिकारिक सार्वजनिक डेटा",
     publisher: "प्रकाशक",
     applicablePeriod: "लागू अवधि",
@@ -916,7 +911,7 @@ export const COPY = {
     savedDraft: "सहेजा गया आवेदन ड्राफ्ट",
     returnResult: "नतीजे पर लौटें",
     guidedUnavailable:
-      "इस प्राधिकरण के लिए निर्देशित फाइलिंग इस प्रोटोटाइप में उपलब्ध नहीं है। आप इस ड्राफ्ट की नकल करके स्वयं उस प्राधिकरण के RTI माध्यम से दाखिल कर सकते हैं।",
+      "इस प्रश्न के लिए अभी फाइलिंग पैकेज तैयार नहीं हो सका। ड्राफ्ट कॉपी करके फाइल करने से पहले प्राधिकरण का अपना RTI चैनल सत्यापित करें।",
     divergenceTitle: "यह बदलाव दूसरी सूचना-ज़रूरत जोड़ सकता है",
     divergenceBody:
       "ड्राफ्ट पर नियंत्रण रखने का तरीका चुनें। कुछ भी छोटा या चुपचाप बदला नहीं जाएगा।",
@@ -981,6 +976,8 @@ export const COPY = {
     mockFee: "शुल्क",
     componentSummary:
       "कार्यशील: मार्ग सत्यापन। अनुकरण: OTP, पहचान, भुगतान, फाइलिंग और पावती।",
+    genericComponentSummary:
+      "अनुकरण: मार्ग चयन, OTP, पहचान, भुगतान, फाइलिंग और पावती। वास्तविक फाइलिंग से पहले प्राधिकरण और पोर्टल सत्यापित करें।",
     paymentCredentials:
       "कोई UPI ID, कार्ड, CVV, बैंक या भुगतान क्रेडेंशियल नहीं लिया जाता।",
     paymentCheck: "मैं समझता/समझती हूँ कि यह अनुकरण किया गया भुगतान चरण है।",
@@ -1947,9 +1944,6 @@ export default function PreflightApp() {
     setAiReturnPhase(null);
     const feedbackKeys = [
       "briefSaved",
-      "briefShared",
-      "technicalBriefSaved",
-      "briefCancelled",
       "briefFailed",
       "packageSaved",
       "packageFailed",
@@ -2207,7 +2201,7 @@ export default function PreflightApp() {
           })
         )
           return;
-        if (payload.guidedCoverage && payload.filingPackage) {
+        if (payload.filingPackage?.route.officialUrl) {
           traceRecorder.record("route.validated", journeyTraceId, {
             component: "filing-route",
             version: payload.filingPackage.route.profile.version,
@@ -2510,7 +2504,7 @@ export default function PreflightApp() {
     }
   }
 
-  async function saveOrShareEvidenceBrief() {
+  async function downloadEvidenceBrief() {
     if (!need || !result) return;
     setBriefFeedback("");
     try {
@@ -2529,38 +2523,6 @@ export default function PreflightApp() {
       const { createEvidenceBriefPdf, evidenceBriefPdfFilename } =
         await import("../evidence/brief-pdf");
       const blob = await createEvidenceBriefPdf(input);
-      const file = new File(
-        [blob],
-        evidenceBriefPdfFilename(input.searchDate),
-        {
-          type: "application/pdf",
-        },
-      );
-      if (
-        typeof navigator.share === "function" &&
-        (!navigator.canShare || navigator.canShare({ files: [file] }))
-      ) {
-        try {
-          await navigator.share({
-            title:
-              language === "hi"
-                ? "RTI प्रमाण सारांश"
-                : "RTI Tathya Evidence Brief",
-            text:
-              language === "hi"
-                ? "स्वतंत्र शोध सहायक — आधिकारिक RTI उत्तर नहीं।"
-                : "Independent research assistant—not an official RTI response.",
-            files: [file],
-          });
-          setBriefFeedback(copy.briefShared);
-          return;
-        } catch (caught) {
-          if (caught instanceof DOMException && caught.name === "AbortError") {
-            setBriefFeedback(copy.briefCancelled);
-            return;
-          }
-        }
-      }
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -2571,39 +2533,6 @@ export default function PreflightApp() {
       link.remove();
       URL.revokeObjectURL(url);
       setBriefFeedback(copy.briefSaved);
-    } catch {
-      setBriefFeedback(copy.briefFailed);
-    }
-  }
-
-  async function downloadTechnicalEvidenceBrief() {
-    if (!need || !result) return;
-    setBriefFeedback("");
-    try {
-      const exportResult = localizeResolution(
-        resultForCitationReview(result, citationReview),
-        language,
-      );
-      const { serializeEvidenceBrief } = await import("../evidence/brief");
-      const serialized = serializeEvidenceBrief({
-        need: localizeNeed(need, language),
-        result: exportResult,
-        searchDate:
-          result.executionReceipt?.executedAt.slice(0, 10) ??
-          new Date().toISOString().slice(0, 10),
-        language,
-      });
-      const blob = new Blob([serialized], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "rti-tathya-evidence-brief.json";
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      setBriefFeedback(copy.technicalBriefSaved);
     } catch {
       setBriefFeedback(copy.briefFailed);
     }
@@ -2854,6 +2783,11 @@ export default function PreflightApp() {
     need && detectDraftDivergence(need, draftText).diverged,
   );
   const draftIsInvalid = draftValidation()?.valid === false;
+  const filingDemoReady = isFilingDemoReady({
+    need,
+    draftText,
+    filingPackage,
+  });
   const prefersDraftingRoute = Boolean(
     need &&
     shouldPreferDraftingRoute({
@@ -3482,17 +3416,8 @@ export default function PreflightApp() {
                 </p>
               )}
             <div className="result-actions">
-              <button
-                className="action-button"
-                onClick={saveOrShareEvidenceBrief}
-              >
+              <button className="action-button" onClick={downloadEvidenceBrief}>
                 {copy.saveBrief}
-              </button>
-              <button
-                className="secondary-button"
-                onClick={downloadTechnicalEvidenceBrief}
-              >
-                {copy.downloadTechnicalBrief}
               </button>
               {holderNeedsClarification ? (
                 <button className="action-button" onClick={editConfirmedNeed}>
@@ -3525,10 +3450,7 @@ export default function PreflightApp() {
                   className="status-icon inline-status-icon"
                   aria-hidden="true"
                 >
-                  {briefFeedback === copy.briefFailed ||
-                  briefFeedback === copy.briefCancelled
-                    ? "ⓘ"
-                    : "✓"}
+                  {briefFeedback === copy.briefFailed ? "ⓘ" : "✓"}
                 </span>{" "}
                 {briefFeedback}
               </p>
@@ -3571,7 +3493,7 @@ export default function PreflightApp() {
               <div>
                 <dt>{copy.route}</dt>
                 <dd>
-                  {filingPackage ? (
+                  {filingPackage?.route.officialUrl ? (
                     <ExternalLink
                       href={filingPackage.route.officialUrl}
                       language={language}
@@ -3592,8 +3514,14 @@ export default function PreflightApp() {
                 <div>
                   <dt>{copy.verified}</dt>
                   <dd>
-                    {filingPackage.route.profile.verifiedAt}.{" "}
-                    {copy.routeVerification}
+                    {filingPackage.route.officialUrl ? (
+                      <>
+                        {filingPackage.route.profile.verifiedAt}.{" "}
+                        {copy.routeVerification}
+                      </>
+                    ) : (
+                      copy.routeNotVerified
+                    )}
                     {filingPackage.route.profile.unverifiedConstraints && (
                       <span className="unverified-note">
                         <span
@@ -3701,27 +3629,28 @@ export default function PreflightApp() {
                 </div>
               </div>
             )}
-            {!filingPackage && (
+            {filingPackage ? (
+              <div className="result-actions">
+                <button
+                  className="action-button"
+                  onClick={continueToFiling}
+                  disabled={!filingDemoReady}
+                >
+                  {copy.continueFiling}
+                </button>
+                <button
+                  className="secondary-button"
+                  onClick={saveCurrentDraft}
+                  disabled={draftDiverged || draftIsInvalid}
+                >
+                  {copy.saveDraft}
+                </button>
+              </div>
+            ) : (
               <p className="coverage-note status-partial">
                 <span aria-hidden="true">ⓘ</span> {copy.guidedUnavailable}
               </p>
             )}
-            <div className="result-actions">
-              <button
-                className="action-button"
-                onClick={continueToFiling}
-                disabled={!filingPackage || draftDiverged || draftIsInvalid}
-              >
-                {copy.continueFiling}
-              </button>
-              <button
-                className="secondary-button"
-                onClick={saveCurrentDraft}
-                disabled={!filingPackage || draftDiverged || draftIsInvalid}
-              >
-                {copy.saveDraft}
-              </button>
-            </div>
           </section>
         </section>
       )}
@@ -3869,7 +3798,11 @@ export default function PreflightApp() {
                     {copy.fictionalApplicant}: {displayProfile.fullName} ·{" "}
                     {copy.mockFee} ₹10
                   </p>
-                  <p>{copy.componentSummary}</p>
+                  <p>
+                    {filingPackage.route.officialUrl
+                      ? copy.componentSummary
+                      : copy.genericComponentSummary}
+                  </p>
                 </div>
                 <label className="checkbox-field">
                   <input
