@@ -11,7 +11,6 @@ import {
   isStaleRequest,
   shouldSupersedeInterpretation,
   languageSwitchDecision,
-  openCalculationDetails,
 } from "./PreflightApp";
 import {
   createFilingModule,
@@ -38,21 +37,6 @@ function createStorage(): StorageMock {
 describe("Preflight persistence boundaries", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-  });
-
-  it("opens the calculation disclosure before scrolling to it", () => {
-    const details = {
-      open: false,
-      scrollIntoView: vi.fn(),
-    } as unknown as HTMLDetailsElement;
-
-    openCalculationDetails(details);
-
-    expect(details.open).toBe(true);
-    expect(details.scrollIntoView).toHaveBeenCalledWith({
-      behavior: "smooth",
-      block: "start",
-    });
   });
 
   it("does not persist filing phases in the research store", () => {
@@ -316,11 +300,11 @@ describe("Preflight persistence boundaries", () => {
       unresolvedClarifications: [],
       scenario: "unsupported" as const,
     };
-    const { holder } = createGenericRtiDemoRoute(need);
+    const { holder, route } = createGenericRtiDemoRoute(need);
     const filingPackage = await filing.prepare({
       need,
       holder,
-      route: { ...NORTHERN_RAILWAY_ROUTE, guidedCoverage: true },
+      route: { ...route, guidedCoverage: true },
     });
     sessionStorage.setItem(
       "rti-preflight-filing-v2",

@@ -703,7 +703,6 @@ export const COPY = {
     openRoute: "Go to official service",
     viewSource: "View source",
     viewEarlierResponse: "View the earlier response",
-    viewCalculation: "View calculation",
     seeWhatChecked: "See what we checked",
     goToOfficialService: "Go to the official EPFO service",
     prepareMissing: "Prepare an RTI for the missing information",
@@ -999,7 +998,6 @@ export const COPY = {
     openRoute: "आधिकारिक सेवा पर जाएँ",
     viewSource: "स्रोत देखें",
     viewEarlierResponse: "पहला उत्तर देखें",
-    viewCalculation: "गणना देखें",
     seeWhatChecked: "हमने क्या जाँचा देखें",
     goToOfficialService: "आधिकारिक EPFO सेवा पर जाएँ",
     prepareMissing: "गुम जानकारी के लिए RTI तैयार करें",
@@ -1430,12 +1428,6 @@ export function filingNeedSignature(need: ConfirmedFilingNeed): string {
     resolutionPreference: need.resolutionPreference,
     unresolvedClarifications: need.unresolvedClarifications,
   });
-}
-
-export function openCalculationDetails(details: HTMLDetailsElement | null) {
-  if (!details) return;
-  details.open = true;
-  details.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function isSavedPreflight(value: unknown): value is SavedPreflight {
@@ -3657,20 +3649,6 @@ export default function PreflightApp() {
                     {copy.viewEarlierResponse}
                   </button>
                 ))}
-              {displayOutcome === "DERIVED_FINDING" && (
-                <button
-                  className="action-button"
-                  onClick={() =>
-                    openCalculationDetails(
-                      document.getElementById(
-                        "calculation-details",
-                      ) as HTMLDetailsElement | null,
-                    )
-                  }
-                >
-                  {copy.viewCalculation}
-                </button>
-              )}
               {displayOutcome === "OFFICIAL_SERVICE_ROUTE" &&
                 displayResult?.serviceRoute && (
                   <ExternalLink
