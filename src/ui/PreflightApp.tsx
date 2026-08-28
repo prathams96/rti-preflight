@@ -448,7 +448,7 @@ export const COPY = {
     selectIntro:
       "हमने आपके मूल शब्द रखे हैं और ज़रूरतों को अलग किया है ताकि हर ज़रूरत को स्पष्ट रूप से जाँचा जा सके।",
     oneNeed:
-      "एक समय में केवल एक ज़रूरत सक्रिय है। बाद में एक और Preflight शुरू कर सकते हैं।",
+      "एक समय में केवल एक ज़रूरत सक्रिय है। बाद में एक और जाँच शुरू कर सकते हैं।",
     measure: "आप क्या माँग रहे हैं",
     geography: "किसके लिए / कहाँ",
     period: "अवधि",
@@ -478,11 +478,11 @@ export const COPY = {
     inspectEvidence: "पंक्ति के प्रमाण देखें",
     inspectRow: (geography: string) => `${geography} के मान और स्रोत सेल देखें`,
     viewPlan: "पंजीकृत गणना योजना देखें",
-    saveBrief: "Evidence Brief (PDF) डाउनलोड करें",
+    saveBrief: "प्रमाण सारांश (PDF) डाउनलोड करें",
     downloadTechnicalBrief: "तकनीकी JSON डाउनलोड करें",
-    briefSaved: "Evidence Brief PDF डाउनलोड हो गया।",
-    briefShared: "Evidence Brief PDF साझा हो गया।",
-    technicalBriefSaved: "तकनीकी Evidence Brief JSON डाउनलोड हो गया।",
+    briefSaved: "प्रमाण सारांश PDF डाउनलोड हो गया।",
+    briefShared: "प्रमाण सारांश PDF साझा हो गया।",
+    technicalBriefSaved: "तकनीकी प्रमाण सारांश JSON डाउनलोड हो गया।",
     briefCancelled: "साझा करना रद्द किया गया। नतीजा यहाँ उपलब्ध है।",
     briefFailed: "प्रमाण सारांश सहेजा नहीं जा सका। नतीजा यहाँ उपलब्ध है।",
     sourceData: "वास्तविक आधिकारिक सार्वजनिक डेटा",
@@ -490,9 +490,9 @@ export const COPY = {
     applicablePeriod: "लागू अवधि",
     locatedValues: "स्थित मान",
     openSource: "आधिकारिक स्रोत खोलें",
-    prepare: "RTI Draft तैयार करें",
-    prepareAnyway: "फिर भी RTI Draft तैयार करें",
-    citizenOverride: "फिर भी आधिकारिक उत्तर चाहिए? RTI Draft तैयार करें",
+    prepare: "RTI ड्राफ्ट तैयार करें",
+    prepareAnyway: "फिर भी RTI ड्राफ्ट तैयार करें",
+    citizenOverride: "फिर भी आधिकारिक उत्तर चाहिए? RTI ड्राफ्ट तैयार करें",
     openRoute: "आधिकारिक सेवा मार्ग खोलें",
     footer:
       "आपका शोध गुमनाम है। अलग फाइलिंग डेमो में जाने तक कुछ दाखिल नहीं होता।",
@@ -507,7 +507,7 @@ export const COPY = {
     characters: "अक्षर",
     continueFiling: "फाइलिंग डेमो पर जाएँ",
     saveDraft: "ड्राफ्ट सहेजें",
-    savedDraft: "सहेजा गया फाइलिंग ड्राफ्ट",
+    savedDraft: "सहेजा गया आवेदन ड्राफ्ट",
     returnResult: "नतीजे पर लौटें",
     guidedUnavailable:
       "इस प्राधिकरण के लिए निर्देशित फाइलिंग इस प्रोटोटाइप में उपलब्ध नहीं है। आप इस ड्राफ्ट की नकल करके स्वयं उस प्राधिकरण के RTI माध्यम से दाखिल कर सकते हैं।",
@@ -529,7 +529,7 @@ export const COPY = {
     identityPrompt: "ये विवरण काल्पनिक हैं और सत्र की स्थिति में रहते हैं।",
     continue: "जारी रखें",
     reviewPrompt: "भुगतान से पहले पूरे फाइलिंग पैकेज की समीक्षा करें।",
-    confirmPackage: "मैं इस पूरे Filing Package की पुष्टि करता/करती हूँ",
+    confirmPackage: "मैं इस पूरे आवेदन पैकेज की पुष्टि करता/करती हूँ",
     paymentPrompt: "डेमो भुगतान: ₹10 · डेमो UPI",
     noRealPayment: "कोई वास्तविक भुगतान नहीं होगा।",
     confirmDemo: "डेमो सबमिशन की पुष्टि करें",
@@ -541,15 +541,15 @@ export const COPY = {
     downloadPackage: "फाइलिंग पैकेज डाउनलोड करें",
     startAnother: "कुछ और पूछें",
     correction: "यह वह नहीं है जो मैंने पूछा था",
-    challenge: "Citation की समस्या रिपोर्ट करें",
+    challenge: "उद्धरण की समस्या रिपोर्ट करें",
     challengePending:
-      "इस उद्धरण की समस्या रिपोर्ट की गई है। मूल नतीजा दिखता रहेगा, लेकिन इस स्रोत के दोबारा सत्यापन तक इसकी स्थिति आंशिक रूप से हल की गई होगी। आप फिर भी RTI Draft तैयार कर सकते हैं।",
-    challengeDialogTitle: "Citation की समस्या रिपोर्ट करें?",
+      "इस उद्धरण की समस्या रिपोर्ट की गई है। मूल नतीजा दिखता रहेगा, लेकिन इस स्रोत के दोबारा सत्यापन तक इसकी स्थिति आंशिक रूप से हल की गई होगी। आप फिर भी RTI ड्राफ्ट तैयार कर सकते हैं।",
+    challengeDialogTitle: "उद्धरण की समस्या रिपोर्ट करें?",
     challengeDialogBody: (sourceTitle: string) =>
       `आप रिपोर्ट कर रहे हैं कि “${sourceTitle}” इस नतीजे का समर्थन नहीं कर सकता।`,
     challengeDialogConsequence:
-      "पुष्टि करने के बाद मूल नतीजा और प्रमाण दिखते रहेंगे, लेकिन दोबारा सत्यापन तक इसकी स्थिति downgrade होगी।",
-    confirmChallenge: "समस्या रिपोर्ट करके downgrade करें",
+      "पुष्टि करने के बाद मूल नतीजा और प्रमाण दिखते रहेंगे, लेकिन दोबारा सत्यापन तक इसका स्तर घटेगा।",
+    confirmChallenge: "समस्या रिपोर्ट करके स्तर घटाएँ",
     cancel: "रद्द करें",
     draftLabel: "फाइलिंग ड्राफ्ट",
     routeNotVerified: "इस प्रोटोटाइप में मार्ग की जानकारी सत्यापित नहीं है",
@@ -2317,6 +2317,7 @@ export default function PreflightApp() {
                           </ExternalLink>
                         )}
                       </details>
+                    )}
                   </article>
                 ))}
               </div>
