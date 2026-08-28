@@ -3,7 +3,10 @@ import {
   SCENARIO_PROMPTS,
   interpretWithFixture,
 } from "../../../content/scenarios";
-import { NORTHERN_RAILWAY_ROUTE } from "../../../filing";
+import {
+  GENERIC_RTI_DEMO_ROUTE_ID,
+  NORTHERN_RAILWAY_ROUTE,
+} from "../../../filing";
 import { POST } from "./route";
 
 afterEach(() => {
@@ -202,7 +205,7 @@ describe("filing draft generation route", () => {
     ["breakdown", "Month"],
     ["informationHolder", "Western Railway"],
   ] as const)(
-    "removes guided route coverage after a material %s edit",
+    "keeps a demo filing package available after a material %s edit",
     async (field, value) => {
       vi.stubEnv("OPENAI_API_KEY", "");
       const edited = {
@@ -211,8 +214,10 @@ describe("filing draft generation route", () => {
       };
       const response = await POST(request(edited));
       const payload = await response.json();
-      expect(payload.guidedCoverage).toBe(false);
-      expect(payload.filingPackage).toBeUndefined();
+      expect(payload.guidedCoverage).toBe(true);
+      expect(payload.filingPackage.route.id).toBe(GENERIC_RTI_DEMO_ROUTE_ID);
+      expect(payload.filingPackage.route.officialUrl).toBeUndefined();
+      expect(payload.filingPackage.route.guidedCoverage).toBe(true);
       expect(payload.draft.text).toContain("confirmed Information Need");
     },
   );

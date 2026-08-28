@@ -3,6 +3,7 @@ import type { Language } from "../../../domain/types";
 import { matchesLanguage } from "../../../model/language";
 import {
   createFilingModule,
+  createGenericRtiDemoRoute,
   isNorthernRailwayGuidedNeed,
   NORTHERN_RAILWAY_HOLDER,
   NORTHERN_RAILWAY_ROUTE,
@@ -23,7 +24,6 @@ import {
 } from "../../../model/openai-config.server";
 import type {
   ConfirmedFilingNeed,
-  PortalProfile,
   ValidatedFilingPackage,
 } from "../../../filing/types";
 
@@ -43,18 +43,6 @@ function outputText(payload: ResponsePayload): string {
       .join("") ??
     ""
   );
-}
-
-function genericProfile(maxChars: number): PortalProfile {
-  return {
-    id: "generic-draft-v1",
-    version: "1.0.0",
-    verifiedAt: "2026-08-28",
-    text: { maxChars, overflowStrategy: "reject" },
-    identity: { fieldsRequired: [], fieldsProhibited: [] },
-    sourceUrl: "https://rtionline.gov.in/",
-    submission: "demo",
-  };
 }
 
 function genericFallback(
@@ -136,45 +124,47 @@ export async function POST(request: Request) {
       body.route && typeof body.route === "object"
         ? (body.route as Record<string, unknown>)
         : undefined;
-    const guidedCoverage =
+    const verifiedRouteCoverage =
       isNorthernRailwayGuidedNeed(body.need) &&
       (suppliedRoute === undefined ||
         suppliedRoute.id === NORTHERN_RAILWAY_ROUTE.id);
-    const routeLimit = guidedCoverage
+    const selected = verifiedRouteCoverage
+      ? { holder: NORTHERN_RAILWAY_HOLDER, route: NORTHERN_RAILWAY_ROUTE }
+      : createGenericRtiDemoRoute(body.need);
+    const routeLimit = verifiedRouteCoverage
       ? NORTHERN_RAILWAY_ROUTE.profile.text.maxChars
       : 3_000;
     // Portal constraints are registry-owned; caller input cannot narrow or expand them.
     const maxChars = routeLimit;
-    const profile = guidedCoverage
+    const profile = verifiedRouteCoverage
       ? {
           ...NORTHERN_RAILWAY_ROUTE.profile,
           text: { ...NORTHERN_RAILWAY_ROUTE.profile.text, maxChars },
         }
-      : genericProfile(maxChars);
-    const prepared = guidedCoverage
-      ? await createFilingModule().prepare({
-          need: body.need,
-          holder: NORTHERN_RAILWAY_HOLDER,
-          route: NORTHERN_RAILWAY_ROUTE,
-        })
-      : undefined;
-    const fallbackText = prepared
+      : {
+          ...selected.route.profile,
+          text: { ...selected.route.profile.text, maxChars },
+        };
+    const prepared = await createFilingModule().prepare({
+      need: body.need,
+      holder: selected.holder,
+      route: { ...selected.route, profile },
+    });
+    const fallbackText = verifiedRouteCoverage
       ? localizeFilingDraft(prepared.draft.text, language)
       : genericFallback(body.need, language);
     const fallbackValidation = validateDraft(fallbackText, profile);
-    const fallbackPackage = prepared
-      ? {
-          ...prepared,
-          draft: { ...prepared.draft, text: fallbackText },
-          validation: fallbackValidation,
-        }
-      : undefined;
+    const fallbackPackage = {
+      ...prepared,
+      draft: { ...prepared.draft, text: fallbackText },
+      validation: fallbackValidation,
+    };
 
     const fallbackResponse = (degradationCode: string) =>
       NextResponse.json({
         draft: { text: fallbackText },
-        ...(fallbackPackage ? { filingPackage: fallbackPackage } : {}),
-        guidedCoverage,
+        filingPackage: fallbackPackage,
+        guidedCoverage: true,
         validation: fallbackValidation,
         generation: "deterministic" as const,
         degraded: true,
@@ -206,7 +196,7 @@ export async function POST(request: Request) {
                 role: "user",
                 content: JSON.stringify({
                   confirmedCanonicalNeed: providerNeed(body.need),
-                  verifiedRoute: guidedCoverage
+                  verifiedRoute: verifiedRouteCoverage
                     ? {
                         authority:
                           NORTHERN_RAILWAY_ROUTE.authority.canonicalName,
@@ -256,24 +246,21 @@ export async function POST(request: Request) {
       if (
         !validation.valid ||
         divergence.diverged ||
-        (guidedCoverage && !hasNorthernRailwayScopeAnchors(parsed.text))
+        (verifiedRouteCoverage && !hasNorthernRailwayScopeAnchors(parsed.text))
       )
         throw new Error("DRAFT_VALIDATION_FAILED");
 
-      let filingPackage: ValidatedFilingPackage | undefined;
-      if (prepared) {
-        filingPackage = {
-          ...prepared,
-          draft: { ...prepared.draft, text: parsed.text },
-          validation,
-        };
-        if (!validateFilingPackage(filingPackage).valid)
-          throw new Error("ROUTE_VALIDATION_FAILED");
-      }
+      const filingPackage: ValidatedFilingPackage = {
+        ...prepared,
+        draft: { ...prepared.draft, text: parsed.text },
+        validation,
+      };
+      if (!validateFilingPackage(filingPackage).valid)
+        throw new Error("ROUTE_VALIDATION_FAILED");
       return NextResponse.json({
         draft: { text: parsed.text },
-        ...(filingPackage ? { filingPackage } : {}),
-        guidedCoverage,
+        filingPackage,
+        guidedCoverage: true,
         validation,
         generation: "openai" as const,
         degraded: false,

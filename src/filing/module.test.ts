@@ -4,6 +4,7 @@ import {
   NORTHERN_RAILWAY_HOLDER,
   NORTHERN_RAILWAY_PROFILE,
   NORTHERN_RAILWAY_ROUTE,
+  createGenericRtiDemoRoute,
   createFilingModule,
   detectDraftDivergence,
   validateDraft,
@@ -333,5 +334,43 @@ describe("Filing Module public seam", () => {
         },
       }),
     ).rejects.toThrow("FILING_PACKAGE_NOT_CONFIRMED");
+  });
+
+  it("submits an interpreted need through the generic demo route", async () => {
+    const filing = createFilingModule();
+    const genericNeed = {
+      id: "need-city-budget",
+      originalText: "Show me the municipal park maintenance budget.",
+      canonicalNeed:
+        "records of the municipal park maintenance budget for financial year 2025-26",
+      measure: "Maintenance budget",
+      geography: "Municipal parks",
+      period: "Financial year 2025-26",
+      breakdown: "Year",
+      informationHolder: "City Municipal Corporation",
+      informationHolderStatus: "unverified" as const,
+      resolutionPreference: "formal" as const,
+      unresolvedClarifications: [],
+      scenario: "unsupported" as const,
+    };
+    const { holder, route } = createGenericRtiDemoRoute(genericNeed);
+    const prepared = await filing.prepare({
+      need: genericNeed,
+      holder,
+      route,
+    });
+
+    const acknowledgement = await filing.demoSubmit({
+      package: prepared,
+      confirmation: {
+        otp: DEMO_OTP,
+        profile: filing.demoProfile,
+        reviewed: true,
+        payment: { method: "demo_upi", amountInr: 10 },
+      },
+    });
+
+    expect(acknowledgement.holder).toBe("City Municipal Corporation");
+    expect(acknowledgement.route).toContain("not verified");
   });
 });

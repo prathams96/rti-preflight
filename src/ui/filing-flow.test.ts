@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { InformationNeed } from "../domain/types";
 import { SCENARIO_PROMPTS, interpretWithFixture } from "../content/scenarios";
 import {
   createFilingModule,
+  createGenericRtiDemoRoute,
   NORTHERN_RAILWAY_HOLDER,
   NORTHERN_RAILWAY_ROUTE,
 } from "../filing";
@@ -49,5 +51,35 @@ describe("filing demo readiness", () => {
         filingPackage,
       }),
     ).toBe(false);
+  });
+
+  it("keeps an interpreted non-directory question ready for the demo flow", async () => {
+    const filing = createFilingModule();
+    const need: InformationNeed = {
+      id: "need-city-budget",
+      originalText: "Show me the municipal park maintenance budget.",
+      canonicalNeed:
+        "records of the municipal park maintenance budget for financial year 2025-26",
+      measure: "Maintenance budget",
+      geography: "Municipal parks",
+      period: "Financial year 2025-26",
+      breakdown: "Year",
+      informationHolder: "City Municipal Corporation",
+      informationHolderStatus: "unverified",
+      resolutionPreference: "formal",
+      unresolvedClarifications: [],
+      scenario: "unsupported",
+    };
+    const { holder, route } = createGenericRtiDemoRoute(need);
+    const filingPackage = await filing.prepare({ need, holder, route });
+
+    expect(route.officialUrl).toBeUndefined();
+    expect(
+      isFilingDemoReady({
+        need,
+        draftText: filingPackage.draft.text,
+        filingPackage,
+      }),
+    ).toBe(true);
   });
 });

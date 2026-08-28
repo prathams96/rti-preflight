@@ -77,7 +77,9 @@ function routeMetadata(route: FilingRouteRef): FilingRouteRef {
       verifiedBy: route.authority.verifiedBy,
     },
     profile,
-    officialUrl: route.officialUrl,
+    ...(route.officialUrl === undefined
+      ? {}
+      : { officialUrl: route.officialUrl }),
     guidedCoverage: route.guidedCoverage,
   };
 }

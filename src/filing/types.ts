@@ -2,7 +2,7 @@ export type FilingAuthority = {
   id: string;
   canonicalName: string;
   portalNames: Record<string, string>;
-  jurisdiction: "central" | "state" | "local";
+  jurisdiction: "central" | "state" | "local" | "unknown";
   aliases: string[];
   lastVerified: string;
   verifiedBy: string;
@@ -47,7 +47,7 @@ export type FilingRouteRef = {
   id: string;
   authority: FilingAuthority;
   profile: PortalProfile;
-  officialUrl: string;
+  officialUrl?: string;
   guidedCoverage: boolean;
 };
 

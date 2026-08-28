@@ -464,7 +464,7 @@ function isValidatedFilingPackage(
     isNonEmptyString(holder.canonicalName) &&
     isObject(route) &&
     isNonEmptyString(route.id) &&
-    isNonEmptyString(route.officialUrl) &&
+    (route.officialUrl === undefined || isNonEmptyString(route.officialUrl)) &&
     typeof route.guidedCoverage === "boolean" &&
     isObject(authority) &&
     isNonEmptyString(authority.id) &&
@@ -639,7 +639,7 @@ export const COPY = {
     savedDraft: "Saved Filing Draft",
     returnResult: "Return to result",
     guidedUnavailable:
-      "Guided filing isn't available for this authority in the prototype. You can copy this draft and file it yourself through the authority's own RTI channel.",
+      "A Filing Package could not be prepared for this question yet. You can copy the draft and verify the authority's own RTI channel before filing.",
     divergenceTitle: "This edit may add another Information Need",
     divergenceBody:
       "Choose how to keep control of the draft. Nothing will be truncated or silently rewritten.",
@@ -704,6 +704,8 @@ export const COPY = {
     mockFee: "Fee",
     componentSummary:
       "Working: route validation. Simulated: OTP, identity, payment, filing, and acknowledgement.",
+    genericComponentSummary:
+      "Simulated: route selection, OTP, identity, payment, filing, and acknowledgement. Verify the authority and portal before any real filing.",
     paymentCredentials:
       "No UPI ID, card, CVV, bank, or payment credential is collected.",
     paymentCheck: "I understand this is a simulated payment step.",
@@ -909,7 +911,7 @@ export const COPY = {
     savedDraft: "सहेजा गया आवेदन ड्राफ्ट",
     returnResult: "नतीजे पर लौटें",
     guidedUnavailable:
-      "इस प्राधिकरण के लिए निर्देशित फाइलिंग इस प्रोटोटाइप में उपलब्ध नहीं है। आप इस ड्राफ्ट की नकल करके स्वयं उस प्राधिकरण के RTI माध्यम से दाखिल कर सकते हैं।",
+      "इस प्रश्न के लिए अभी फाइलिंग पैकेज तैयार नहीं हो सका। ड्राफ्ट कॉपी करके फाइल करने से पहले प्राधिकरण का अपना RTI चैनल सत्यापित करें।",
     divergenceTitle: "यह बदलाव दूसरी सूचना-ज़रूरत जोड़ सकता है",
     divergenceBody:
       "ड्राफ्ट पर नियंत्रण रखने का तरीका चुनें। कुछ भी छोटा या चुपचाप बदला नहीं जाएगा।",
@@ -974,6 +976,8 @@ export const COPY = {
     mockFee: "शुल्क",
     componentSummary:
       "कार्यशील: मार्ग सत्यापन। अनुकरण: OTP, पहचान, भुगतान, फाइलिंग और पावती।",
+    genericComponentSummary:
+      "अनुकरण: मार्ग चयन, OTP, पहचान, भुगतान, फाइलिंग और पावती। वास्तविक फाइलिंग से पहले प्राधिकरण और पोर्टल सत्यापित करें।",
     paymentCredentials:
       "कोई UPI ID, कार्ड, CVV, बैंक या भुगतान क्रेडेंशियल नहीं लिया जाता।",
     paymentCheck: "मैं समझता/समझती हूँ कि यह अनुकरण किया गया भुगतान चरण है।",
@@ -2197,7 +2201,7 @@ export default function PreflightApp() {
           })
         )
           return;
-        if (payload.guidedCoverage && payload.filingPackage) {
+        if (payload.filingPackage?.route.officialUrl) {
           traceRecorder.record("route.validated", journeyTraceId, {
             component: "filing-route",
             version: payload.filingPackage.route.profile.version,
@@ -3489,7 +3493,7 @@ export default function PreflightApp() {
               <div>
                 <dt>{copy.route}</dt>
                 <dd>
-                  {filingPackage ? (
+                  {filingPackage?.route.officialUrl ? (
                     <ExternalLink
                       href={filingPackage.route.officialUrl}
                       language={language}
@@ -3510,8 +3514,14 @@ export default function PreflightApp() {
                 <div>
                   <dt>{copy.verified}</dt>
                   <dd>
-                    {filingPackage.route.profile.verifiedAt}.{" "}
-                    {copy.routeVerification}
+                    {filingPackage.route.officialUrl ? (
+                      <>
+                        {filingPackage.route.profile.verifiedAt}.{" "}
+                        {copy.routeVerification}
+                      </>
+                    ) : (
+                      copy.routeNotVerified
+                    )}
                     {filingPackage.route.profile.unverifiedConstraints && (
                       <span className="unverified-note">
                         <span
@@ -3788,7 +3798,11 @@ export default function PreflightApp() {
                     {copy.fictionalApplicant}: {displayProfile.fullName} ·{" "}
                     {copy.mockFee} ₹10
                   </p>
-                  <p>{copy.componentSummary}</p>
+                  <p>
+                    {filingPackage.route.officialUrl
+                      ? copy.componentSummary
+                      : copy.genericComponentSummary}
+                  </p>
                 </div>
                 <label className="checkbox-field">
                   <input
