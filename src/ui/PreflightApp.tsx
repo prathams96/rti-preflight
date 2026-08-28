@@ -32,6 +32,7 @@ import {
   validateDraft,
   type DemoAcknowledgement,
   type DemoStep,
+  type ConfirmedFilingNeed,
   type FictionalFilingProfile,
   type ValidatedFilingPackage,
 } from "../filing";
@@ -51,6 +52,8 @@ import {
   localizeFilingDraft,
   localizeClarification,
   localizeDisclosureEntry,
+  canonicalizeNeedValue,
+  localizeFilingProfile,
   localizeMessage,
   localizeNeed,
   localizeResolution,
@@ -603,6 +606,7 @@ export const COPY = {
     prepareAnyway: "Prepare an RTI Draft anyway",
     citizenOverride: "Still need an official response? Prepare an RTI Draft",
     openRoute: "Open official service route",
+    clarifyHolder: "Clarify the likely department first",
     footer:
       "Your research is anonymous. Nothing is filed unless you enter the separate filing demo.",
     language: "हिन्दी",
@@ -648,6 +652,9 @@ export const COPY = {
     noGovernment:
       "No request, payment, or personal information was sent to a government system.",
     downloadPackage: "Download demo Filing Package",
+    packageSaved: "Demo Filing Package PDF downloaded.",
+    packageFailed:
+      "We couldn’t save this Filing Package PDF. The acknowledgement remains available here.",
     startAnother: "Ask something else",
     correction: "This isn’t what I asked",
     challenge: "Report a citation problem",
@@ -684,7 +691,7 @@ export const COPY = {
     paymentCredentials:
       "No UPI ID, card, CVV, bank, or payment credential is collected.",
     paymentCheck: "I understand this is a simulated payment step.",
-    fictionalTime: "Submitted",
+    fictionalTime: "Fictional submission time",
     submittedDraft: "Submitted draft snapshot",
     draftAria: "Filing Draft",
     stepperAria: "Simulated filing steps",
@@ -702,10 +709,10 @@ export const COPY = {
     askReassurance: ASK_SCREEN_COPY.en.reassurance,
     confirmIntro:
       "We rewrote your question so it can be checked against official records. Correct anything that's wrong — this is exactly what we'll search for.",
-    statutoryTimeline:
-      "Under the RTI Act, the authority must reply within 30 days.",
+    responseProcess:
+      "In a real filing, the official route provides the applicable response process.",
     realWorldNext:
-      "In a real filing you'd now get an acknowledgement number by email, and the authority has 30 days to reply.",
+      "In a real filing, the government portal would provide its own acknowledgement and the applicable response timeline.",
     provenance: (count: number, date: string) =>
       `Checked against ${count} official values · last verified ${date}`,
     customOption: "Other / custom — type your own",
@@ -836,6 +843,7 @@ export const COPY = {
     prepareAnyway: "फिर भी RTI ड्राफ्ट तैयार करें",
     citizenOverride: "फिर भी आधिकारिक उत्तर चाहिए? RTI ड्राफ्ट तैयार करें",
     openRoute: "आधिकारिक सेवा मार्ग खोलें",
+    clarifyHolder: "पहले संभावित विभाग स्पष्ट करें",
     footer:
       "आपका शोध गुमनाम है। अलग फाइलिंग डेमो में जाने तक कुछ दाखिल नहीं होता।",
     language: "English",
@@ -880,7 +888,10 @@ export const COPY = {
     fictionalRegistration: "काल्पनिक पंजीकरण",
     noGovernment:
       "किसी सरकारी सिस्टम को अनुरोध, भुगतान या व्यक्तिगत जानकारी नहीं भेजी गई।",
-    downloadPackage: "फाइलिंग पैकेज डाउनलोड करें",
+    downloadPackage: "डेमो फाइलिंग पैकेज डाउनलोड करें",
+    packageSaved: "डेमो फाइलिंग पैकेज PDF डाउनलोड हो गया।",
+    packageFailed:
+      "डेमो फाइलिंग पैकेज PDF सहेजा नहीं जा सका। पावती यहाँ उपलब्ध है।",
     startAnother: "कुछ और पूछें",
     correction: "यह वह नहीं है जो मैंने पूछा था",
     challenge: "उद्धरण की समस्या रिपोर्ट करें",
@@ -917,7 +928,7 @@ export const COPY = {
     paymentCredentials:
       "कोई UPI ID, कार्ड, CVV, बैंक या भुगतान क्रेडेंशियल नहीं लिया जाता।",
     paymentCheck: "मैं समझता/समझती हूँ कि यह अनुकरण किया गया भुगतान चरण है।",
-    fictionalTime: "जमा किया गया",
+    fictionalTime: "काल्पनिक सबमिशन समय",
     submittedDraft: "जमा किए गए ड्राफ्ट का स्नैपशॉट",
     draftAria: "फाइलिंग ड्राफ्ट",
     stepperAria: "अनुकरण किए गए फाइलिंग चरण",
@@ -935,10 +946,10 @@ export const COPY = {
     askReassurance: ASK_SCREEN_COPY.hi.reassurance,
     confirmIntro:
       "हमने आपके प्रश्न को इस तरह लिखा है कि उसे आधिकारिक रिकॉर्ड से जाँचा जा सके। कुछ ग़लत हो तो सुधार लें — हम बिलकुल यही खोजेंगे।",
-    statutoryTimeline:
-      "RTI अधिनियम के तहत प्राधिकरण को 30 दिनों में उत्तर देना होता है।",
+    responseProcess:
+      "असली फाइलिंग में आधिकारिक मार्ग लागू प्रतिक्रिया प्रक्रिया बताएगा।",
     realWorldNext:
-      "असली फाइलिंग में अब आपको ईमेल पर पावती संख्या मिलती और प्राधिकरण को 30 दिनों में उत्तर देना होता।",
+      "असली फाइलिंग में सरकारी पोर्टल अपनी पावती और लागू प्रतिक्रिया समय-सीमा बताएगा।",
     provenance: (count: number, date: string) =>
       `${count} आधिकारिक मानों से मिलान किया गया · अंतिम सत्यापन ${date}`,
     customOption: "अन्य / अपनी जानकारी लिखें",
@@ -1071,6 +1082,22 @@ export function readSessionFilingState(): SessionFilingState | undefined {
   }
 }
 
+export function loadSessionFilingState(): {
+  state: SessionFilingState | undefined;
+  recoveryNeeded: boolean;
+} {
+  let existed = false;
+  try {
+    existed =
+      typeof window !== "undefined" &&
+      Boolean(window.sessionStorage.getItem(FILING_KEY));
+  } catch {
+    /* optional storage */
+  }
+  const state = readSessionFilingState();
+  return { state, recoveryNeeded: existed && !state };
+}
+
 function clearResearchStorage() {
   try {
     [RESEARCH_KEY, LEGACY_RESEARCH_KEY].forEach((key) =>
@@ -1094,6 +1121,21 @@ function clearFilingStorage() {
 function clearPrototypeStorage() {
   clearResearchStorage();
   clearFilingStorage();
+}
+
+export function filingNeedSignature(need: ConfirmedFilingNeed): string {
+  return JSON.stringify({
+    id: need.id,
+    canonicalNeed: need.canonicalNeed,
+    measure: need.measure,
+    geography: need.geography,
+    period: need.period,
+    breakdown: need.breakdown,
+    informationHolder: need.informationHolder,
+    informationHolderStatus: need.informationHolderStatus,
+    resolutionPreference: need.resolutionPreference,
+    unresolvedClarifications: need.unresolvedClarifications,
+  });
 }
 
 function isSavedPreflight(value: unknown): value is SavedPreflight {
@@ -1240,7 +1282,9 @@ function StructuredNeedInput({
   id,
   label,
   value,
+  displayValue = value,
   options,
+  displayOptions = options,
   customOption,
   customHelp,
   customAccepted,
@@ -1249,7 +1293,9 @@ function StructuredNeedInput({
   id: string;
   label: string;
   value: string;
+  displayValue?: string;
   options: readonly string[];
+  displayOptions?: readonly string[];
   customOption: string;
   customHelp: string;
   customAccepted: string;
@@ -1263,7 +1309,7 @@ function StructuredNeedInput({
       <input
         id={id}
         list={`${id}-options`}
-        value={value}
+        value={displayValue}
         onChange={(event) =>
           onChange(
             event.target.value === customOption ? "" : event.target.value,
@@ -1272,7 +1318,7 @@ function StructuredNeedInput({
         aria-invalid={isInvalid}
       />
       <datalist id={`${id}-options`}>
-        {options.map((option) => (
+        {displayOptions.map((option) => (
           <option value={option} key={option} />
         ))}
         <option value={customOption} />
@@ -1592,9 +1638,52 @@ export default function PreflightApp() {
   const displayResult = result
     ? localizeResolution(result, language)
     : undefined;
+  const displayProfile = localizeFilingProfile(profile, language);
+  const displayAcknowledgement = acknowledgement
+    ? {
+        ...acknowledgement,
+        holder: localizeText(acknowledgement.holder, language),
+        submittedDraft: localizeFilingDraft(
+          acknowledgement.submittedDraft,
+          language,
+        ),
+      }
+    : undefined;
+
+  function invalidateFilingConfirmations() {
+    setReviewed(false);
+    setPaymentConfirmed(false);
+    setAcknowledgement(undefined);
+    setFilingError("");
+    setFilingStep("otp");
+  }
+
+  function invalidatePreparedFiling() {
+    invalidateFilingConfirmations();
+    setFilingPackage(undefined);
+    setDraftText("");
+    setDraftOriginalText("");
+    setDraftError("");
+    setDivergenceChoice("");
+    setFilingStep("otp");
+    setOtp("");
+    setProfile(filingModule.demoProfile);
+    clearFilingStorage();
+  }
 
   function changeLanguage(nextLanguage: Language) {
     if (nextLanguage === language) return;
+    const feedbackKeys = [
+      "briefSaved",
+      "briefShared",
+      "technicalBriefSaved",
+      "briefCancelled",
+      "briefFailed",
+      "packageSaved",
+      "packageFailed",
+    ] as const;
+    const feedbackKey = feedbackKeys.find((key) => briefFeedback === copy[key]);
+    if (feedbackKey) setBriefFeedback(COPY[nextLanguage][feedbackKey]);
     const documentIsUntouched = draftText === draftOriginalText;
     if (
       documentIsUntouched &&
@@ -1604,6 +1693,7 @@ export default function PreflightApp() {
       const nextDraftText = localizeFilingDraft(draftText, nextLanguage);
       setDraftText(nextDraftText);
       setDraftOriginalText(nextDraftText);
+      if (nextDraftText !== draftText) invalidateFilingConfirmations();
       if (filingPackage) {
         setFilingPackage({
           ...filingPackage,
@@ -1671,7 +1761,8 @@ export default function PreflightApp() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const saved = readSessionFilingState();
+      const { state: saved, recoveryNeeded } = loadSessionFilingState();
+      if (recoveryNeeded) setRecoveryNotice(true);
       if (!saved) return;
       setNeeds([saved.need]);
       setNeed(saved.need);
@@ -1733,7 +1824,16 @@ export default function PreflightApp() {
 
   const updateNeed = (field: keyof InformationNeed, value: string) => {
     if (!need) return;
-    const next = { ...need, [field]: value } as InformationNeed;
+    const canonicalValue = [
+      "measure",
+      "geography",
+      "period",
+      "breakdown",
+      "informationHolder",
+    ].includes(field)
+      ? canonicalizeNeedValue(value, language)
+      : value;
+    const next = { ...need, [field]: canonicalValue } as InformationNeed;
     if (
       next.scenario === "unsupported" &&
       next.informationHolder !== "To be confirmed" &&
@@ -1742,11 +1842,19 @@ export default function PreflightApp() {
       next.period !== "Not yet specified"
     )
       next.unresolvedClarifications = [];
+    if (
+      filingPackage &&
+      filingNeedSignature(filingPackage.confirmedNeed) !==
+        filingNeedSignature(next)
+    ) {
+      invalidatePreparedFiling();
+    }
     if (result) {
       setResult(undefined);
-      setFilingPackage(undefined);
-      setDraftText("");
-      setDraftOriginalText("");
+      if (!filingPackage) {
+        setDraftText("");
+        setDraftOriginalText("");
+      }
     }
     setNeed(next);
   };
@@ -1771,11 +1879,16 @@ export default function PreflightApp() {
 
   function openDraft() {
     if (!need) return;
+    if (holderNeedsClarification) {
+      setPhase("confirm");
+      return;
+    }
     setDraftError("");
     setDivergenceChoice("");
     if (
       filingPackage?.draft.needId === need.id &&
-      filingPackage.confirmedNeed.canonicalNeed === need.canonicalNeed
+      filingNeedSignature(filingPackage.confirmedNeed) ===
+        filingNeedSignature(need)
     ) {
       setPhase("draft");
       return;
@@ -1837,6 +1950,14 @@ export default function PreflightApp() {
       need.draftingIntent ?? hasExplicitDraftingIntent(need.originalText),
     );
     if (
+      holderNeedsClarification &&
+      shouldPreferDraftingRoute({ ...need, draftingIntent: explicitDrafting })
+    ) {
+      setError("");
+      setPhase("confirm");
+      return;
+    }
+    if (
       shouldPreferDraftingRoute({ ...need, draftingIntent: explicitDrafting })
     ) {
       openDraft();
@@ -1848,9 +1969,7 @@ export default function PreflightApp() {
   function editConfirmedNeed() {
     setError("");
     setResult(undefined);
-    setFilingPackage(undefined);
-    setDraftText("");
-    setDraftOriginalText("");
+    invalidatePreparedFiling();
     setPhase("confirm");
   }
 
@@ -1882,6 +2001,7 @@ export default function PreflightApp() {
       draft: { ...filingPackage.draft, text: draftText },
       validation,
     } satisfies ValidatedFilingPackage;
+    invalidateFilingConfirmations();
     setFilingPackage(updatedPackage);
     setFilingError("");
     setFilingStep("otp");
@@ -1889,6 +2009,7 @@ export default function PreflightApp() {
   }
 
   function handleDraftChange(value: string) {
+    if (value !== draftText) invalidateFilingConfirmations();
     setDraftText(value);
     setDraftError("");
     setDivergenceChoice("");
@@ -1922,14 +2043,14 @@ export default function PreflightApp() {
     setNeeds([]);
     setNeed(undefined);
     setResult(undefined);
-    setFilingPackage(undefined);
-    setAcknowledgement(undefined);
+    invalidatePreparedFiling();
     setPhase("start");
     setDivergenceChoice("separate");
   }
 
   function resumeSavedPreflight(saved: SavedPreflight) {
     const restored = restoreSavedPreflightForLanguage(saved, language);
+    if (filingPackage) invalidatePreparedFiling();
     setText(restored.text);
     setNeeds(restored.need ? [restored.need] : []);
     setNeed(restored.need);
@@ -2020,22 +2141,34 @@ export default function PreflightApp() {
       });
   }
 
-  function downloadPackage() {
+  async function downloadPackage() {
     if (!filingPackage || !acknowledgement || !need) return;
-    const serialized = filingModule.serializeArtifact({
-      package: filingPackage,
-      profile,
-      fee: { amountInr: 10, method: "demo_upi" },
-      acknowledgement,
-    });
-    const url = `data:application/json;charset=utf-8,${encodeURIComponent(serialized)}`;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "rti-tathya-filing-package.json";
-    link.style.display = "none";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    setBriefFeedback("");
+    try {
+      const { createFilingPackagePdf, FILING_PACKAGE_PDF_FILENAME } =
+        await import("../filing/package-pdf");
+      const blob = await createFilingPackagePdf(
+        {
+          package: filingPackage,
+          profile,
+          fee: { amountInr: 10, method: "demo_upi" },
+          acknowledgement,
+        },
+        language,
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = FILING_PACKAGE_PDF_FILENAME;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setBriefFeedback(copy.packageSaved);
+    } catch {
+      setBriefFeedback(copy.packageFailed);
+    }
   }
 
   async function saveOrShareEvidenceBrief() {
@@ -2327,6 +2460,12 @@ export default function PreflightApp() {
         need.draftingIntent ?? hasExplicitDraftingIntent(need.originalText),
     }),
   );
+  const holderNeedsClarification = Boolean(
+    need &&
+    need.informationHolderStatus !== "verified" &&
+    (need.informationHolder === "Unknown" ||
+      need.informationHolder === "To be confirmed"),
+  );
   const statusClass = useMemo(
     () => displayOutcome?.toLocaleLowerCase().replaceAll("_", "-") ?? "",
     [displayOutcome],
@@ -2346,6 +2485,11 @@ export default function PreflightApp() {
         <button className="text-button" onClick={() => setDetailsOpen(true)}>
           {copy.details} <Icon name="external" />
         </button>
+        {phase !== "start" && (
+          <button className="text-button global-restart" onClick={reset}>
+            {copy.restart}
+          </button>
+        )}
       </header>
       <div className="brand-row">
         <div className="wordmark">
@@ -2528,6 +2672,10 @@ export default function PreflightApp() {
                 label={copy.geography}
                 value={need.geography}
                 options={COMMON_GEOGRAPHIES}
+                displayValue={displayNeed?.geography ?? need.geography}
+                displayOptions={COMMON_GEOGRAPHIES.map((option) =>
+                  localizeText(option, language),
+                )}
                 customOption={copy.customOption}
                 customHelp={copy.customHelp}
                 customAccepted={copy.customAccepted}
@@ -2538,6 +2686,10 @@ export default function PreflightApp() {
                 label={copy.period}
                 value={need.period}
                 options={COMMON_PERIODS}
+                displayValue={displayNeed?.period ?? need.period}
+                displayOptions={COMMON_PERIODS.map((option) =>
+                  localizeText(option, language),
+                )}
                 customOption={copy.customOption}
                 customHelp={copy.customHelp}
                 customAccepted={copy.customAccepted}
@@ -2623,10 +2775,11 @@ export default function PreflightApp() {
                 }
                 onClick={confirmNeed}
               >
-                {prefersDraftingRoute ? copy.prepare : copy.search}
-              </button>
-              <button className="secondary-button" onClick={reset}>
-                {copy.restart}
+                {holderNeedsClarification && prefersDraftingRoute
+                  ? copy.clarifyHolder
+                  : prefersDraftingRoute
+                    ? copy.prepare
+                    : copy.search}
               </button>
             </div>
           </div>
@@ -2943,15 +3096,18 @@ export default function PreflightApp() {
               >
                 {copy.downloadTechnicalBrief}
               </button>
-              {result.outcome !== "OFFICIAL_SERVICE_ROUTE" && (
+              {holderNeedsClarification ? (
+                <button className="action-button" onClick={editConfirmedNeed}>
+                  {copy.clarifyHolder}
+                </button>
+              ) : result.outcome !== "OFFICIAL_SERVICE_ROUTE" ? (
                 <button className="action-button" onClick={openDraft}>
                   {result.outcome === "DERIVED_FINDING" ||
                   result.outcome === "SOURCE_RESOLVED"
                     ? copy.citizenOverride
                     : copy.prepare}
                 </button>
-              )}
-              {result.outcome === "OFFICIAL_SERVICE_ROUTE" && (
+              ) : (
                 <button className="secondary-button" onClick={openDraft}>
                   {copy.prepare}
                 </button>
@@ -2963,9 +3119,6 @@ export default function PreflightApp() {
                 }}
               >
                 {copy.correction}
-              </button>
-              <button className="secondary-button" onClick={reset}>
-                {copy.restart}
               </button>
             </div>
             {briefFeedback && (
@@ -3006,9 +3159,11 @@ export default function PreflightApp() {
               <div>
                 <dt>{copy.to}</dt>
                 <dd>
-                  {filingPackage?.holder.canonicalName ??
-                    displayNeed?.informationHolder ??
-                    need.informationHolder}
+                  {localizeText(
+                    filingPackage?.holder.canonicalName ??
+                      need.informationHolder,
+                    language,
+                  )}
                 </dd>
               </div>
               <div>
@@ -3023,11 +3178,12 @@ export default function PreflightApp() {
                       href={filingPackage.route.officialUrl}
                       language={language}
                     >
-                      {
+                      {localizeText(
                         filingPackage.route.authority.portalNames[
                           filingPackage.route.id
-                        ]
-                      }
+                        ],
+                        language,
+                      )}
                     </ExternalLink>
                   ) : (
                     copy.routeNotVerified
@@ -3049,9 +3205,11 @@ export default function PreflightApp() {
                           ⓘ
                         </span>{" "}
                         {copy.unverified}:{" "}
-                        {filingPackage.route.profile.unverifiedConstraints.join(
-                          "; ",
-                        )}
+                        {filingPackage.route.profile.unverifiedConstraints
+                          .map((constraint) =>
+                            localizeText(constraint, language),
+                          )
+                          .join("; ")}
                         .
                       </span>
                     )}
@@ -3089,7 +3247,7 @@ export default function PreflightApp() {
                 <p className="supporting-copy">{copy.unknownRetained}</p>
               </div>
             )}
-            <p className="supporting-copy">{copy.statutoryTimeline}</p>
+            <p className="supporting-copy">{copy.responseProcess}</p>
             {draftValidation()?.valid === false && (
               <p className="error-message" role="alert">
                 <span aria-hidden="true">!</span>
@@ -3164,9 +3322,6 @@ export default function PreflightApp() {
                 disabled={!filingPackage || draftDiverged || draftIsInvalid}
               >
                 {copy.saveDraft}
-              </button>
-              <button className="secondary-button" onClick={reset}>
-                {copy.restart}
               </button>
             </div>
           </section>
@@ -3253,23 +3408,23 @@ export default function PreflightApp() {
                 <dl className="fictional-profile">
                   <div>
                     <dt>{copy.name}</dt>
-                    <dd>{profile.fullName}</dd>
+                    <dd>{displayProfile.fullName}</dd>
                   </div>
                   <div>
                     <dt>{copy.email}</dt>
-                    <dd>{profile.email}</dd>
+                    <dd>{displayProfile.email}</dd>
                   </div>
                   <div>
                     <dt>{copy.address}</dt>
-                    <dd>{profile.address}</dd>
+                    <dd>{displayProfile.address}</dd>
                   </div>
                   <div>
                     <dt>{copy.state}</dt>
-                    <dd>{profile.state}</dd>
+                    <dd>{displayProfile.state}</dd>
                   </div>
                   <div>
                     <dt>{copy.pin}</dt>
-                    <dd>{profile.pinCode}</dd>
+                    <dd>{displayProfile.pinCode}</dd>
                   </div>
                 </dl>
                 <button
@@ -3299,18 +3454,23 @@ export default function PreflightApp() {
                 <h2>{copy.stepReview}</h2>
                 <p className="supporting-copy">{copy.reviewPrompt}</p>
                 <div className="review-summary">
-                  <strong>{filingPackage.holder.canonicalName}</strong>
-                  <p>{filingPackage.draft.text}</p>
+                  <strong>
+                    {localizeText(filingPackage.holder.canonicalName, language)}
+                  </strong>
                   <p>
-                    {copy.routeLine}:{" "}
-                    {
-                      filingPackage.route.authority.portalNames[
-                        filingPackage.route.id
-                      ]
-                    }
+                    {localizeFilingDraft(filingPackage.draft.text, language)}
                   </p>
                   <p>
-                    {copy.fictionalApplicant}: {profile.fullName} ·{" "}
+                    {copy.routeLine}:{" "}
+                    {localizeText(
+                      filingPackage.route.authority.portalNames[
+                        filingPackage.route.id
+                      ],
+                      language,
+                    )}
+                  </p>
+                  <p>
+                    {copy.fictionalApplicant}: {displayProfile.fullName} ·{" "}
                     {copy.mockFee} ₹10
                   </p>
                   <p>{copy.componentSummary}</p>
@@ -3386,11 +3546,6 @@ export default function PreflightApp() {
               </div>
             )}
           </section>
-          <div className="result-actions">
-            <button className="secondary-button" onClick={reset}>
-              {copy.restart}
-            </button>
-          </div>
         </section>
       )}
 
@@ -3420,16 +3575,19 @@ export default function PreflightApp() {
               <dl className="ack-summary">
                 <div>
                   <dt>{copy.to}</dt>
-                  <dd>{acknowledgement.holder}</dd>
+                  <dd>
+                    {displayAcknowledgement?.holder ?? acknowledgement.holder}
+                  </dd>
                 </div>
                 <div>
                   <dt>{copy.route}</dt>
                   <dd>
-                    {
+                    {localizeText(
                       filingPackage.route.authority.portalNames[
                         filingPackage.route.id
-                      ]
-                    }
+                      ],
+                      language,
+                    )}
                   </dd>
                 </div>
                 <div>
@@ -3441,16 +3599,25 @@ export default function PreflightApp() {
                 <div>
                   <dt>{copy.fictionalTime}</dt>
                   <dd>
-                    {new Date(acknowledgement.submittedAt).toLocaleDateString(
+                    {new Date(acknowledgement.submittedAt).toLocaleString(
                       language === "hi" ? "hi-IN" : "en-IN",
-                      { day: "numeric", month: "long", year: "numeric" },
+                      {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      },
                     )}
                   </dd>
                 </div>
               </dl>
               <div className="ack-draft">
                 <strong>{copy.submittedDraft}</strong>
-                <p>{acknowledgement.submittedDraft}</p>
+                <p>
+                  {displayAcknowledgement?.submittedDraft ??
+                    acknowledgement.submittedDraft}
+                </p>
               </div>
               <div className="result-actions">
                 <button className="action-button" onClick={downloadPackage}>
@@ -3460,6 +3627,15 @@ export default function PreflightApp() {
                   {copy.startAnother}
                 </button>
               </div>
+              {briefFeedback && (
+                <p
+                  className="download-feedback"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {briefFeedback}
+                </p>
+              )}
             </section>
           </section>
         )}

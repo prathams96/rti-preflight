@@ -7,6 +7,7 @@ import { createOfflinePreflightModule } from "../preflight/module";
 import { COPY } from "./PreflightApp";
 import {
   clarificationQuestion,
+  canonicalizeNeedValue,
   localizeFilingDraft,
   localizeClarification,
   localizeDisclosureEntry,
@@ -42,6 +43,45 @@ describe("Hindi journey localization", () => {
       measure: "चोरी की संपत्ति का मूल्य और बरामदगी प्रतिशत",
       geography: "सभी राज्य/केंद्र शासित प्रदेश",
     });
+  });
+
+  it("canonicalizes known Hindi need values without changing custom citizen text", () => {
+    const need = interpretWithFixture(SCENARIO_PROMPTS[2].prompt)[0];
+    const localized = localizeNeed(need, "hi");
+
+    expect(localized.measure).toBe(
+      "रखरखाव खर्च, कार्यादेश, अनुबंध और ठेकेदारों के नाम",
+    );
+    expect(canonicalizeNeedValue(localized.measure, "hi")).toBe(need.measure);
+    expect(canonicalizeNeedValue(localized.geography, "hi")).toBe(
+      need.geography,
+    );
+    expect(canonicalizeNeedValue(localized.period, "hi")).toBe(need.period);
+    expect(canonicalizeNeedValue(localized.breakdown, "hi")).toBe(
+      need.breakdown,
+    );
+    expect(canonicalizeNeedValue(localized.informationHolder, "hi")).toBe(
+      need.informationHolder,
+    );
+    expect(canonicalizeNeedValue("मेरी अपनी नगरपालिका", "hi")).toBe(
+      "मेरी अपनी नगरपालिका",
+    );
+    expect(canonicalizeNeedValue(need.measure, "en")).toBe(need.measure);
+  });
+
+  it("keeps canonical NCRB semantics stable while switching display language", async () => {
+    const need = interpretWithFixture(SCENARIO_PROMPTS[0].prompt)[0];
+    const before = structuredClone(need);
+    const hindiDisplay = localizeNeed(need, "hi");
+
+    expect(hindiDisplay.canonicalNeed).not.toBe(need.canonicalNeed);
+    expect(need).toEqual(before);
+    const result = await createOfflinePreflightModule().resolve({
+      need,
+      snapshot,
+      traceId: "canonical-language-test",
+    });
+    expect(result.outcome).toBe("DERIVED_FINDING");
   });
 
   it("localizes a representative evidence result and filing document", async () => {

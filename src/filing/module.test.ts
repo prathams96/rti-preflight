@@ -11,6 +11,7 @@ import {
   buildFilingPackageArtifact,
   serializeFilingPackageArtifact,
 } from "./index";
+import { localizeFilingDraft } from "../ui/localization";
 
 const need = {
   id: "need-railway",
@@ -208,6 +209,33 @@ describe("Filing Module public seam", () => {
         "Please provide records about municipal waste collection in Ward 5.",
       ).diverged,
     ).toBe(true);
+  });
+
+  it("does not treat the localized railway draft as a replacement need", async () => {
+    const filing = createFilingModule();
+    const prepared = await filing.prepare({
+      need,
+      holder: NORTHERN_RAILWAY_HOLDER,
+      route: NORTHERN_RAILWAY_ROUTE,
+    });
+    const hindiDraft = localizeFilingDraft(prepared.draft.text, "hi");
+
+    expect(detectDraftDivergence(need, hindiDraft).diverged).toBe(false);
+    expect(
+      detectDraftDivergence(
+        need,
+        `${hindiDraft}\nपेंशन बकाया की जानकारी भी दें`,
+      ).diverged,
+    ).toBe(true);
+    expect(
+      detectDraftDivergence(
+        need,
+        "Please provide municipal waste collection records for Ward 5.",
+      ).diverged,
+    ).toBe(true);
+    expect(detectDraftDivergence(need, prepared.draft.text).diverged).toBe(
+      false,
+    );
   });
 
   it("keeps the fictional filing profile separate and requires explicit demo steps", async () => {

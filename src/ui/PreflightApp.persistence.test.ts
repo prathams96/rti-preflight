@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InformationNeed } from "../domain/types";
 import {
   persist,
+  filingNeedSignature,
+  loadSessionFilingState,
   readPersistedState,
   readSessionFilingState,
   restoreSavedPreflightForLanguage,
@@ -43,6 +45,28 @@ describe("Preflight persistence boundaries", () => {
     } as Parameters<typeof persist>[0]);
 
     expect(localStorage.getItem("rti-preflight-state-v2")).toBeNull();
+  });
+
+  it("changes the filing reuse signature when a semantic need field changes", () => {
+    const baseline = {
+      id: "need-1",
+      canonicalNeed: "maintenance records",
+      measure: "maintenance expenditure",
+      geography: "New Delhi Railway Station",
+      period: "Financial year 2024-25",
+      breakdown: "Contractor",
+      informationHolder: "Northern Railway",
+      informationHolderStatus: "verified" as const,
+      resolutionPreference: "formal" as const,
+      unresolvedClarifications: [],
+    };
+
+    expect(
+      filingNeedSignature({ ...baseline, measure: "different records" }),
+    ).not.toBe(filingNeedSignature(baseline));
+    expect(
+      filingNeedSignature({ ...baseline, geography: "another station" }),
+    ).not.toBe(filingNeedSignature(baseline));
   });
 
   it("keeps a valid filing session when the research record is invalid", async () => {
@@ -177,6 +201,78 @@ describe("Preflight persistence boundaries", () => {
 
     expect(readSessionFilingState()).toBeUndefined();
     expect(sessionStorage.getItem("rti-preflight-filing-v2")).toBeNull();
+  });
+
+  it("reports recovery when an existing filing session is malformed", () => {
+    const sessionStorage = createStorage();
+    vi.stubGlobal("window", { localStorage: createStorage(), sessionStorage });
+    sessionStorage.setItem("rti-preflight-filing-v2", "not-json");
+
+    expect(loadSessionFilingState()).toEqual({
+      state: undefined,
+      recoveryNeeded: true,
+    });
+    expect(sessionStorage.getItem("rti-preflight-filing-v2")).toBeNull();
+  });
+
+  it("does not report recovery when no filing session was stored", () => {
+    vi.stubGlobal("window", {
+      localStorage: createStorage(),
+      sessionStorage: createStorage(),
+    });
+
+    expect(loadSessionFilingState()).toEqual({
+      state: undefined,
+      recoveryNeeded: false,
+    });
+  });
+
+  it("restores a valid filing session without reporting recovery", async () => {
+    const sessionStorage = createStorage();
+    vi.stubGlobal("window", { localStorage: createStorage(), sessionStorage });
+    const filing = createFilingModule();
+    const confirmedNeed = {
+      id: "need-railway",
+      originalText: "Please provide the confirmed railway records.",
+      canonicalNeed:
+        "maintenance expenditure for lifts and escalators and contractors at New Delhi Railway Station during FY 2024-25",
+      measure: "Maintenance expenditure and contractor records",
+      geography: "New Delhi Railway Station",
+      period: "Financial year 2024-25",
+      breakdown: "Contractor",
+      informationHolder: "Northern Railway",
+      informationHolderStatus: "verified",
+      resolutionPreference: "formal",
+      unresolvedClarifications: [],
+      scenario: "railway-filing",
+      draftingIntent: true,
+    } satisfies InformationNeed;
+    const filingPackage = await filing.prepare({
+      need: confirmedNeed,
+      holder: NORTHERN_RAILWAY_HOLDER,
+      route: NORTHERN_RAILWAY_ROUTE,
+    });
+    const state = {
+      phase: "draft" as const,
+      need: confirmedNeed,
+      draftText: filingPackage.draft.text,
+      package: filingPackage,
+      step: "otp" as const,
+      otp: "",
+      profile: filing.demoProfile,
+      reviewed: false,
+      paymentConfirmed: false,
+      language: "en" as const,
+    };
+    sessionStorage.setItem(
+      "rti-preflight-filing-v2",
+      JSON.stringify({ version: 2, state }),
+    );
+
+    expect(loadSessionFilingState()).toEqual({
+      state,
+      recoveryNeeded: false,
+    });
   });
 
   it("discards malformed nested research and filing state", () => {

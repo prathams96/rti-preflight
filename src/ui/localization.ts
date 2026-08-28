@@ -4,6 +4,7 @@ import type {
   RenderableResolution,
 } from "../domain/types";
 import type { DisclosureEntry } from "../disclosure/ledger";
+import type { FictionalFilingProfile } from "../filing/types";
 
 const HINDI_TEXT: Record<string, string> = {
   "Calculated from official figures—not directly stated by NCRB.":
@@ -134,6 +135,9 @@ const HINDI_TEXT: Record<string, string> = {
   "Filtering and calculations": "फ़िल्टरिंग और गणनाएँ",
   "Working deterministic registered-table calculation engine.":
     "कार्यशील नियतात्मक पंजीकृत-तालिका गणना इंजन।",
+  "Central Government public authority": "केंद्रीय सरकारी लोक प्राधिकरण",
+  "3000 characters maximum": "अधिकतम 3000 अक्षर",
+  bytes: "बाइट",
   "Previous RTI response": "पिछला RTI उत्तर",
   "Synthetic fixture only—not an official response.":
     "केवल सिंथेटिक फ़िक्स्चर — यह आधिकारिक उत्तर नहीं है।",
@@ -163,13 +167,20 @@ const NEED_TEXT: Record<string, string> = {
   "Value of property stolen and percentage recovered":
     "चोरी की संपत्ति का मूल्य और बरामदगी प्रतिशत",
   "All States/UTs": "सभी राज्य/केंद्र शासित प्रदेश",
+  "A selected city or municipality": "चयनित शहर या नगरपालिका",
+  "A selected district": "चयनित जिला",
+  "A selected State/UT": "चयनित राज्य/केंद्र शासित प्रदेश",
+  "New Delhi Railway Station": "नई दिल्ली रेलवे स्टेशन",
   "2021 versus 2023": "2021 बनाम 2023",
   "As reported by each State/UT":
     "हर राज्य/केंद्र शासित प्रदेश की रिपोर्ट के अनुसार",
+  "As covered by the publications": "प्रकाशनों में शामिल के अनुसार",
   "Records of lift and escalator maintenance expenditure and contractors at New Delhi Railway Station.":
     "नई दिल्ली रेलवे स्टेशन पर लिफ्ट और एस्केलेटर के रखरखाव खर्च तथा ठेकेदारों के रिकॉर्ड।",
   "Maintenance expenditure, work orders, contracts, and contractor names":
     "रखरखाव खर्च, कार्यादेश, अनुबंध और ठेकेदारों के नाम",
+  Contractor: "ठेकेदार",
+  "State / UT": "राज्य / केंद्र शासित प्रदेश",
   "Financial year 2024–25": "वित्तीय वर्ष 2024–25",
   "The status of the citizen's own EPF claim.":
     "नागरिक के अपने EPF दावे की स्थिति।",
@@ -183,11 +194,20 @@ const NEED_TEXT: Record<string, string> = {
     "ऐसा EPF दावा रिकॉर्ड जिसका विषय पक्का करना है।",
   "Status of an EPF claim": "किसी EPF दावे की स्थिति",
   "EPFO account subject to confirmation": "पुष्टि किया जाने वाला EPFO खाता",
+  Delhi: "दिल्ली",
   "Current claim": "वर्तमान दावा",
+  Claim: "दावा",
   "A previously issued response relevant to a Central information need.":
     "केंद्रीय सूचना-ज़रूरत से संबंधित पहले जारी किया गया उत्तर।",
   "Relevant earlier RTI response": "संबंधित पिछला RTI उत्तर",
   "A selected Central public authority": "चुना गया केंद्रीय लोक प्राधिकरण",
+  "Central public authority": "केंद्रीय लोक प्राधिकरण",
+  "Public authority": "लोक प्राधिकरण",
+  "Air-quality metric": "वायु-गुणवत्ता माप",
+  "Applicable publication periods": "लागू प्रकाशन अवधियाँ",
+  Publication: "प्रकाशन",
+  "The public record or measure requested":
+    "माँगा गया सार्वजनिक रिकॉर्ड या माप",
   "Not specified": "निर्दिष्ट नहीं",
   "Not yet specified": "अभी निर्दिष्ट नहीं",
   "To be confirmed": "पुष्टि की जानी है",
@@ -251,6 +271,26 @@ function translateText(text: string, language: Language): string {
 
 export function localizeText(text: string, language: Language): string {
   return translateText(text, language);
+}
+
+const REVERSE_NEED_TEXT = Object.fromEntries(
+  Object.entries(NEED_TEXT).map(([english, hindi]) => [hindi, english]),
+);
+
+export function canonicalizeNeedValue(
+  value: string,
+  language: Language,
+): string {
+  if (language === "en") return value;
+  return REVERSE_NEED_TEXT[value] ?? value;
+}
+
+export function localizeFilingProfile(
+  profile: FictionalFilingProfile,
+  language: Language,
+): FictionalFilingProfile {
+  if (language === "en") return profile;
+  return { ...profile, state: translateText(profile.state, language) };
 }
 
 export function localizeClarification(
