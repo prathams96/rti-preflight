@@ -414,10 +414,11 @@ function resolveNeed(
     );
   return {
     outcome: classifyOutcome({ need, execution: "OUT_OF_SNAPSHOT" }),
-    headline: "This request is outside the prototype Evidence Snapshot.",
+    headline:
+      "We couldn’t verify this from the sources available in this prototype.",
     meaning:
-      "The prototype cannot claim that the information is unavailable or unpublished. You can review the scope, edit the need, or prepare a Filing Draft.",
-    evidenceStatus: "Outside the prototype Evidence Snapshot",
+      "This does not mean the information is unavailable or unpublished. We cannot claim an answer because the sources available in this prototype do not cover this request.",
+    evidenceStatus: "Not verified from available sources",
     evidence: [],
     rows: [],
     gaps: [
@@ -426,8 +427,8 @@ function resolveNeed(
     searchScope:
       "The prototype checked its Capability Manifest and found no registered source for this need.",
     recommendedAction: grievance
-      ? "Prepare a records-focused Filing Draft asking for orders, notes, reports, or correspondence rather than an explanation of why."
-      : "Review Search Scope, edit the Information Need, or prepare a Filing Draft.",
+      ? "Prepare a records-focused RTI Filing Draft asking for orders, notes, reports, or correspondence rather than an explanation of why."
+      : "Review the checked scope, edit the Information Need, or prepare an RTI Filing Draft.",
     coverageManifest: {
       capabilityManifestHash: source.capabilityManifest.hash,
       checkedAuthority: need.informationHolder,

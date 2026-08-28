@@ -35,6 +35,11 @@ import { EPFO_CLAIM_STATUS_ROUTE } from "../service/epfo-route";
 import { serializeEvidenceBrief } from "../evidence/brief";
 import { createTraceRecorder, generateTraceId } from "../observability";
 import { ASK_SCREEN_COPY } from "./start-screen-copy";
+import {
+  RESULT_STAGE_COPY,
+  resultOutcomeAfterCitationReview,
+  type CitationReviewState,
+} from "./result-stage";
 
 type Phase =
   | "start"
@@ -177,7 +182,8 @@ const COPY = {
     search: "Search published sources",
     edit: "Edit",
     restart: "Start over",
-    result: "Result",
+    result: RESULT_STAGE_COPY.en.resultStage,
+    researchNotice: RESULT_STAGE_COPY.en.researchNotice,
     searching: "Checking published government records",
     searchingDetail: "No government system is being accessed.",
     back: "Back to confirmed need",
@@ -185,7 +191,7 @@ const COPY = {
     multipleStage: "Ask · Multiple needs",
     confirmStage: "Step 2 of 3 · Check",
     searchStage: "Step 3 of 3 · Searching",
-    resultStage: "Result",
+    resultStage: RESULT_STAGE_COPY.en.resultStage,
     selectTitle: "Choose one Information Need to continue",
     selectIntro:
       "We kept your original wording and separated the needs so each one can be checked clearly.",
@@ -217,10 +223,10 @@ const COPY = {
     stolenColumn: "Stolen 2021 → 2023",
     changeColumn: "Change",
     recoveryColumn: "Recovery 2021 → 2023",
-    inspectEvidence: "Inspect row evidence",
+    inspectEvidence: "Inspect evidence details",
     inspectRow: (geography: string) =>
-      `Inspect ${geography} operands and source cells`,
-    viewPlan: "View the registered calculation plan",
+      `Inspect ${geography} values and source cells`,
+    viewPlan: "Inspect calculation details",
     saveBrief: "Save/share Evidence Brief",
     briefSaved: "Evidence Brief downloaded.",
     briefShared: "Evidence Brief shared.",
@@ -232,21 +238,23 @@ const COPY = {
     applicablePeriod: "Applicable period",
     locatedValues: "Located values",
     openSource: "Open official source",
-    prepare: "Prepare an RTI",
-    prepareAnyway: "Prepare an RTI anyway",
-    citizenOverride: "Still need an official response? Prepare an RTI",
+    prepare: "Prepare an RTI Draft",
+    prepareAnyway: "Prepare an RTI Draft anyway",
+    citizenOverride: "Still need an official response? Prepare an RTI Draft",
     openRoute: "Open official service route",
-    footer: "Research is anonymous until you choose to save or file.",
+    footer:
+      "Your research is anonymous. Nothing is filed unless you enter the separate filing demo.",
     language: "हिन्दी",
-    draftStage: "Your RTI request",
-    draftTitle: "Your RTI request",
+    draftStage: RESULT_STAGE_COPY.en.draftStage,
+    draftTitle: RESULT_STAGE_COPY.en.draftTitle,
+    draftIntro: RESULT_STAGE_COPY.en.draftIntro,
     to: "Information Holder",
     request: "Request",
     route: "Official Filing Route",
     verified: "Last checked",
     characters: "characters",
-    continueFiling: "Continue to filing",
-    saveDraft: "Save draft",
+    continueFiling: "Continue to filing demo",
+    saveDraft: "Save this draft",
     savedDraft: "Saved Filing Draft",
     returnResult: "Return to result",
     guidedUnavailable:
@@ -257,8 +265,9 @@ const COPY = {
     keepWritten: "Keep as written",
     separateNeed: "Separate into another Saved Preflight",
     undoChanges: "Undo changes",
-    fileStage: "Filing (demo)",
-    fileTitle: "File your RTI (demo)",
+    fileStage: RESULT_STAGE_COPY.en.fileStage,
+    fileTitle: RESULT_STAGE_COPY.en.fileTitle,
+    fileIntro: RESULT_STAGE_COPY.en.fileIntro,
     stepOtp: "1. Verify",
     stepIdentity: "2. Your details",
     stepReview: "3. Review",
@@ -271,18 +280,25 @@ const COPY = {
     confirmPackage: "I confirm this complete Filing Package",
     paymentPrompt: "Demo Payment: ₹10 · Demo UPI",
     noRealPayment: "No real payment will be made.",
-    confirmDemo: "Confirm demo submission",
+    confirmDemo: "Complete simulated filing",
     acknowledgementStage: "Done",
-    acknowledgementTitle: "That's how filing works",
+    acknowledgementTitle: RESULT_STAGE_COPY.en.acknowledgementTitle,
     fictionalRegistration: "Fictional registration",
     noGovernment:
       "No request, payment, or personal information was sent to a government system.",
-    downloadPackage: "Download Filing Package",
+    downloadPackage: "Download demo Filing Package",
     startAnother: "Ask something else",
     correction: "This isn’t what I asked",
-    challenge: "This source doesn’t support the claim",
+    challenge: "Report a citation problem",
     challengePending:
-      "This citation is challenged. The result is downgraded pending revalidation.",
+      "You reported a citation problem. The result stays visible below, but it is downgraded to partially resolved until this source is revalidated. You can still prepare an RTI Draft.",
+    challengeDialogTitle: "Report a citation problem?",
+    challengeDialogBody: (sourceTitle: string) =>
+      `You are reporting that “${sourceTitle}” may not support this result.`,
+    challengeDialogConsequence:
+      "After you confirm, the original result and evidence will stay visible, but its status will be downgraded pending revalidation.",
+    confirmChallenge: "Report problem and downgrade",
+    cancel: "Cancel",
     draftLabel: "Filing Draft",
     routeNotVerified: "Route information not verified in this prototype",
     routeVerification:
@@ -345,7 +361,8 @@ const COPY = {
     search: "प्रकाशित स्रोत खोजें",
     edit: "बदलें",
     restart: "फिर से शुरू करें",
-    result: "नतीजा",
+    result: RESULT_STAGE_COPY.hi.resultStage,
+    researchNotice: RESULT_STAGE_COPY.hi.researchNotice,
     searching: "प्रकाशित सरकारी रिकॉर्ड देख रहे हैं",
     searchingDetail: "किसी सरकारी सिस्टम को नहीं देखा जा रहा है।",
     back: "पुष्टि की गई ज़रूरत पर लौटें",
@@ -353,7 +370,7 @@ const COPY = {
     multipleStage: "पूछें · कई ज़रूरतें",
     confirmStage: "चरण 2/3 · जाँचें",
     searchStage: "चरण 3/3 · खोज रहे हैं",
-    resultStage: "नतीजा",
+    resultStage: RESULT_STAGE_COPY.hi.resultStage,
     selectTitle: "जारी रखने के लिए एक सूचना-ज़रूरत चुनें",
     selectIntro:
       "हमने आपके मूल शब्द रखे हैं और ज़रूरतों को अलग किया है ताकि हर ज़रूरत को स्पष्ट रूप से जाँचा जा सके।",
@@ -385,10 +402,9 @@ const COPY = {
     stolenColumn: "चोरी 2021 → 2023",
     changeColumn: "बदलाव",
     recoveryColumn: "बरामदगी 2021 → 2023",
-    inspectEvidence: "पंक्ति के प्रमाण देखें",
-    inspectRow: (geography: string) =>
-      `${geography} के operands और स्रोत सेल देखें`,
-    viewPlan: "पंजीकृत गणना योजना देखें",
+    inspectEvidence: "प्रमाण का विवरण देखें",
+    inspectRow: (geography: string) => `${geography} के मान और स्रोत सेल देखें`,
+    viewPlan: "गणना का विवरण देखें",
     saveBrief: "Evidence Brief सहेजें/साझा करें",
     briefSaved: "Evidence Brief डाउनलोड हो गया।",
     briefShared: "Evidence Brief साझा हो गया।",
@@ -399,21 +415,23 @@ const COPY = {
     applicablePeriod: "लागू अवधि",
     locatedValues: "स्थित मान",
     openSource: "आधिकारिक स्रोत खोलें",
-    prepare: "RTI तैयार करें",
-    prepareAnyway: "फिर भी RTI तैयार करें",
-    citizenOverride: "फिर भी आधिकारिक उत्तर चाहिए? RTI तैयार करें",
+    prepare: "RTI Draft तैयार करें",
+    prepareAnyway: "फिर भी RTI Draft तैयार करें",
+    citizenOverride: "फिर भी आधिकारिक उत्तर चाहिए? RTI Draft तैयार करें",
     openRoute: "आधिकारिक सेवा मार्ग खोलें",
-    footer: "जब तक आप सहेजना या दाखिल करना न चुनें, शोध गुमनाम है।",
+    footer:
+      "आपका शोध गुमनाम है। अलग फाइलिंग डेमो में जाने तक कुछ दाखिल नहीं होता।",
     language: "English",
-    draftStage: "आपका RTI अनुरोध",
-    draftTitle: "आपका RTI अनुरोध",
+    draftStage: RESULT_STAGE_COPY.hi.draftStage,
+    draftTitle: RESULT_STAGE_COPY.hi.draftTitle,
+    draftIntro: RESULT_STAGE_COPY.hi.draftIntro,
     to: "सूचना-धारक",
     request: "अनुरोध",
     route: "आधिकारिक Filing Route",
     verified: "अंतिम जाँच",
     characters: "अक्षर",
-    continueFiling: "फाइलिंग पर जाएँ",
-    saveDraft: "ड्राफ्ट सहेजें",
+    continueFiling: "फाइलिंग डेमो पर जाएँ",
+    saveDraft: "यह ड्राफ्ट सहेजें",
     savedDraft: "सहेजा गया Filing Draft",
     returnResult: "नतीजे पर लौटें",
     guidedUnavailable:
@@ -424,8 +442,9 @@ const COPY = {
     keepWritten: "जैसा लिखा है वैसा रखें",
     separateNeed: "दूसरे Saved Preflight में अलग करें",
     undoChanges: "बदलाव वापस लें",
-    fileStage: "फाइलिंग (डेमो)",
-    fileTitle: "अपनी RTI दाखिल करें (डेमो)",
+    fileStage: RESULT_STAGE_COPY.hi.fileStage,
+    fileTitle: RESULT_STAGE_COPY.hi.fileTitle,
+    fileIntro: RESULT_STAGE_COPY.hi.fileIntro,
     stepOtp: "1. सत्यापन",
     stepIdentity: "2. आपका विवरण",
     stepReview: "3. समीक्षा",
@@ -438,18 +457,25 @@ const COPY = {
     confirmPackage: "मैं इस पूरे Filing Package की पुष्टि करता/करती हूँ",
     paymentPrompt: "Demo Payment: ₹10 · Demo UPI",
     noRealPayment: "कोई वास्तविक payment नहीं होगा।",
-    confirmDemo: "Demo submission की पुष्टि करें",
+    confirmDemo: "Simulated filing पूरी करें",
     acknowledgementStage: "पूरा हुआ",
-    acknowledgementTitle: "फाइलिंग ऐसे होती है",
+    acknowledgementTitle: RESULT_STAGE_COPY.hi.acknowledgementTitle,
     fictionalRegistration: "काल्पनिक पंजीकरण",
     noGovernment:
       "किसी सरकारी सिस्टम को अनुरोध, payment या व्यक्तिगत जानकारी नहीं भेजी गई।",
-    downloadPackage: "Filing Package डाउनलोड करें",
+    downloadPackage: "Demo Filing Package डाउनलोड करें",
     startAnother: "कुछ और पूछें",
     correction: "यह वह नहीं है जो मैंने पूछा था",
-    challenge: "यह स्रोत इस दावे का समर्थन नहीं करता",
+    challenge: "Citation की समस्या रिपोर्ट करें",
     challengePending:
-      "इस citation को चुनौती दी गई है। पुनः सत्यापन तक नतीजे को downgrade किया गया है।",
+      "आपने citation की समस्या रिपोर्ट की है। नीचे मूल नतीजा दिखता रहेगा, लेकिन इस स्रोत के दोबारा सत्यापन तक इसकी स्थिति आंशिक रूप से हल की गई होगी। आप फिर भी RTI Draft तैयार कर सकते हैं।",
+    challengeDialogTitle: "Citation की समस्या रिपोर्ट करें?",
+    challengeDialogBody: (sourceTitle: string) =>
+      `आप रिपोर्ट कर रहे हैं कि “${sourceTitle}” इस नतीजे का समर्थन नहीं कर सकता।`,
+    challengeDialogConsequence:
+      "पुष्टि करने के बाद मूल नतीजा और प्रमाण दिखते रहेंगे, लेकिन दोबारा सत्यापन तक इसकी स्थिति downgrade होगी।",
+    confirmChallenge: "समस्या रिपोर्ट करके downgrade करें",
+    cancel: "रद्द करें",
     draftLabel: "Filing Draft",
     routeNotVerified: "इस प्रोटोटाइप में route जानकारी सत्यापित नहीं है",
     routeVerification:
@@ -505,7 +531,7 @@ const outcomeLabel: Record<string, string> = {
   DERIVED_FINDING: "Calculated from official figures",
   SOURCE_RESOLVED: "Source-Resolved",
   NO_RELIABLE_FINDING: "No answer found in the records we checked",
-  OUTSIDE_SNAPSHOT_COVERAGE: "Outside what we've checked",
+  OUTSIDE_SNAPSHOT_COVERAGE: "Not verified from available sources",
   OFFICIAL_SERVICE_ROUTE: "Official Service Route",
   PARTIALLY_RESOLVED: "Partially Resolved",
   EVIDENCE_CONFLICT: "Evidence Conflict",
@@ -515,7 +541,7 @@ const outcomeLabelHi: Record<string, string> = {
   DERIVED_FINDING: "आधिकारिक आँकड़ों से गणना की गई",
   SOURCE_RESOLVED: "स्रोत से हल",
   NO_RELIABLE_FINDING: "जिन रिकॉर्ड को हमने देखा उनमें उत्तर नहीं मिला",
-  OUTSIDE_SNAPSHOT_COVERAGE: "हमने जो देखा उससे बाहर",
+  OUTSIDE_SNAPSHOT_COVERAGE: "उपलब्ध स्रोतों से पुष्टि नहीं हुई",
   OFFICIAL_SERVICE_ROUTE: "आधिकारिक सेवा मार्ग",
   PARTIALLY_RESOLVED: "आंशिक रूप से हल",
   EVIDENCE_CONFLICT: "प्रमाण में विरोध",
@@ -780,6 +806,105 @@ function Details({
   );
 }
 
+function CitationChallengeDialog({
+  sourceTitle,
+  onCancel,
+  onConfirm,
+  copy,
+}: {
+  sourceTitle: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  copy: {
+    challengeDialogTitle: string;
+    challengeDialogBody: (sourceTitle: string) => string;
+    challengeDialogConsequence: string;
+    cancel: string;
+    confirmChallenge: string;
+  };
+}) {
+  const dialogRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusDialog = window.requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>("button")?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(focusDialog);
+      previouslyFocused?.focus();
+    };
+  }, []);
+
+  const keepFocusInDialog = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(
+      dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    );
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (
+      event.shiftKey
+        ? document.activeElement === first
+        : document.activeElement === last
+    ) {
+      event.preventDefault();
+      (event.shiftKey ? last : first)?.focus();
+    }
+  };
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onClick={onCancel}>
+      <section
+        className="dialog supporting-plane"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="challenge-title"
+        ref={dialogRef}
+        onKeyDown={keepFocusInDialog}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="dialog-heading">
+          <div>
+            <p className="eyebrow">{copy.challengeDialogTitle}</p>
+            <h2 id="challenge-title">{sourceTitle}</h2>
+          </div>
+          <button
+            className="icon-button"
+            onClick={onCancel}
+            aria-label={copy.cancel}
+          >
+            ×
+          </button>
+        </div>
+        <p>{copy.challengeDialogBody(sourceTitle)}</p>
+        <p className="challenge-consequence">
+          {copy.challengeDialogConsequence}
+        </p>
+        <div className="button-row">
+          <button className="secondary-button" onClick={onCancel}>
+            {copy.cancel}
+          </button>
+          <button className="action-button" onClick={onConfirm}>
+            {copy.confirmChallenge}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function PreflightApp() {
   const filingModule = useMemo(() => createFilingModule(), []);
   const traceRecorder = useMemo(() => createTraceRecorder(), []);
@@ -795,6 +920,7 @@ export default function PreflightApp() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [challengedEvidenceId, setChallengedEvidenceId] = useState("");
   const [challengedNeedSignature, setChallengedNeedSignature] = useState("");
+  const [challengeCandidateId, setChallengeCandidateId] = useState("");
   const [filingPackage, setFilingPackage] = useState<
     ValidatedFilingPackage | undefined
   >();
@@ -955,6 +1081,7 @@ export default function PreflightApp() {
     setResult(resumeState.result);
     setChallengedEvidenceId(resumeState.challengedEvidenceId ?? "");
     setChallengedNeedSignature(resumeState.challengedNeedSignature ?? "");
+    setChallengeCandidateId("");
     setResumeState(undefined);
   }
 
@@ -1109,8 +1236,14 @@ export default function PreflightApp() {
 
   function challengeEvidence(evidenceId: string) {
     if (!need) return;
-    setChallengedEvidenceId(evidenceId);
+    setChallengeCandidateId(evidenceId);
+  }
+
+  function confirmCitationChallenge() {
+    if (!need || !challengeCandidateId) return;
+    setChallengedEvidenceId(challengeCandidateId);
     setChallengedNeedSignature(needSignature(need));
+    setChallengeCandidateId("");
     traceRecorder.record(
       "evidence.rejected",
       result?.traceId ?? journeyTraceId,
@@ -1331,6 +1464,7 @@ export default function PreflightApp() {
       setResult(payload);
       setChallengedEvidenceId("");
       setChallengedNeedSignature("");
+      setChallengeCandidateId("");
       setPhase("result");
     } catch (caught) {
       traceRecorder.record("resolution.completed", journeyTraceId, {
@@ -1355,6 +1489,7 @@ export default function PreflightApp() {
     setResult(undefined);
     setChallengedEvidenceId("");
     setChallengedNeedSignature("");
+    setChallengeCandidateId("");
     setFilingPackage(undefined);
     setDraftText("");
     setDraftOriginalText("");
@@ -1378,9 +1513,18 @@ export default function PreflightApp() {
     }
     setResumeState(undefined);
   }
-  const displayOutcome = challengedEvidenceId
-    ? "PARTIALLY_RESOLVED"
-    : result?.outcome;
+  const citationReview: CitationReviewState = challengeCandidateId
+    ? { status: "awaiting-confirmation", evidenceId: challengeCandidateId }
+    : challengedEvidenceId
+      ? { status: "downgraded", evidenceId: challengedEvidenceId }
+      : { status: "idle" };
+  const displayOutcome = resultOutcomeAfterCitationReview(
+    result?.outcome,
+    citationReview,
+  );
+  const challengedSourceTitle = result?.evidence.find(
+    (item) => item.id === challengeCandidateId,
+  )?.sourceTitle;
   const draftDiverged = Boolean(
     need && detectDraftDivergence(need, draftText).diverged,
   );
@@ -1708,9 +1852,24 @@ export default function PreflightApp() {
               </span>
               <span>{resultLabel}</span>
             </div>
-            <h2>{result.headline}</h2>
-            <p className="result-meaning">{result.meaning}</p>
-            <p className="evidence-status">{result.evidenceStatus}</p>
+            <p className="research-notice" role="status">
+              <Icon name="info" /> {copy.researchNotice}
+            </p>
+            <h2>
+              {result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
+                ? RESULT_STAGE_COPY[language].outsideHeadline
+                : result.headline}
+            </h2>
+            <p className="result-meaning">
+              {result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
+                ? RESULT_STAGE_COPY[language].outsideMeaning
+                : result.meaning}
+            </p>
+            <p className="evidence-status">
+              {result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
+                ? RESULT_STAGE_COPY[language].outsideEvidenceStatus
+                : result.evidenceStatus}
+            </p>
             {challengedEvidenceId && (
               <p className="error-message" role="status">
                 <span aria-hidden="true">!</span>
@@ -1745,17 +1904,12 @@ export default function PreflightApp() {
                         <dt>{copy.applicablePeriod}</dt>
                         <dd>{item.applicablePeriod}</dd>
                       </div>
-                      <div>
-                        <dt>{copy.locatedValues}</dt>
-                        <dd>
-                          {item.grounding.length > 0
-                            ? `${item.grounding.length} immutable references with content hashes`
-                            : "Route metadata; no personal record was retrieved"}
-                        </dd>
-                      </div>
                     </dl>
                     {item.url ? (
-                      <ExternalLink href={item.url}>
+                      <ExternalLink
+                        className="action-button action-link official-source-link"
+                        href={item.url}
+                      >
                         {item.sourceType === "official_service_route"
                           ? copy.openRoute
                           : copy.openSource}
@@ -1795,13 +1949,25 @@ export default function PreflightApp() {
                           {copy.challenge}
                         </button>
                       )}
-                    {item.alternateUrl && (
-                      <ExternalLink
-                        className="source-link-secondary"
-                        href={item.alternateUrl}
-                      >
-                        {copy.pinnedCsv}
-                      </ExternalLink>
+                    {(item.alternateUrl || item.grounding.length > 0) && (
+                      <details className="evidence-inspection">
+                        <summary>{copy.inspectEvidence}</summary>
+                        <dl>
+                          <div>
+                            <dt>{copy.locatedValues}</dt>
+                            <dd>
+                              {item.grounding.length > 0
+                                ? `${item.grounding.length} immutable references with content hashes`
+                                : "Route metadata; no personal record was retrieved"}
+                            </dd>
+                          </div>
+                        </dl>
+                        {item.alternateUrl && (
+                          <ExternalLink href={item.alternateUrl}>
+                            {copy.pinnedCsv}
+                          </ExternalLink>
+                        )}
+                      </details>
                     )}
                   </article>
                 ))}
@@ -1910,14 +2076,21 @@ export default function PreflightApp() {
             {result.gaps.length > 0 && (
               <div className="gap-block">
                 <strong>{copy.unresolved}</strong>
-                {result.gaps.map((gap) => (
+                {(result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
+                  ? [RESULT_STAGE_COPY[language].outsideGap]
+                  : result.gaps
+                ).map((gap) => (
                   <p key={gap}>{gap}</p>
                 ))}
               </div>
             )}
             <details className="scope" open={result.gaps.length > 0}>
               <summary>{copy.scope}</summary>
-              <p>{result.searchScope}</p>
+              <p>
+                {result.outcome === "OUTSIDE_SNAPSHOT_COVERAGE"
+                  ? RESULT_STAGE_COPY[language].outsideScope
+                  : result.searchScope}
+              </p>
             </details>
             {need &&
               need.scenario === "ncrb-property" &&
@@ -2003,6 +2176,7 @@ export default function PreflightApp() {
               {copy.returnResult}
             </button>
           </div>
+          <p className="stage-boundary">{copy.draftIntro}</p>
           <section
             className="active-plane draft-plane"
             aria-label={copy.draftAria}
@@ -2169,6 +2343,7 @@ export default function PreflightApp() {
               {copy.editDraft}
             </button>
           </div>
+          <p className="stage-boundary">{copy.fileIntro}</p>
           <div className="stepper" aria-label={copy.stepperAria}>
             {["otp", "identity", "review", "payment"].map((step, index) => (
               <span
@@ -2437,6 +2612,14 @@ export default function PreflightApp() {
       </footer>
       {detailsOpen && (
         <Details copy={copy} onClose={() => setDetailsOpen(false)} />
+      )}
+      {challengeCandidateId && challengedSourceTitle && (
+        <CitationChallengeDialog
+          sourceTitle={challengedSourceTitle}
+          copy={copy}
+          onCancel={() => setChallengeCandidateId("")}
+          onConfirm={confirmCitationChallenge}
+        />
       )}
     </main>
   );

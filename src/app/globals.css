@@ -563,6 +563,28 @@ textarea::placeholder {
   color: var(--evidence-teal);
   line-height: 1.6;
 }
+.research-notice,
+.stage-boundary {
+  color: var(--evidence-teal);
+  line-height: 1.5;
+}
+.research-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1rem 0 0;
+  font-weight: 750;
+}
+.research-notice .ui-icon {
+  flex: 0 0 auto;
+}
+.stage-boundary {
+  margin: 0 0 1.1rem;
+  border-left: 5px solid var(--action-amber);
+  background: var(--white);
+  padding: 0.75rem 0.9rem;
+  font-weight: 650;
+}
 .evidence-status {
   font-weight: 800;
 }
@@ -631,6 +653,28 @@ textarea::placeholder {
 .evidence-card a {
   color: var(--inspection-teal);
   font-weight: 750;
+}
+.official-source-link {
+  margin: 0.25rem 0 0.8rem;
+}
+.evidence-inspection {
+  margin-top: 0.9rem;
+  border-top: 1px solid var(--evidence-teal);
+  padding-top: 0.7rem;
+}
+.evidence-inspection summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+.evidence-inspection dl {
+  margin-bottom: 0.65rem;
+}
+.challenge-consequence {
+  border-left: 5px solid var(--partial-slate);
+  background: var(--table-mist);
+  padding: 0.75rem 0.9rem;
+  color: var(--evidence-teal);
+  line-height: 1.5;
 }
 .source-link-secondary {
   display: inline-block;

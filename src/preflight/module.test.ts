@@ -70,6 +70,10 @@ describe("PreflightModule public seam", () => {
     expect(outside.coverageManifest?.capabilityManifestHash).toBe(
       snapshot.capabilityManifest.hash,
     );
+    expect(outside.headline).toBe(
+      "We couldn’t verify this from the sources available in this prototype.",
+    );
+    expect(outside.evidenceStatus).toBe("Not verified from available sources");
     expect(outside.meaning).toContain("cannot claim");
   });
 
