@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Outcome } from "../domain/types";
 import {
   RESULT_STAGE_COPY,
+  resultForCitationReview,
   resultOutcomeAfterCitationReview,
   type CitationReviewState,
 } from "./result-stage";
@@ -30,6 +31,33 @@ describe("result-stage semantics", () => {
     expect(
       resultOutcomeAfterCitationReview("SOURCE_RESOLVED" as Outcome, review),
     ).toBe("PARTIALLY_RESOLVED");
+  });
+
+  it("makes exported results agree with a confirmed citation downgrade", () => {
+    const result = {
+      outcome: "DERIVED_FINDING" as const,
+      headline: "The original finding remains visible.",
+      meaning: "The original meaning remains visible.",
+      evidenceStatus: "Derived from official figures.",
+      evidence: [],
+      rows: [],
+      gaps: [],
+      searchScope: "Checked the registered snapshot.",
+      recommendedAction: "Review the evidence.",
+      traceId: "trace-result",
+    };
+
+    const exported = resultForCitationReview(result, {
+      status: "downgraded",
+      evidenceId: "ncrb-table-20a",
+    });
+
+    expect(exported.outcome).toBe("PARTIALLY_RESOLVED");
+    expect(exported.headline).toBe(result.headline);
+    expect(exported.gaps).toContainEqual(
+      expect.stringContaining("citation problem"),
+    );
+    expect(exported.evidenceStatus).toContain("revalidation");
   });
 
   it("keeps the research, draft, and filing-demo boundaries explicit in both languages", () => {

@@ -52,6 +52,18 @@ describe("Hindi journey localization", () => {
     expect(hindiResult.evidence[0].extract).toContain("आधिकारिक तालिका");
     expect(hindiResult.calculation?.filters[0]).toContain("चोरी की संपत्ति");
 
+    const challengedResult = localizeResolution(
+      {
+        ...result,
+        evidenceStatus: `${result.evidenceStatus} This result was downgraded to partially resolved pending source revalidation after a citation problem report.`,
+      },
+      "hi",
+    );
+    expect(challengedResult.evidenceStatus).toContain("उद्धरण की समस्या");
+    expect(challengedResult.evidenceStatus).not.toContain(
+      "This result was downgraded",
+    );
+
     const prepared = await createFilingModule().prepare({
       need: interpretWithFixture(SCENARIO_PROMPTS[2].prompt)[0],
       holder: NORTHERN_RAILWAY_HOLDER,

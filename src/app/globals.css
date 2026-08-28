@@ -611,6 +611,25 @@ select:focus {
   list-style: none;
 }
 
+.disclosure-affordance {
+  display: inline-grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: 0 0 auto;
+  place-items: center;
+  margin-left: 0.65rem;
+  border: 1px solid var(--ink-muted);
+  border-radius: 999px;
+  color: var(--ink-muted);
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.examples[open] .disclosure-affordance {
+  transform: rotate(45deg);
+}
+
 .examples summary::-webkit-details-marker {
   display: none;
 }
@@ -1553,6 +1572,12 @@ footer {
 
   .examples summary {
     font-size: 1.05rem;
+  }
+
+  .disclosure-affordance {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-left: 0.5rem;
   }
 
   .examples summary::after {

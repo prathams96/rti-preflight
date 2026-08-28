@@ -1,3 +1,6 @@
+import "regenerator-runtime/runtime.js";
+import { PDFDocument, PDFString, rgb } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import type {
   DerivedRow,
   EvidenceItem,
@@ -8,6 +11,7 @@ import {
   type EvidenceBrief,
   type EvidenceBriefInput,
 } from "./brief";
+import type { Language } from "../domain/types";
 
 export const EVIDENCE_BRIEF_PDF_MIME = "application/pdf" as const;
 export const EVIDENCE_BRIEF_PDF_FILENAME = "rti-tathya-evidence-brief";
@@ -18,6 +22,8 @@ const MARGIN = 42;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 const FOOTER_Y = 24;
 const CONTENT_BOTTOM = 48;
+const REGULAR_FONT_URL = "/fonts/noto-sans-combined-400.ttf";
+const BOLD_FONT_URL = "/fonts/noto-sans-combined-700.ttf";
 
 type PdfLink = {
   x: number;
@@ -26,7 +32,35 @@ type PdfLink = {
   height: number;
   url: string;
 };
-type PdfPage = { commands: string[]; links: PdfLink[] };
+type PdfColor = readonly [number, number, number];
+type PdfDrawCommand =
+  | {
+      kind: "text";
+      value: string;
+      x: number;
+      y: number;
+      size: number;
+      font: FontName;
+      color: PdfColor;
+    }
+  | {
+      kind: "rect";
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      color: PdfColor;
+    }
+  | {
+      kind: "line";
+      x: number;
+      y: number;
+      x2: number;
+      y2: number;
+      color: PdfColor;
+      width: number;
+    };
+type PdfPage = { commands: PdfDrawCommand[]; links: PdfLink[] };
 
 const COLORS = {
   ink: [0.075, 0.173, 0.2],
@@ -40,9 +74,13 @@ const COLORS = {
 
 type FontName = "F1" | "F2";
 
+type PdfFonts = {
+  regular: import("pdf-lib").PDFFont;
+  bold: import("pdf-lib").PDFFont;
+};
+
 function pdfSafeText(value: string): string {
   return value
-    .normalize("NFKD")
     .replaceAll("₹", "INR ")
     .replaceAll("−", "-")
     .replaceAll("–", "-")
@@ -51,20 +89,7 @@ function pdfSafeText(value: string): string {
     .replaceAll("‘", "'")
     .replaceAll("“", '"')
     .replaceAll("”", '"')
-    .replaceAll("…", "...")
-    .replace(/[^\x20-\x7e]/g, "?")
-    .replace(/[\r\n]+/g, " ");
-}
-
-function escapePdfString(value: string): string {
-  return pdfSafeText(value)
-    .replaceAll("\\", "\\\\")
-    .replaceAll("(", "\\(")
-    .replaceAll(")", "\\)");
-}
-
-function colorCommand(color: readonly [number, number, number]): string {
-  return `${color[0]} ${color[1]} ${color[2]} rg`;
+    .replaceAll("…", "...");
 }
 
 function approximateTextWidth(value: string, size: number): number {
@@ -93,40 +118,226 @@ function wrapText(value: string, width: number, size: number): string[] {
   return lines.length > 0 ? lines : [""];
 }
 
-function outcomeLabel(outcome: EvidenceBrief["result"]["outcome"]): string {
-  return {
-    DERIVED_FINDING: "Calculated finding",
-    SOURCE_RESOLVED: "Source-resolved finding",
-    PARTIALLY_RESOLVED: "Partially resolved",
-    EVIDENCE_CONFLICT: "Evidence conflict",
-    FORMAL_RESPONSE_REQUIRED: "Formal response required",
-    NO_RELIABLE_FINDING: "No reliable finding",
-    OUTSIDE_SNAPSHOT_COVERAGE: "Outside snapshot coverage",
-    OFFICIAL_SERVICE_ROUTE: "Official service route",
-  }[outcome];
-}
+type PdfCopy = {
+  evidenceBrief: string;
+  searchDate: string;
+  disclosure: string;
+  confirmedNeed: string;
+  request: string;
+  measure: string;
+  geography: string;
+  period: string;
+  breakdown: string;
+  informationHolder: string;
+  verified: string;
+  notVerified: string;
+  answerPreference: string;
+  publishedInformation: string;
+  formalResponse: string;
+  notYetDecided: string;
+  unresolvedClarifications: string;
+  result: string;
+  outcome: string;
+  operation: string;
+  inputsAndFilters: string;
+  caveat: string;
+  evidenceStatus: string;
+  plainLanguageFinding: string;
+  suggestedNextStep: string;
+  calculation: string;
+  noCalculation: string;
+  calculatedResult: string;
+  supportingEvidence: string;
+  noSupportingEvidence: string;
+  relatedFinding: string;
+  relatedEvidence: string;
+  gapsAndScope: string;
+  noGaps: string;
+  searchScope: string;
+  notResponse: string;
+  publisher: string;
+  applicablePeriod: string;
+  scope: string;
+  published: string;
+  method: string;
+  supportingExtract: string;
+  syntheticFixture: string;
+  sourceLink: string;
+  evidenceLocations: string;
+  extraEvidence: (count: number) => string;
+  tableState: string;
+  tableStolen: string;
+  tableRecovery: string;
+  tableChange: string;
+  tableCell: string;
+  recordField: string;
+  outcomeLabels: Record<EvidenceBrief["result"]["outcome"], string>;
+};
 
-function locatorLabel(locator: GroundingReference["locator"]): string {
+const PDF_COPY: Record<Language, PdfCopy> = {
+  en: {
+    evidenceBrief: "Evidence Brief",
+    searchDate: "Search date",
+    disclosure:
+      "Independent research assistant - not an official RTI response.",
+    confirmedNeed: "Confirmed Information Need",
+    request: "Request",
+    measure: "Measure",
+    geography: "Geography",
+    period: "Period",
+    breakdown: "Breakdown",
+    informationHolder: "Information holder",
+    verified: "Verified in the prototype directory",
+    notVerified: "Not verified in the prototype directory",
+    answerPreference: "Answer preference",
+    publishedInformation: "Published information",
+    formalResponse: "A new written response",
+    notYetDecided: "Not yet decided",
+    unresolvedClarifications: "Unresolved clarifications",
+    result: "Result",
+    outcome: "Outcome",
+    operation: "Operation",
+    inputsAndFilters: "Inputs and filters",
+    caveat: "Caveat",
+    evidenceStatus: "Evidence status",
+    plainLanguageFinding: "Plain-language finding",
+    suggestedNextStep: "Suggested next step",
+    calculation: "Calculation",
+    noCalculation: "No calculation was used for this result.",
+    calculatedResult:
+      "Calculated result (INR crore; recovery change in percentage points)",
+    supportingEvidence: "Supporting Evidence",
+    noSupportingEvidence:
+      "No supporting evidence was included in the checked snapshot.",
+    relatedFinding: "Related published finding",
+    relatedEvidence: "Evidence for the related finding",
+    gapsAndScope: "Gaps and Search Scope",
+    noGaps: "No unresolved gaps were recorded for this result.",
+    searchScope: "Search Scope",
+    notResponse:
+      "This document does not constitute an RTI response, government record, or filing receipt.",
+    publisher: "Publisher",
+    applicablePeriod: "Applicable period",
+    scope: "Scope",
+    published: "Published",
+    method: "Method",
+    supportingExtract: "Supporting extract",
+    syntheticFixture: "Synthetic fixture",
+    sourceLink: "Source link",
+    evidenceLocations: "Evidence locations",
+    extraEvidence: (count) =>
+      `${count} additional evidence locations are preserved in the technical JSON export.`,
+    tableState: "State/UT",
+    tableStolen: "Stolen",
+    tableRecovery: "Recovery",
+    tableChange: "Change",
+    tableCell: "Table cell",
+    recordField: "Record field",
+    outcomeLabels: {
+      DERIVED_FINDING: "Calculated finding",
+      SOURCE_RESOLVED: "Source-resolved finding",
+      PARTIALLY_RESOLVED: "Partially resolved",
+      EVIDENCE_CONFLICT: "Evidence conflict",
+      FORMAL_RESPONSE_REQUIRED: "Formal response required",
+      NO_RELIABLE_FINDING: "No reliable finding",
+      OUTSIDE_SNAPSHOT_COVERAGE: "Outside snapshot coverage",
+      OFFICIAL_SERVICE_ROUTE: "Official service route",
+    },
+  },
+  hi: {
+    evidenceBrief: "प्रमाण सारांश",
+    searchDate: "खोज तारीख",
+    disclosure: "स्वतंत्र शोध सहायक — आधिकारिक RTI उत्तर नहीं।",
+    confirmedNeed: "पुष्ट की गई सूचना-ज़रूरत",
+    request: "अनुरोध",
+    measure: "माप",
+    geography: "भूगोल",
+    period: "अवधि",
+    breakdown: "विभाजन",
+    informationHolder: "सूचना-धारक",
+    verified: "प्रोटोटाइप निर्देशिका में सत्यापित",
+    notVerified: "प्रोटोटाइप निर्देशिका में सत्यापित नहीं",
+    answerPreference: "उत्तर की प्राथमिकता",
+    publishedInformation: "प्रकाशित जानकारी",
+    formalResponse: "नया लिखित उत्तर",
+    notYetDecided: "अभी तय नहीं",
+    unresolvedClarifications: "अनसुलझे स्पष्टीकरण",
+    result: "नतीजा",
+    outcome: "नतीजे की स्थिति",
+    operation: "ऑपरेशन",
+    inputsAndFilters: "इनपुट और फ़िल्टर",
+    caveat: "सावधानी",
+    evidenceStatus: "प्रमाण स्थिति",
+    plainLanguageFinding: "सरल भाषा में निष्कर्ष",
+    suggestedNextStep: "सुझाया गया अगला कदम",
+    calculation: "गणना",
+    noCalculation: "इस नतीजे के लिए कोई गणना नहीं की गई।",
+    calculatedResult:
+      "गणना किया गया नतीजा (INR करोड़; बरामदगी में बदलाव प्रतिशत अंक में)",
+    supportingEvidence: "सहायक प्रमाण",
+    noSupportingEvidence:
+      "जाँचे गए स्नैपशॉट में कोई सहायक प्रमाण शामिल नहीं था।",
+    relatedFinding: "संबंधित प्रकाशित निष्कर्ष",
+    relatedEvidence: "संबंधित निष्कर्ष का प्रमाण",
+    gapsAndScope: "अंतर और खोज दायरा",
+    noGaps: "इस नतीजे के लिए कोई अनसुलझा अंतर दर्ज नहीं किया गया।",
+    searchScope: "खोज दायरा",
+    notResponse:
+      "यह दस्तावेज़ RTI उत्तर, सरकारी रिकॉर्ड या फाइलिंग पावती नहीं है।",
+    publisher: "प्रकाशक",
+    applicablePeriod: "लागू अवधि",
+    scope: "दायरा",
+    published: "प्रकाशित",
+    method: "तरीका",
+    supportingExtract: "सहायक अंश",
+    syntheticFixture: "सिंथेटिक फ़िक्स्चर",
+    sourceLink: "स्रोत लिंक",
+    evidenceLocations: "प्रमाण स्थान",
+    extraEvidence: (count) =>
+      `${count} अतिरिक्त प्रमाण स्थान तकनीकी JSON निर्यात में सुरक्षित हैं।`,
+    tableState: "राज्य/केंद्र शासित प्रदेश",
+    tableStolen: "चोरी",
+    tableRecovery: "बरामदगी",
+    tableChange: "बदलाव",
+    tableCell: "तालिका सेल",
+    recordField: "रिकॉर्ड फ़ील्ड",
+    outcomeLabels: {
+      DERIVED_FINDING: "आधिकारिक आँकड़ों से गणना की गई",
+      SOURCE_RESOLVED: "स्रोत से हल",
+      PARTIALLY_RESOLVED: "आंशिक रूप से हल",
+      EVIDENCE_CONFLICT: "प्रमाण में विरोध",
+      FORMAL_RESPONSE_REQUIRED: "औपचारिक उत्तर ज़रूरी",
+      NO_RELIABLE_FINDING: "विश्वसनीय निष्कर्ष नहीं मिला",
+      OUTSIDE_SNAPSHOT_COVERAGE: "स्नैपशॉट दायरे से बाहर",
+      OFFICIAL_SERVICE_ROUTE: "आधिकारिक सेवा मार्ग",
+    },
+  },
+};
+
+function locatorLabel(
+  locator: GroundingReference["locator"],
+  copy: PdfCopy,
+): string {
   return locator.kind === "cell"
-    ? `Table cell ${locator.rowKey}, ${locator.colKey}`
-    : `Record field ${locator.pointer}`;
+    ? `${copy.tableCell} ${locator.rowKey}, ${locator.colKey}`
+    : `${copy.recordField} ${locator.pointer}`;
 }
 
 function friendlyStatus(
   status: EvidenceBrief["confirmedInformationNeed"]["informationHolderStatus"],
+  copy: PdfCopy,
 ): string {
-  return status === "verified"
-    ? "Verified in the prototype directory"
-    : "Not verified in the prototype directory";
+  return status === "verified" ? copy.verified : copy.notVerified;
 }
 
 function friendlyPreference(
   preference: EvidenceBrief["confirmedInformationNeed"]["resolutionPreference"],
+  copy: PdfCopy,
 ): string {
   return {
-    published: "Published information",
-    formal: "A new written response",
-    unsure: "Not yet decided",
+    published: copy.publishedInformation,
+    formal: copy.formalResponse,
+    unsure: copy.notYetDecided,
   }[preference];
 }
 
@@ -134,8 +345,10 @@ class BriefPdfLayout {
   private pages: PdfPage[] = [];
   private page: PdfPage;
   private y = PAGE_HEIGHT - 74;
+  private readonly copy: PdfCopy;
 
-  constructor() {
+  constructor(copy: PdfCopy) {
+    this.copy = copy;
     this.page = this.newPage();
   }
 
@@ -156,7 +369,7 @@ class BriefPdfLayout {
     this.rect(0, PAGE_HEIGHT - 48, PAGE_WIDTH, 48, COLORS.teal);
     this.text("RTI TATHYA", MARGIN, PAGE_HEIGHT - 29, 15, "F2", COLORS.white);
     this.text(
-      "EVIDENCE BRIEF",
+      this.copy.evidenceBrief.toLocaleUpperCase(),
       PAGE_WIDTH - MARGIN - 106,
       PAGE_HEIGHT - 28,
       8,
@@ -171,14 +384,7 @@ class BriefPdfLayout {
       COLORS.paleTeal,
       0.7,
     );
-    this.text(
-      "Independent research assistant - not an official RTI response.",
-      MARGIN,
-      FOOTER_Y,
-      7.5,
-      "F1",
-      COLORS.muted,
-    );
+    this.text(this.copy.disclosure, MARGIN, FOOTER_Y, 7.5, "F1", COLORS.muted);
     this.text(
       "rti-tathya",
       PAGE_WIDTH - MARGIN - 54,
@@ -196,9 +402,7 @@ class BriefPdfLayout {
     height: number,
     color: readonly [number, number, number],
   ): void {
-    this.page.commands.push(
-      `${colorCommand(color)} ${x} ${y} ${width} ${height} re f`,
-    );
+    this.page.commands.push({ kind: "rect", x, y, width, height, color });
   }
 
   private line(
@@ -209,9 +413,7 @@ class BriefPdfLayout {
     color: readonly [number, number, number],
     width: number,
   ): void {
-    this.page.commands.push(
-      `${colorCommand(color)} ${width} w ${x} ${y} m ${x2} ${y2} l S`,
-    );
+    this.page.commands.push({ kind: "line", x, y, x2, y2, color, width });
   }
 
   private text(
@@ -222,9 +424,7 @@ class BriefPdfLayout {
     font: FontName,
     color: readonly [number, number, number],
   ): void {
-    this.page.commands.push(
-      `BT /${font} ${size} Tf ${colorCommand(color)} 1 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)} Tm (${escapePdfString(value)}) Tj ET`,
-    );
+    this.page.commands.push({ kind: "text", value, x, y, size, font, color });
   }
 
   private ensure(height: number): void {
@@ -287,7 +487,7 @@ class BriefPdfLayout {
   }
 
   field(label: string, value: string): void {
-    const safeValue = value.trim() || "Not specified";
+    const safeValue = value.trim() || this.copy.notYetDecided;
     const size = 9;
     const labelWidth = 114;
     const lines = wrapText(safeValue, CONTENT_WIDTH - labelWidth, size);
@@ -367,13 +567,13 @@ class BriefPdfLayout {
 
   table(rows: readonly DerivedRow[]): void {
     const columns = [
-      { label: "State/UT", width: 116 },
-      { label: "Stolen\n2021", width: 65 },
-      { label: "Stolen\n2023", width: 65 },
-      { label: "Change", width: 61 },
-      { label: "Recovery\n2021", width: 70 },
-      { label: "Recovery\n2023", width: 70 },
-      { label: "Change", width: 64 },
+      { label: this.copy.tableState, width: 116 },
+      { label: `${this.copy.tableStolen}\n2021`, width: 65 },
+      { label: `${this.copy.tableStolen}\n2023`, width: 65 },
+      { label: this.copy.tableChange, width: 61 },
+      { label: `${this.copy.tableRecovery}\n2021`, width: 70 },
+      { label: `${this.copy.tableRecovery}\n2023`, width: 70 },
+      { label: this.copy.tableChange, width: 64 },
     ];
     const headerHeight = 29;
     const rowHeight = 22;
@@ -446,207 +646,194 @@ class BriefPdfLayout {
   }
 }
 
-function addEvidence(layout: BriefPdfLayout, item: EvidenceItem): void {
+function addEvidence(
+  layout: BriefPdfLayout,
+  item: EvidenceItem,
+  copy: PdfCopy,
+): void {
   layout.subheading(item.sourceTitle);
-  layout.field("Publisher", item.publisher);
-  layout.field("Applicable period", item.applicablePeriod);
-  if (item.scope) layout.field("Scope", item.scope);
-  if (item.publicationDate) layout.field("Published", item.publicationDate);
-  if (item.methodology) layout.field("Method", item.methodology);
-  layout.paragraph(`Supporting extract: ${item.extract}`);
+  layout.field(copy.publisher, item.publisher);
+  layout.field(copy.applicablePeriod, item.applicablePeriod);
+  if (item.scope) layout.field(copy.scope, item.scope);
+  if (item.publicationDate) layout.field(copy.published, item.publicationDate);
+  if (item.methodology) layout.field(copy.method, item.methodology);
+  layout.paragraph(`${copy.supportingExtract}: ${item.extract}`);
   if (item.syntheticDisclosure)
     layout.callout(
-      `Synthetic fixture: ${item.syntheticDisclosure}`,
+      `${copy.syntheticFixture}: ${item.syntheticDisclosure}`,
       COLORS.red,
     );
   for (const url of [item.url, item.alternateUrl].filter(
     (value, index, all): value is string =>
       Boolean(value) && all.indexOf(value) === index,
   ))
-    layout.link("Source link", url);
+    layout.link(copy.sourceLink, url);
   const groundingLabels = item.grounding
     .slice(0, 4)
-    .map((reference) => locatorLabel(reference.locator));
+    .map((reference) => locatorLabel(reference.locator, copy));
   if (groundingLabels.length > 0)
-    layout.field("Evidence locations", groundingLabels.join("; "));
+    layout.field(copy.evidenceLocations, groundingLabels.join("; "));
   if (item.grounding.length > groundingLabels.length)
     layout.paragraph(
-      `${item.grounding.length - groundingLabels.length} additional evidence locations are preserved in the technical JSON export.`,
-      { size: 8.2, color: COLORS.muted },
+      copy.extraEvidence(item.grounding.length - groundingLabels.length),
+      {
+        size: 8.2,
+        color: COLORS.muted,
+      },
     );
 }
 
-function renderBrief(brief: EvidenceBrief): PdfPage[] {
-  const layout = new BriefPdfLayout();
-  layout.title("Evidence Brief", `Search date: ${brief.searchDate}`);
-  layout.callout(
-    "Independent research assistant - not an official RTI response.",
-  );
+function renderBrief(brief: EvidenceBrief, language: Language): PdfPage[] {
+  const copy = PDF_COPY[language];
+  const layout = new BriefPdfLayout(copy);
+  layout.title(copy.evidenceBrief, `${copy.searchDate}: ${brief.searchDate}`);
+  layout.callout(copy.disclosure);
 
-  layout.section("Confirmed Information Need");
+  layout.section(copy.confirmedNeed);
   const need = brief.confirmedInformationNeed;
-  layout.field("Request", need.canonicalNeed);
-  layout.field("Measure", need.measure);
-  layout.field("Geography", need.geography);
-  layout.field("Period", need.period);
-  layout.field("Breakdown", need.breakdown);
+  layout.field(copy.request, need.canonicalNeed);
+  layout.field(copy.measure, need.measure);
+  layout.field(copy.geography, need.geography);
+  layout.field(copy.period, need.period);
+  layout.field(copy.breakdown, need.breakdown);
   layout.field(
-    "Information holder",
-    `${need.informationHolder} (${friendlyStatus(need.informationHolderStatus)})`,
+    copy.informationHolder,
+    `${need.informationHolder} (${friendlyStatus(need.informationHolderStatus, copy)})`,
   );
   layout.field(
-    "Answer preference",
-    friendlyPreference(need.resolutionPreference),
+    copy.answerPreference,
+    friendlyPreference(need.resolutionPreference, copy),
   );
   if (need.unresolvedClarifications.length > 0) {
-    layout.subheading("Unresolved clarifications");
+    layout.subheading(copy.unresolvedClarifications);
     for (const clarification of need.unresolvedClarifications)
       layout.bullet(clarification);
   }
 
-  layout.section("Result");
+  layout.section(copy.result);
   const result = brief.result;
-  layout.field("Outcome", outcomeLabel(result.outcome));
-  layout.field("Evidence status", result.evidenceStatus);
-  layout.subheading("Plain-language finding");
+  layout.field(copy.outcome, copy.outcomeLabels[result.outcome]);
+  layout.field(copy.evidenceStatus, result.evidenceStatus);
+  layout.subheading(copy.plainLanguageFinding);
   layout.paragraph(result.headline, { size: 10.5, color: COLORS.ink });
   layout.paragraph(result.meaning);
-  layout.field("Suggested next step", result.recommendedAction);
+  layout.field(copy.suggestedNextStep, result.recommendedAction);
 
   if (result.calculation) {
-    layout.section("Calculation");
-    layout.field("Operation", result.calculation.operation);
-    layout.subheading("Inputs and filters");
+    layout.section(copy.calculation);
+    layout.field(copy.operation, result.calculation.operation);
+    layout.subheading(copy.inputsAndFilters);
     for (const filter of result.calculation.filters) layout.bullet(filter);
-    layout.field("Caveat", result.calculation.caveat);
+    layout.field(copy.caveat, result.calculation.caveat);
   } else {
-    layout.section("Calculation");
-    layout.paragraph("No calculation was used for this result.", {
+    layout.section(copy.calculation);
+    layout.paragraph(copy.noCalculation, {
       color: COLORS.muted,
     });
   }
 
   if (result.rows.length > 0) {
-    layout.subheading(
-      "Calculated result (INR crore; recovery change in percentage points)",
-    );
+    layout.subheading(copy.calculatedResult);
     layout.table(result.rows);
   }
   if (result.researchFinding && result.researchFinding.rows.length > 0) {
-    layout.subheading("Related published finding");
+    layout.subheading(copy.relatedFinding);
     layout.paragraph(result.researchFinding.headline);
     layout.table(result.researchFinding.rows);
   }
 
-  layout.section("Supporting Evidence");
+  layout.section(copy.supportingEvidence);
   if (result.evidence.length === 0) {
-    layout.paragraph(
-      "No supporting evidence was included in the checked snapshot.",
-      { color: COLORS.muted },
-    );
+    layout.paragraph(copy.noSupportingEvidence, { color: COLORS.muted });
   } else {
-    for (const item of result.evidence) addEvidence(layout, item);
+    for (const item of result.evidence) addEvidence(layout, item, copy);
   }
   if (result.researchFinding && result.researchFinding.evidence.length > 0) {
-    layout.subheading("Evidence for the related finding");
+    layout.subheading(copy.relatedEvidence);
     for (const item of result.researchFinding.evidence)
-      addEvidence(layout, item);
+      addEvidence(layout, item, copy);
   }
 
-  layout.section("Gaps and Search Scope");
+  layout.section(copy.gapsAndScope);
   if (result.gaps.length === 0)
-    layout.paragraph("No unresolved gaps were recorded for this result.", {
+    layout.paragraph(copy.noGaps, {
       color: COLORS.muted,
     });
   else for (const gap of result.gaps) layout.bullet(gap);
-  layout.subheading("Search Scope");
+  layout.subheading(copy.searchScope);
   layout.paragraph(result.searchScope);
-  layout.paragraph(
-    "This document does not constitute an RTI response, government record, or filing receipt.",
-    { size: 8.5, color: COLORS.muted },
-  );
+  layout.paragraph(copy.notResponse, { size: 8.5, color: COLORS.muted });
   return layout.output;
 }
 
-function asciiBytes(value: string): Uint8Array {
-  return new TextEncoder().encode(value);
+async function loadFont(url: string): Promise<Uint8Array> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("EVIDENCE_BRIEF_FONT_UNAVAILABLE");
+  return new Uint8Array(await response.arrayBuffer());
 }
 
-function pdfObject(body: string): string {
-  return `${body}\n`;
-}
+async function buildPdf(
+  pages: readonly PdfPage[],
+  language: Language,
+): Promise<Uint8Array> {
+  const [regularFontBytes, boldFontBytes] = await Promise.all([
+    loadFont(REGULAR_FONT_URL),
+    loadFont(BOLD_FONT_URL),
+  ]);
+  const document = await PDFDocument.create();
+  document.registerFontkit(fontkit);
+  const [regularFont, boldFont] = await Promise.all([
+    document.embedFont(regularFontBytes, { subset: true }),
+    document.embedFont(boldFontBytes, { subset: true }),
+  ]);
+  const fonts: PdfFonts = { regular: regularFont, bold: boldFont };
+  document.setLanguage(language === "hi" ? "hi-IN" : "en-IN");
 
-function buildPdf(pages: readonly PdfPage[]): Uint8Array {
-  const objects: string[] = [];
-  const addObject = (body: string): number => {
-    objects.push(pdfObject(body));
-    return objects.length;
-  };
-  const pagesId = addObject("");
-  const regularFontId = addObject(
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
-  );
-  const boldFontId = addObject(
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
-  );
-  const pageIds: number[] = [];
-
-  for (const page of pages) {
-    const stream = page.commands.join("\n");
-    const contentId = addObject(
-      `<< /Length ${asciiBytes(stream).length} >>\nstream\n${stream}\nendstream`,
-    );
-    const annotationIds = page.links.map((link) =>
-      addObject(
-        `<< /Type /Annot /Subtype /Link /Rect [${link.x.toFixed(2)} ${link.y.toFixed(2)} ${(link.x + link.width).toFixed(2)} ${(link.y + link.height).toFixed(2)}] /Border [0 0 0] /A << /S /URI /URI (${escapePdfString(link.url)}) >> >>`,
-      ),
-    );
-    const annots =
-      annotationIds.length > 0
-        ? ` /Annots [${annotationIds.map((id) => `${id} 0 R`).join(" ")}]`
-        : "";
-    pageIds.push(
-      addObject(
-        `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 ${regularFontId} 0 R /F2 ${boldFontId} 0 R >> >> /Contents ${contentId} 0 R${annots} >>`,
-      ),
-    );
+  for (const sourcePage of pages) {
+    const page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    for (const command of sourcePage.commands) {
+      if (command.kind === "rect") {
+        page.drawRectangle({
+          x: command.x,
+          y: command.y,
+          width: command.width,
+          height: command.height,
+          color: rgb(...command.color),
+        });
+      } else if (command.kind === "line") {
+        page.drawLine({
+          start: { x: command.x, y: command.y },
+          end: { x: command.x2, y: command.y2 },
+          thickness: command.width,
+          color: rgb(...command.color),
+        });
+      } else {
+        page.drawText(command.value, {
+          x: command.x,
+          y: command.y,
+          size: command.size,
+          font: command.font === "F2" ? fonts.bold : fonts.regular,
+          color: rgb(...command.color),
+        });
+      }
+    }
+    for (const link of sourcePage.links) {
+      const annotation = document.context.register(
+        document.context.obj({
+          Type: "Annot",
+          Subtype: "Link",
+          Rect: [link.x, link.y, link.x + link.width, link.y + link.height],
+          Border: [0, 0, 0],
+          A: {
+            S: "URI",
+            URI: PDFString.of(link.url),
+          },
+        }),
+      );
+      page.node.addAnnot(annotation);
+    }
   }
-  objects[pagesId - 1] = pdfObject(
-    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`,
-  );
-  const catalogId = addObject(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
-
-  const chunks: Uint8Array[] = [asciiBytes("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n")];
-  const offsets: number[] = [0];
-  let offset = chunks[0].length;
-  for (const [index, object] of objects.entries()) {
-    offsets.push(offset);
-    const encoded = asciiBytes(`${index + 1} 0 obj\n${object}endobj\n`);
-    chunks.push(encoded);
-    offset += encoded.length;
-  }
-  const xrefOffset = offset;
-  const xref = [`xref`, `0 ${objects.length + 1}`, `0000000000 65535 f `];
-  for (const objectOffset of offsets.slice(1))
-    xref.push(`${objectOffset.toString().padStart(10, "0")} 00000 n `);
-  xref.push(
-    `trailer`,
-    `<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>`,
-    `startxref`,
-    `${xrefOffset}`,
-    `%%EOF`,
-  );
-  chunks.push(asciiBytes(`${xref.join("\n")}\n`));
-
-  const output = new Uint8Array(
-    chunks.reduce((total, chunk) => total + chunk.length, 0),
-  );
-  let cursor = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, cursor);
-    cursor += chunk.length;
-  }
-  return output;
+  return document.save({ useObjectStreams: false });
 }
 
 export function evidenceBriefPdfFilename(searchDate: string): string {
@@ -656,13 +843,18 @@ export function evidenceBriefPdfFilename(searchDate: string): string {
 /** Render the detached public Evidence Brief as a browser-safe, A4 PDF. */
 export function serializeEvidenceBriefPdf(
   input: EvidenceBriefInput,
-): Uint8Array {
-  return buildPdf(renderBrief(buildEvidenceBrief(input)));
+): Promise<Uint8Array> {
+  return buildPdf(
+    renderBrief(buildEvidenceBrief(input), input.language ?? "en"),
+    input.language ?? "en",
+  );
 }
 
 /** Return a Blob for download/share APIs in the browser. */
-export function createEvidenceBriefPdf(input: EvidenceBriefInput): Blob {
-  const bytes = serializeEvidenceBriefPdf(input);
+export async function createEvidenceBriefPdf(
+  input: EvidenceBriefInput,
+): Promise<Blob> {
+  const bytes = await serializeEvidenceBriefPdf(input);
   const buffer = bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,

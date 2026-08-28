@@ -47,6 +47,7 @@ import { ASK_SCREEN_COPY } from "./start-screen-copy";
 import {
   RESULT_STAGE_COPY,
   resultOutcomeAfterCitationReview,
+  resultForCitationReview,
   type CitationReviewState,
 } from "./result-stage";
 import { informationNeedEditErrors } from "../preflight/need-validation";
@@ -139,6 +140,7 @@ function Icon({ name }: { name: IconName }) {
 type PersistedEnvelope<T> = { version: 2; state: T };
 const RESEARCH_KEY = "rti-preflight-state-v2";
 const FILING_KEY = "rti-preflight-filing-v2";
+const SAVED_PREFLIGHTS_KEY = "rti-preflight-saved";
 const LEGACY_RESEARCH_KEY = "rti-preflight-draft";
 const LEGACY_FILING_KEY = "rti-preflight-filing";
 const RESEARCH_PHASES = ["select", "confirm", "search", "result"] as const;
@@ -147,6 +149,191 @@ const isResearchPhase = (phase: Phase): phase is ResearchPhase =>
   RESEARCH_PHASES.includes(phase as ResearchPhase);
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+const isOneOf = <T extends string>(
+  value: unknown,
+  options: readonly T[],
+): value is T => typeof value === "string" && options.includes(value as T);
+
+const SCENARIOS = [
+  "ncrb-property",
+  "previous-rti",
+  "epfo-status",
+  "cpcb-conflict",
+  "railway-filing",
+  "unsupported",
+] as const;
+const OUTCOMES = [
+  "SOURCE_RESOLVED",
+  "DERIVED_FINDING",
+  "PARTIALLY_RESOLVED",
+  "EVIDENCE_CONFLICT",
+  "FORMAL_RESPONSE_REQUIRED",
+  "NO_RELIABLE_FINDING",
+  "OUTSIDE_SNAPSHOT_COVERAGE",
+  "OFFICIAL_SERVICE_ROUTE",
+] as const;
+
+function isGroundingReference(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  const locator = value.locator;
+  const validLocator =
+    isObject(locator) &&
+    (locator.kind === "cell"
+      ? isNonEmptyString(locator.rowKey) && isNonEmptyString(locator.colKey)
+      : locator.kind === "jsonPointer" && isNonEmptyString(locator.pointer));
+  return (
+    isNonEmptyString(value.sourceBlobHash) &&
+    isNonEmptyString(value.representationHash) &&
+    isNonEmptyString(value.locatedContent) &&
+    isNonEmptyString(value.locatedContentHash) &&
+    validLocator &&
+    isNonEmptyString(value.extractionMethod) &&
+    isNonEmptyString(value.extractionVersion) &&
+    isOneOf(value.confidence, ["exact", "inferred_header"] as const)
+  );
+}
+
+function isEvidenceItem(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  return (
+    isNonEmptyString(value.id) &&
+    isNonEmptyString(value.sourceTitle) &&
+    isNonEmptyString(value.publisher) &&
+    isOneOf(value.sourceType, [
+      "official_dataset",
+      "rti_response_fixture",
+      "official_service_route",
+    ] as const) &&
+    (value.url === undefined || isNonEmptyString(value.url)) &&
+    (value.alternateUrl === undefined ||
+      isNonEmptyString(value.alternateUrl)) &&
+    isNonEmptyString(value.applicablePeriod) &&
+    (value.publicationDate === undefined ||
+      isNonEmptyString(value.publicationDate)) &&
+    (value.scope === undefined || isNonEmptyString(value.scope)) &&
+    (value.methodology === undefined || isNonEmptyString(value.methodology)) &&
+    (value.syntheticDisclosure === undefined ||
+      isNonEmptyString(value.syntheticDisclosure)) &&
+    isNonEmptyString(value.extract) &&
+    isOneOf(value.translationStatus, [
+      "original",
+      "machine_translated",
+    ] as const) &&
+    Array.isArray(value.grounding) &&
+    value.grounding.every(isGroundingReference)
+  );
+}
+
+function isDerivedRow(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  const calculationMetadata = value.calculationMetadata;
+  return (
+    isNonEmptyString(value.geography) &&
+    isNonEmptyString(value.stolen2021) &&
+    isNonEmptyString(value.stolen2023) &&
+    isNonEmptyString(value.stolenDelta) &&
+    isNonEmptyString(value.recovery2021) &&
+    isNonEmptyString(value.recovery2023) &&
+    isNonEmptyString(value.recoveryDelta) &&
+    value.unit === "INR crore" &&
+    Array.isArray(value.lineage) &&
+    value.lineage.every(isGroundingReference) &&
+    (calculationMetadata === undefined ||
+      (isObject(calculationMetadata) &&
+        [
+          "representationHash",
+          "planHash",
+          "engineVersion",
+          "engineHash",
+          "policyVersion",
+          "policyHash",
+        ].every((key) => isNonEmptyString(calculationMetadata[key]))))
+  );
+}
+
+function isExecutionReceipt(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  return (
+    isNonEmptyString(value.snapshotHash) &&
+    isNonEmptyString(value.capabilityManifestHash) &&
+    isNonEmptyString(value.retrievalPlanHash) &&
+    isStringArray(value.checkedResourceIds) &&
+    isStringArray(value.gapManifest) &&
+    isNonEmptyString(value.executedAt) &&
+    (value.engineVersion === undefined ||
+      isNonEmptyString(value.engineVersion)) &&
+    (value.engineHash === undefined || isNonEmptyString(value.engineHash)) &&
+    (value.policyVersion === undefined ||
+      isNonEmptyString(value.policyVersion)) &&
+    (value.policyHash === undefined || isNonEmptyString(value.policyHash))
+  );
+}
+
+function isRenderableResolution(value: unknown): value is RenderableResolution {
+  if (!isObject(value)) return false;
+  const calculation = value.calculation;
+  const coverageManifest = value.coverageManifest;
+  const researchFinding = value.researchFinding;
+  const validCalculation =
+    calculation === undefined ||
+    (isObject(calculation) &&
+      isNonEmptyString(calculation.operation) &&
+      isStringArray(calculation.filters) &&
+      isNonEmptyString(calculation.caveat) &&
+      isNonEmptyString(calculation.planHash));
+  const validCoverageManifest =
+    coverageManifest === undefined ||
+    (isObject(coverageManifest) &&
+      isNonEmptyString(coverageManifest.capabilityManifestHash) &&
+      isNonEmptyString(coverageManifest.checkedAuthority) &&
+      isStringArray(coverageManifest.checkedResourceIds) &&
+      isNonEmptyString(coverageManifest.limitation));
+  const validResearchFinding =
+    researchFinding === undefined ||
+    (isObject(researchFinding) &&
+      isOneOf(researchFinding.outcome, OUTCOMES) &&
+      isNonEmptyString(researchFinding.headline) &&
+      isNonEmptyString(researchFinding.evidenceStatus) &&
+      Array.isArray(researchFinding.evidence) &&
+      researchFinding.evidence.every(isEvidenceItem) &&
+      Array.isArray(researchFinding.rows) &&
+      researchFinding.rows.every(isDerivedRow));
+  const validServiceRoute =
+    value.serviceRoute === undefined ||
+    (isObject(value.serviceRoute) &&
+      isNonEmptyString(value.serviceRoute.id) &&
+      isNonEmptyString(value.serviceRoute.purpose) &&
+      isNonEmptyString(value.serviceRoute.officialUrl) &&
+      isNonEmptyString(value.serviceRoute.verifiedAt) &&
+      isStringArray(value.serviceRoute.primarySourceUrls));
+  return (
+    isOneOf(value.outcome, OUTCOMES) &&
+    isNonEmptyString(value.headline) &&
+    isNonEmptyString(value.meaning) &&
+    isNonEmptyString(value.evidenceStatus) &&
+    Array.isArray(value.evidence) &&
+    value.evidence.every(isEvidenceItem) &&
+    Array.isArray(value.rows) &&
+    value.rows.every(isDerivedRow) &&
+    isStringArray(value.gaps) &&
+    isNonEmptyString(value.searchScope) &&
+    isNonEmptyString(value.recommendedAction) &&
+    validCalculation &&
+    (value.executionReceipt === undefined ||
+      isExecutionReceipt(value.executionReceipt)) &&
+    validCoverageManifest &&
+    validResearchFinding &&
+    validServiceRoute &&
+    (value.formalResponseReason === undefined ||
+      isNonEmptyString(value.formalResponseReason)) &&
+    isNonEmptyString(value.traceId)
+  );
+}
+
 const isNeed = (value: unknown): value is InformationNeed =>
   isObject(value) &&
   [
@@ -158,9 +345,21 @@ const isNeed = (value: unknown): value is InformationNeed =>
     "period",
     "breakdown",
     "informationHolder",
-  ].every((key) => typeof value[key] === "string") &&
-  Array.isArray(value.unresolvedClarifications);
-const validSavedState = (value: unknown): value is SavedState => {
+  ].every((key) => isNonEmptyString(value[key])) &&
+  isStringArray(value.unresolvedClarifications) &&
+  isOneOf(value.informationHolderStatus, ["verified", "unverified"] as const) &&
+  isOneOf(value.resolutionPreference, [
+    "published",
+    "formal",
+    "unsure",
+  ] as const) &&
+  isOneOf(value.scenario, SCENARIOS) &&
+  (value.draftingIntent === undefined ||
+    typeof value.draftingIntent === "boolean") &&
+  (value.recordSubject === undefined ||
+    isOneOf(value.recordSubject, ["own", "another", "unspecified"] as const));
+
+export const validSavedState = (value: unknown): value is SavedState => {
   if (
     !isObject(value) ||
     !["start", "select", "confirm", "search", "result"].includes(
@@ -173,23 +372,157 @@ const validSavedState = (value: unknown): value is SavedState => {
     (value.language !== "en" && value.language !== "hi")
   )
     return false;
+  if (
+    value.needs !== undefined &&
+    (!Array.isArray(value.needs) || !value.needs.every(isNeed))
+  )
+    return false;
+  if (value.need !== undefined && !isNeed(value.need)) return false;
+  if (value.result !== undefined && !isRenderableResolution(value.result))
+    return false;
+  if (
+    value.challengedEvidenceId !== undefined &&
+    !isNonEmptyString(value.challengedEvidenceId)
+  )
+    return false;
+  if (
+    value.challengedNeedSignature !== undefined &&
+    !isNonEmptyString(value.challengedNeedSignature)
+  )
+    return false;
+  if (value.phase === "select")
+    return Array.isArray(value.needs) && value.needs.length > 0;
   if (value.phase === "confirm" || value.phase === "search")
     return isNeed(value.need);
   if (value.phase === "result")
-    return isNeed(value.need) && isObject(value.result);
+    return isNeed(value.need) && isRenderableResolution(value.result);
   return true;
 };
-const validFilingState = (value: unknown): value is SessionFilingState =>
-  isObject(value) &&
-  ["draft", "file", "acknowledgement"].includes(value.phase as string) &&
-  typeof value.draftText === "string" &&
-  (value.language === "en" ||
-    value.language === "hi" ||
-    value.language === undefined) &&
-  isObject(value.package) &&
-  ["otp", "identity", "review", "payment", "confirmation"].includes(
-    value.step as string,
+
+function isFilingProfile(value: unknown): value is FictionalFilingProfile {
+  return (
+    isObject(value) &&
+    isNonEmptyString(value.fullName) &&
+    isNonEmptyString(value.email) &&
+    isNonEmptyString(value.address) &&
+    isNonEmptyString(value.state) &&
+    isNonEmptyString(value.pinCode)
   );
+}
+
+function isValidatedFilingPackage(
+  value: unknown,
+): value is ValidatedFilingPackage {
+  if (!isObject(value) || value.valid !== true) return false;
+  const draft = value.draft;
+  const holder = value.holder;
+  const route = value.route;
+  const confirmedNeed = value.confirmedNeed;
+  const validation = value.validation;
+  const authority = isObject(route) ? route.authority : undefined;
+  const profile = isObject(route) ? route.profile : undefined;
+  const profileText = isObject(profile) ? profile.text : undefined;
+  const profileIdentity = isObject(profile) ? profile.identity : undefined;
+  const unverifiedConstraints = isObject(profile)
+    ? profile.unverifiedConstraints
+    : undefined;
+  return (
+    isObject(draft) &&
+    isNonEmptyString(draft.text) &&
+    isNonEmptyString(draft.needId) &&
+    isNonEmptyString(draft.holderId) &&
+    isNonEmptyString(draft.routeId) &&
+    isObject(confirmedNeed) &&
+    isNonEmptyString(confirmedNeed.id) &&
+    isNonEmptyString(confirmedNeed.canonicalNeed) &&
+    isObject(holder) &&
+    isNonEmptyString(holder.id) &&
+    isNonEmptyString(holder.canonicalName) &&
+    isObject(route) &&
+    isNonEmptyString(route.id) &&
+    isNonEmptyString(route.officialUrl) &&
+    typeof route.guidedCoverage === "boolean" &&
+    isObject(authority) &&
+    isNonEmptyString(authority.id) &&
+    isNonEmptyString(authority.canonicalName) &&
+    isObject(authority.portalNames) &&
+    Object.values(authority.portalNames).every(isNonEmptyString) &&
+    isObject(profile) &&
+    isNonEmptyString(profile.id) &&
+    isNonEmptyString(profile.version) &&
+    isNonEmptyString(profile.verifiedAt) &&
+    isObject(profileText) &&
+    typeof profileText.maxChars === "number" &&
+    Number.isFinite(profileText.maxChars) &&
+    profileText.maxChars > 0 &&
+    isOneOf(profileText.overflowStrategy, [
+      "attachment_pdf",
+      "reject",
+    ] as const) &&
+    isObject(profileIdentity) &&
+    isStringArray(profileIdentity.fieldsRequired) &&
+    isStringArray(profileIdentity.fieldsProhibited) &&
+    (unverifiedConstraints === undefined ||
+      isStringArray(unverifiedConstraints)) &&
+    isNonEmptyString(profile.sourceUrl) &&
+    profile.submission === "demo" &&
+    isObject(validation) &&
+    typeof validation.valid === "boolean" &&
+    typeof validation.characterCount === "number" &&
+    Number.isFinite(validation.characterCount) &&
+    isStringArray(validation.errors)
+  );
+}
+
+function isAcknowledgement(value: unknown): value is DemoAcknowledgement {
+  if (!isObject(value) || !isObject(value.fee)) return false;
+  return (
+    isNonEmptyString(value.registrationNumber) &&
+    isNonEmptyString(value.disclosure) &&
+    isNonEmptyString(value.holder) &&
+    isNonEmptyString(value.route) &&
+    isNonEmptyString(value.submittedDraft) &&
+    typeof value.fee.amountInr === "number" &&
+    value.fee.method === "demo_upi" &&
+    isNonEmptyString(value.submittedAt)
+  );
+}
+
+export const validFilingState = (
+  value: unknown,
+): value is SessionFilingState => {
+  if (
+    !isObject(value) ||
+    !isOneOf(value.phase, ["draft", "file", "acknowledgement"] as const) ||
+    typeof value.draftText !== "string" ||
+    (value.language !== "en" &&
+      value.language !== "hi" &&
+      value.language !== undefined) ||
+    !isOneOf(value.step, [
+      "otp",
+      "identity",
+      "review",
+      "payment",
+      "confirmation",
+    ] as const) ||
+    (!isNonEmptyString(value.otp) && value.otp !== "") ||
+    !isFilingProfile(value.profile) ||
+    typeof value.reviewed !== "boolean" ||
+    typeof value.paymentConfirmed !== "boolean"
+  )
+    return false;
+  if (value.package !== undefined && !isValidatedFilingPackage(value.package))
+    return false;
+  if (value.phase === "file" && !isValidatedFilingPackage(value.package))
+    return false;
+  if (value.phase === "acknowledgement")
+    return (
+      value.step === "confirmation" &&
+      isValidatedFilingPackage(value.package) &&
+      isAcknowledgement(value.acknowledgement)
+    );
+  return value.step !== "confirmation" && value.acknowledgement === undefined;
+};
 
 export const COPY = {
   en: {
@@ -383,7 +716,8 @@ export const COPY = {
     verifiedRouteProfile: "Verified Filing Route profile",
     epfoRouteDetails: "EPFO Official Service Route",
     cpcbScenario: "CPCB conflict scenario",
-    officialEpfoSource: "Official EPFO source",
+    routeMetadataNote:
+      "Purpose and verification date are metadata; the primary route is the link above.",
     resumeTitle: "Resume previous Preflight",
     resumeBody: "Your saved prototype journey is ready to continue.",
     startFresh: "Start fresh",
@@ -613,7 +947,8 @@ export const COPY = {
     verifiedRouteProfile: "सत्यापित फाइलिंग मार्ग प्रोफ़ाइल",
     epfoRouteDetails: "EPFO आधिकारिक सेवा मार्ग",
     cpcbScenario: "CPCB विरोधाभास परिदृश्य",
-    officialEpfoSource: "आधिकारिक EPFO स्रोत",
+    routeMetadataNote:
+      "उद्देश्य और सत्यापन की तारीख मेटाडेटा हैं; मुख्य मार्ग ऊपर दिया गया लिंक है।",
     resumeTitle: "पिछली जाँच फिर शुरू करें",
     resumeBody: "आपकी सहेजी गई प्रोटोटाइप यात्रा जारी रखने के लिए तैयार है।",
     startFresh: "नई शुरुआत करें",
@@ -755,16 +1090,92 @@ function clearPrototypeStorage() {
   clearFilingStorage();
 }
 
+function isSavedPreflight(value: unknown): value is SavedPreflight {
+  if (
+    !isObject(value) ||
+    !isNonEmptyString(value.id) ||
+    !isNonEmptyString(value.label) ||
+    typeof value.text !== "string" ||
+    (value.language !== "en" && value.language !== "hi")
+  )
+    return false;
+  if (
+    value.phase !== undefined &&
+    !isOneOf(value.phase, ["start", "confirm", "result", "draft"] as const)
+  )
+    return false;
+  if (value.need !== undefined && !isNeed(value.need)) return false;
+  if (value.result !== undefined && !isRenderableResolution(value.result))
+    return false;
+  if (value.draftText !== undefined && typeof value.draftText !== "string")
+    return false;
+  if (
+    value.draftOriginalText !== undefined &&
+    typeof value.draftOriginalText !== "string"
+  )
+    return false;
+  if (
+    value.filingPackage !== undefined &&
+    !isValidatedFilingPackage(value.filingPackage)
+  )
+    return false;
+  if (
+    value.phase === "result" &&
+    (!isNeed(value.need) || !isRenderableResolution(value.result))
+  )
+    return false;
+  if (value.phase === "confirm" && !isNeed(value.need)) return false;
+  if (
+    value.phase === "draft" &&
+    (!isNeed(value.need) || typeof value.draftText !== "string")
+  )
+    return false;
+  return true;
+}
+
 function readSavedPreflights(): SavedPreflight[] {
   if (typeof window === "undefined") return [];
   try {
     const parsed = JSON.parse(
-      window.localStorage.getItem("rti-preflight-saved") ?? "[]",
-    ) as SavedPreflight[];
-    return Array.isArray(parsed) ? parsed : [];
+      window.localStorage.getItem(SAVED_PREFLIGHTS_KEY) ?? "[]",
+    ) as unknown;
+    return Array.isArray(parsed) ? parsed.filter(isSavedPreflight) : [];
   } catch {
     return [];
   }
+}
+
+/** Restore journey data without changing the language the citizen selected. */
+export function restoreSavedPreflightForLanguage(
+  saved: SavedPreflight,
+  language: Language,
+): SavedPreflight {
+  const draftText =
+    saved.draftText === undefined
+      ? undefined
+      : localizeFilingDraft(saved.draftText, language);
+  const draftOriginalText =
+    saved.draftOriginalText === undefined
+      ? draftText
+      : localizeFilingDraft(saved.draftOriginalText, language);
+  const filingPackage =
+    saved.filingPackage && draftText !== undefined
+      ? {
+          ...saved.filingPackage,
+          draft: { ...saved.filingPackage.draft, text: draftText },
+          validation: validateDraft(
+            draftText,
+            saved.filingPackage.route.profile,
+          ),
+        }
+      : saved.filingPackage;
+  return {
+    ...saved,
+    language,
+    ...(draftText === undefined ? {} : { draftText }),
+    ...(draftOriginalText === undefined ? {} : { draftOriginalText }),
+    ...(filingPackage === undefined ? {} : { filingPackage }),
+  };
 }
 
 function needSignature(need: InformationNeed | undefined): string {
@@ -903,7 +1314,7 @@ function Details({
     verifiedRouteProfile: string;
     epfoRouteDetails: string;
     cpcbScenario: string;
-    officialEpfoSource: string;
+    routeMetadataNote: string;
     details: string;
     officialSource: string;
     independentDetails: string;
@@ -1017,11 +1428,7 @@ function Details({
               EPFO_CLAIM_STATUS_ROUTE.verificationDate,
             )}
           </p>
-          {EPFO_CLAIM_STATUS_ROUTE.primarySourceUrls.map((url) => (
-            <ExternalLink href={url} key={url} language={language}>
-              {copy.officialEpfoSource}
-            </ExternalLink>
-          ))}
+          <p className="supporting-copy">{copy.routeMetadataNote}</p>
         </div>
         <div className="route-provenance">
           <h3>{copy.cpcbScenario}</h3>
@@ -1245,7 +1652,7 @@ export default function PreflightApp() {
     if (!savedPreflightsLoaded) return;
     try {
       window.localStorage.setItem(
-        "rti-preflight-saved",
+        SAVED_PREFLIGHTS_KEY,
         JSON.stringify(savedPreflights),
       );
     } catch {
@@ -1335,7 +1742,6 @@ export default function PreflightApp() {
     ) ?? [];
   function resumePrevious() {
     if (!resumeState) return;
-    setLanguage(resumeState.language);
     setPhase(resumeState.phase);
     setText(resumeState.text);
     setNeeds(resumeState.needs ?? (resumeState.need ? [resumeState.need] : []));
@@ -1507,15 +1913,17 @@ export default function PreflightApp() {
   }
 
   function resumeSavedPreflight(saved: SavedPreflight) {
-    setLanguage(saved.language);
-    setText(saved.text);
-    setNeeds(saved.need ? [saved.need] : []);
-    setNeed(saved.need);
-    setResult(saved.result);
-    setFilingPackage(saved.filingPackage);
-    setDraftText(saved.draftText ?? "");
-    setDraftOriginalText(saved.draftOriginalText ?? saved.draftText ?? "");
-    setPhase(saved.phase ?? (saved.result ? "result" : "start"));
+    const restored = restoreSavedPreflightForLanguage(saved, language);
+    setText(restored.text);
+    setNeeds(restored.need ? [restored.need] : []);
+    setNeed(restored.need);
+    setResult(restored.result);
+    setFilingPackage(restored.filingPackage);
+    setDraftText(restored.draftText ?? "");
+    setDraftOriginalText(
+      restored.draftOriginalText ?? restored.draftText ?? "",
+    );
+    setPhase(restored.phase ?? (restored.result ? "result" : "start"));
   }
 
   function saveCurrentDraft() {
@@ -1618,14 +2026,19 @@ export default function PreflightApp() {
     if (!need || !result) return;
     setBriefFeedback("");
     try {
+      const exportResult = localizeResolution(
+        resultForCitationReview(result, citationReview),
+        language,
+      );
       const input = {
-        need,
-        result,
+        need: localizeNeed(need, language),
+        result: exportResult,
         searchDate:
           result.executionReceipt?.executedAt.slice(0, 10) ??
           new Date().toISOString().slice(0, 10),
+        language,
       };
-      const blob = createEvidenceBriefPdf(input);
+      const blob = await createEvidenceBriefPdf(input);
       const file = new File(
         [blob],
         evidenceBriefPdfFilename(input.searchDate),
@@ -1677,12 +2090,17 @@ export default function PreflightApp() {
     if (!need || !result) return;
     setBriefFeedback("");
     try {
+      const exportResult = localizeResolution(
+        resultForCitationReview(result, citationReview),
+        language,
+      );
       const serialized = serializeEvidenceBrief({
-        need,
-        result,
+        need: localizeNeed(need, language),
+        result: exportResult,
         searchDate:
           result.executionReceipt?.executedAt.slice(0, 10) ??
           new Date().toISOString().slice(0, 10),
+        language,
       });
       const blob = new Blob([serialized], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -1856,7 +2274,7 @@ export default function PreflightApp() {
     setError("");
     try {
       clearPrototypeStorage();
-      window.localStorage.removeItem("rti-preflight-saved");
+      window.localStorage.removeItem(SAVED_PREFLIGHTS_KEY);
     } catch {
       /* no-op */
     }
@@ -1988,7 +2406,12 @@ export default function PreflightApp() {
             </p>
           </section>
           <details className="examples supporting-plane" open>
-            <summary>{copy.examples}</summary>
+            <summary>
+              <span>{copy.examples}</span>
+              <span className="disclosure-affordance" aria-hidden="true">
+                +
+              </span>
+            </summary>
             <div className="scenario-list">
               {SCENARIO_PROMPTS.map((scenario) => (
                 <button
@@ -2292,17 +2715,9 @@ export default function PreflightApp() {
                             {copy.verifiedWord}{" "}
                             {displayResult.serviceRoute.verifiedAt}
                           </p>
-                          <ul>
-                            {displayResult.serviceRoute.primarySourceUrls.map(
-                              (url) => (
-                                <li key={url}>
-                                  <ExternalLink href={url} language={language}>
-                                    {copy.officialSource}
-                                  </ExternalLink>
-                                </li>
-                              ),
-                            )}
-                          </ul>
+                          <p className="supporting-copy">
+                            {copy.routeMetadataNote}
+                          </p>
                         </div>
                       )}
                     {!challengedEvidenceId &&
@@ -2482,14 +2897,7 @@ export default function PreflightApp() {
               >
                 {copy.downloadTechnicalBrief}
               </button>
-              {result.outcome === "OFFICIAL_SERVICE_ROUTE" ? (
-                <ExternalLink
-                  className="action-button action-link"
-                  href={result.evidence[0]?.url ?? ""}
-                >
-                  {copy.openRoute}
-                </ExternalLink>
-              ) : (
+              {result.outcome !== "OFFICIAL_SERVICE_ROUTE" && (
                 <button className="action-button" onClick={openDraft}>
                   {result.outcome === "DERIVED_FINDING" ||
                   result.outcome === "SOURCE_RESOLVED"

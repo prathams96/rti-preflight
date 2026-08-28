@@ -117,6 +117,10 @@ const HINDI_TEXT: Record<string, string> = {
     "तुलना से पहले घोषित कुल वाली पंक्तियाँ हटाएँ",
   "This identifies a reported data pattern, not a ranking of police performance. NCRB figures are supplied by States/UTs and may reflect differences in reporting and recording. Monetary values are in crore.":
     "यह रिपोर्ट किए गए आँकड़ों का पैटर्न बताता है, पुलिस के प्रदर्शन की रैंकिंग नहीं। NCRB आँकड़े राज्यों/केंद्र शासित प्रदेशों से मिलते हैं और रिपोर्टिंग व रिकॉर्डिंग के अंतर को दर्शा सकते हैं। मौद्रिक मान करोड़ में हैं।",
+  "A citation problem report is awaiting confirmation; the original result remains visible.":
+    "उद्धरण की समस्या की रिपोर्ट पुष्टि की प्रतीक्षा में है; मूल नतीजा दिखाई दे रहा है।",
+  "This result was downgraded to partially resolved pending source revalidation after a citation problem report.":
+    "उद्धरण की समस्या की रिपोर्ट के बाद स्रोत के फिर से सत्यापन तक यह नतीजा आंशिक रूप से हल किया गया है।",
 };
 
 const NEED_TEXT: Record<string, string> = {
@@ -162,6 +166,14 @@ function translateText(text: string, language: Language): string {
     " You chose a formal response, so the related Research Finding is preserved while you decide whether to prepare a Filing Draft.";
   if (text.endsWith(formalSuffix))
     return `${translateText(text.slice(0, -formalSuffix.length), language)} आपने औपचारिक उत्तर चुना है, इसलिए संबंधित शोध निष्कर्ष सुरक्षित है; अब आप तय कर सकते हैं कि फाइलिंग ड्राफ्ट तैयार करना है या नहीं।`;
+  for (const citationSuffix of [
+    "A citation problem report is awaiting confirmation; the original result remains visible.",
+    "This result was downgraded to partially resolved pending source revalidation after a citation problem report.",
+  ]) {
+    const suffix = ` ${citationSuffix}`;
+    if (text.endsWith(suffix))
+      return `${translateText(text.slice(0, -suffix.length), language)} ${HINDI_TEXT[citationSuffix]}`;
+  }
   const exact = HINDI_TEXT[text] ?? NEED_TEXT[text];
   if (exact) return exact;
   const matchedStates = text.match(
@@ -343,6 +355,16 @@ export function localizeResolution(
             result.researchFinding.evidenceStatus,
             language,
           ),
+          evidence: result.researchFinding.evidence.map((item) => ({
+            ...item,
+            sourceTitle: translateText(item.sourceTitle, language),
+            publisher: translateText(item.publisher, language),
+            applicablePeriod: translateText(item.applicablePeriod, language),
+            extract: translateText(item.extract, language),
+            syntheticDisclosure: item.syntheticDisclosure
+              ? translateText(item.syntheticDisclosure, language)
+              : item.syntheticDisclosure,
+          })),
         }
       : result.researchFinding,
     formalResponseReason: result.formalResponseReason

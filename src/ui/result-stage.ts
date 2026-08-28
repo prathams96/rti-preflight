@@ -1,4 +1,4 @@
-import type { Outcome } from "../domain/types";
+import type { Outcome, RenderableResolution } from "../domain/types";
 
 /**
  * A citation report is intentionally a separate review step. Until the
@@ -14,6 +14,34 @@ export function resultOutcomeAfterCitationReview(
   review: CitationReviewState,
 ): Outcome | undefined {
   return review.status === "downgraded" ? "PARTIALLY_RESOLVED" : outcome;
+}
+
+/**
+ * Keep exported evidence aligned with what the result stage communicates.
+ * The original evidence remains attached so a citizen can inspect the
+ * challenged source while the artifact records the pending review state.
+ */
+export function resultForCitationReview(
+  result: RenderableResolution,
+  review: CitationReviewState,
+): RenderableResolution {
+  if (review.status === "idle") return result;
+
+  const reviewNote =
+    review.status === "awaiting-confirmation"
+      ? "A citation problem report is awaiting confirmation; the original result remains visible."
+      : "This result was downgraded to partially resolved pending source revalidation after a citation problem report.";
+
+  return {
+    ...result,
+    ...(review.status === "downgraded"
+      ? { outcome: "PARTIALLY_RESOLVED" as const }
+      : {}),
+    evidenceStatus: `${result.evidenceStatus} ${reviewNote}`,
+    gaps: result.gaps.includes(reviewNote)
+      ? result.gaps
+      : [...result.gaps, reviewNote],
+  };
 }
 
 export const RESULT_STAGE_COPY = {

@@ -5,6 +5,7 @@ import type {
   ExecutionReceipt,
   GroundingReference,
   InformationNeed,
+  Language,
   RenderableResolution,
 } from "../domain/types";
 import { redactSensitiveIdentifiers } from "../model/redaction";
@@ -17,6 +18,7 @@ export type EvidenceBriefInput = {
   need: InformationNeed;
   result: RenderableResolution;
   searchDate: string;
+  language?: Language;
 };
 
 export type EvidenceBrief = {
