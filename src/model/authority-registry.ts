@@ -23,6 +23,18 @@ export const AUTHORITY_REGISTRY: ReadonlyArray<AuthorityRecord> = [
   },
 ];
 
+export const GENERIC_INFORMATION_HOLDER = "Relevant public authority";
+
+export function normalizeInformationHolder(name: string | undefined): string {
+  const candidate = name?.trim();
+  return !candidate ||
+    /^(unknown|to be confirmed|not specified|not yet specified|none specified|unspecified|relevant public authority)$/iu.test(
+      candidate,
+    )
+    ? GENERIC_INFORMATION_HOLDER
+    : candidate;
+}
+
 export function resolveAuthorityName(
   name: string,
 ): AuthorityRecord | undefined {

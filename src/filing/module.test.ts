@@ -13,6 +13,7 @@ import {
   serializeFilingPackageArtifact,
 } from "./index";
 import { localizeFilingDraft } from "../ui/localization";
+import { DemoAdapter } from "./adapter";
 
 const need = {
   id: "need-railway",
@@ -93,7 +94,7 @@ describe("Filing Module public seam", () => {
     expect(serialized).not.toContain("must-not-export");
     expect(serialized).not.toContain("rawModelPayload");
     expect(serialized).not.toContain("Raw citizen prompt");
-    expect(serialized).toContain("DEMO-RTI-2026-0042");
+    expect(serialized).toContain("DEMO-RTI-");
   });
 
   it("is detached, immutable, and deterministic", async () => {
@@ -265,7 +266,7 @@ describe("Filing Module public seam", () => {
         payment: { method: "demo_upi", amountInr: 10 },
       },
     });
-    expect(acknowledgement.registrationNumber).toBe("DEMO-RTI-2026-0042");
+    expect(acknowledgement.registrationNumber).toMatch(/^DEMO-RTI-/);
     expect(acknowledgement.disclosure).toMatch(
       /No request, payment, or personal information/,
     );
@@ -311,7 +312,7 @@ describe("Filing Module public seam", () => {
     ).toBe(true);
   });
 
-  it("keeps Demo Payment and submission disabled outside Guided Filing Coverage", async () => {
+  it("accepts a structurally valid route even when it is not guided coverage", async () => {
     const filing = createFilingModule();
     const outsideRoute = {
       ...NORTHERN_RAILWAY_ROUTE,
@@ -333,10 +334,10 @@ describe("Filing Module public seam", () => {
           payment: { method: "demo_upi", amountInr: 10 },
         },
       }),
-    ).rejects.toThrow("FILING_PACKAGE_NOT_CONFIRMED");
+    ).resolves.toMatchObject({ holder: "Northern Railway" });
   });
 
-  it("rejects submission through the generic demo route outside guided coverage", async () => {
+  it("submits through the generic demo route with the same safeguards", async () => {
     const filing = createFilingModule();
     const genericNeed = {
       id: "need-city-budget",
@@ -370,6 +371,31 @@ describe("Filing Module public seam", () => {
           payment: { method: "demo_upi", amountInr: 10 },
         },
       }),
-    ).rejects.toThrow("FILING_PACKAGE_NOT_CONFIRMED");
+    ).resolves.toMatchObject({
+      holder: "City Municipal Corporation",
+      route: "Generic RTI demo route (not verified)",
+    });
+  });
+
+  it("uses the submission completion time supplied by the demo clock", async () => {
+    const filing = createFilingModule(
+      new DemoAdapter(() => "2026-08-29T13:00:00.000Z"),
+    );
+    const prepared = await filing.prepare({
+      need,
+      holder: NORTHERN_RAILWAY_HOLDER,
+      route: NORTHERN_RAILWAY_ROUTE,
+    });
+
+    const acknowledgement = await filing.demoSubmit({
+      package: prepared,
+      confirmation: {
+        otp: DEMO_OTP,
+        profile: filing.demoProfile,
+        reviewed: true,
+        payment: { method: "demo_upi", amountInr: 10 },
+      },
+    });
+    expect(acknowledgement.submittedAt).toBe("2026-08-29T13:00:00.000Z");
   });
 });

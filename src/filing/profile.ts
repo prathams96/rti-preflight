@@ -95,7 +95,7 @@ function genericHolderName(need: ConfirmedFilingNeed): string {
   const candidate = need.informationHolder?.trim();
   if (
     !candidate ||
-    /^(unknown|to be confirmed|unspecified|relevant public authority)$/i.test(
+    /^(unknown|to be confirmed|not specified|not yet specified|none specified|unspecified|relevant public authority)$/i.test(
       candidate,
     )
   )
@@ -146,8 +146,8 @@ export function createGenericRtiDemoRoute(need: ConfirmedFilingNeed): {
       identity: { fieldsRequired: [], fieldsProhibited: [] },
       jurisdictionRule:
         "The official filing authority and route must be verified before real filing.",
-      sourceUrl: "https://rtionline.gov.in/",
-      sourceUrls: ["https://rtionline.gov.in/"],
+      sourceUrl: "https://example.invalid/rti-demo",
+      sourceUrls: ["https://example.invalid/rti-demo"],
       unverifiedConstraints: [
         "This is a simulated fallback route; portal, authority, fee, and eligibility details are not verified.",
       ],

@@ -121,6 +121,7 @@ function receipt(
   planHash: string,
   checkedResourceIds: string[],
   gaps: string[],
+  executedAt: string,
   metadata?: CalculationMetadata,
 ) {
   return {
@@ -129,7 +130,7 @@ function receipt(
     retrievalPlanHash: planHash,
     checkedResourceIds,
     gapManifest: gaps,
-    executedAt: "2026-08-27T00:00:00.000Z",
+    executedAt,
     ...(metadata
       ? {
           engineVersion: metadata.engineVersion,
@@ -141,8 +142,21 @@ function receipt(
   };
 }
 
+export function formatDecimalString(value: string): string {
+  const trimmed = value.trim();
+  const negative = trimmed.startsWith("-");
+  const unsigned = trimmed.replace(/^[+-]/, "");
+  const [integerPart, fractionPart = ""] = unsigned.split(".");
+  const integer = integerPart.replace(/^0+(?=\d)/, "") || "0";
+  const fraction = fractionPart.replace(/0+$/, "");
+  if (integer === "0" && fraction.length === 0) return "0";
+  return `${negative ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
+}
+
 function signed(value: string): string {
-  return `${value.startsWith("-") ? "−" : "+"}${value.replace(/^-/, "")}`;
+  const formatted = formatDecimalString(value);
+  if (formatted === "0") return formatted;
+  return `${formatted.startsWith("-") ? "−" : "+"}${formatted.replace(/^-/, "")}`;
 }
 
 function displayColumn(
@@ -166,14 +180,19 @@ function displayColumn(
       value: `${signed(value)}${source?.unit === "%" ? " pp" : ""}`,
     };
   }
+  const formatted = formatDecimalString(value);
   if (column?.unit === "INR crore")
-    return { key, label: column.displayLabel ?? key, value: `₹${value} crore` };
+    return {
+      key,
+      label: column.displayLabel ?? key,
+      value: `₹${formatted} crore`,
+    };
   if (column?.unit === "%")
-    return { key, label: column.displayLabel ?? key, value: `${value}%` };
+    return { key, label: column.displayLabel ?? key, value: `${formatted}%` };
   return {
     key,
     label: column?.displayLabel ?? key.replaceAll("_", " "),
-    value,
+    value: formatted,
   };
 }
 
@@ -200,9 +219,10 @@ function measureValue(
   unit: RegisteredMeasure["unit"],
 ): string | null {
   if (value === null) return null;
-  if (unit === "INR crore") return `₹${value} crore`;
-  if (unit === "%") return `${value}%`;
-  return value;
+  const formatted = formatDecimalString(value);
+  if (unit === "INR crore") return `₹${formatted} crore`;
+  if (unit === "%") return `${formatted}%`;
+  return formatted;
 }
 
 function comparisonValue(
@@ -306,6 +326,7 @@ function derivedTableResolution(
   traceId: string,
   plan: CalcPlan,
   table: RegisteredTable,
+  executedAt: string,
 ): RenderableResolution {
   const execution = executePlan(plan, table);
   const metadata = execution.metadata;
@@ -320,16 +341,20 @@ function derivedTableResolution(
     columns: plan.output
       .filter((column) => column !== plan.output[0])
       .map((column) => displayColumn(column, row.values[column]!, table, plan)),
-    ...(row.values.stolen_2021 ? { stolen2021: row.values.stolen_2021 } : {}),
-    ...(row.values.stolen_2023 ? { stolen2023: row.values.stolen_2023 } : {}),
+    ...(row.values.stolen_2021
+      ? { stolen2021: formatDecimalString(row.values.stolen_2021) }
+      : {}),
+    ...(row.values.stolen_2023
+      ? { stolen2023: formatDecimalString(row.values.stolen_2023) }
+      : {}),
     ...(row.values.stolen_delta
       ? { stolenDelta: signed(row.values.stolen_delta) }
       : {}),
     ...(row.values.recovery_2021
-      ? { recovery2021: row.values.recovery_2021 }
+      ? { recovery2021: formatDecimalString(row.values.recovery_2021) }
       : {}),
     ...(row.values.recovery_2023
-      ? { recovery2023: row.values.recovery_2023 }
+      ? { recovery2023: formatDecimalString(row.values.recovery_2023) }
       : {}),
     ...(row.values.recovery_delta
       ? { recoveryDelta: `${signed(row.values.recovery_delta)} pp` }
@@ -397,6 +422,7 @@ function derivedTableResolution(
       metadata.planHash,
       [source.source.id],
       execution.gaps,
+      executedAt,
       metadata,
     ),
     traceId,
@@ -458,6 +484,7 @@ function noFindingResolution(
   need: InformationNeed,
   source: Snapshot,
   traceId: string,
+  executedAt: string,
 ): RenderableResolution {
   const planHash = hashPlan({
     plan: "railway-in-snapshot-no-finding-v2",
@@ -483,6 +510,7 @@ function noFindingResolution(
       planHash,
       ["northern-railway-filing-fixture"],
       gaps,
+      executedAt,
     ),
     traceId,
   };
@@ -622,6 +650,7 @@ async function resolveNeed(
   source: Snapshot,
   traceId: string,
   planAdapter: PlanAdapter,
+  executedAt: string,
 ): Promise<RenderableResolution> {
   const candidate = matchRegisteredTable(need, source);
   if (candidate) {
@@ -656,6 +685,7 @@ async function resolveNeed(
         traceId,
         plan,
         candidate.table,
+        executedAt,
       );
     } catch (error) {
       return planningFailureResolution(
@@ -667,7 +697,7 @@ async function resolveNeed(
     }
   }
   if (need.scenario === "railway-filing")
-    return noFindingResolution(need, source, traceId);
+    return noFindingResolution(need, source, traceId, executedAt);
   if (need.scenario === "epfo-status") return epfoResolution(need, traceId);
   if (need.scenario === "previous-rti")
     return syntheticFixtureResolution(need, source, traceId);
@@ -708,6 +738,7 @@ export class RTIPreflightModule implements PreflightModule {
     private readonly planAdapter: PlanAdapter = process.env.OPENAI_API_KEY
       ? new OpenAICalcPlanAdapter()
       : new DeterministicPlanAdapter(),
+    private readonly now: () => string = () => new Date().toISOString(),
   ) {}
   interpret(input: {
     text: string;
@@ -730,6 +761,7 @@ export class RTIPreflightModule implements PreflightModule {
         input.snapshot,
         normalizeTraceId(input.traceId),
         this.planAdapter,
+        this.now(),
       )),
       narration: "deterministic" as const,
     };

@@ -7,6 +7,7 @@ import {
   GENERIC_RTI_DEMO_ROUTE_ID,
   NORTHERN_RAILWAY_ROUTE,
 } from "../../../filing";
+import { POST as interpretPOST } from "../interpret/route";
 import { POST } from "./route";
 
 afterEach(() => {
@@ -30,6 +31,81 @@ function request(
 }
 
 describe("filing draft generation route", () => {
+  it("carries an arbitrary AI-interpreted need into a valid generic filing package", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "configured-key");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          output_text: JSON.stringify({
+            needs: [
+              {
+                canonicalNeed:
+                  "Number of MSMEs that shut or closed in 2025 and 2026",
+                measure: "Number of MSMEs that shut/closed",
+                geography: "Not specified",
+                period: "2025 versus 2026",
+                breakdown: "Year",
+                informationHolder:
+                  "Ministry of Micro, Small and Medium Enterprises",
+                resolutionPreference: "formal",
+                unresolvedClarifications: [
+                  "Which geography should be covered?",
+                ],
+                display: {
+                  canonicalNeed:
+                    "Number of MSMEs that shut or closed in 2025 and 2026",
+                  measure: "Number of MSMEs that shut/closed",
+                  geography: "Not specified",
+                  period: "2025 versus 2026",
+                  breakdown: "Year",
+                  informationHolder:
+                    "Ministry of Micro, Small and Medium Enterprises",
+                  unresolvedClarifications: [
+                    "Which geography should be covered?",
+                  ],
+                },
+              },
+            ],
+          }),
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const interpretation = await interpretPOST(
+      new Request("http://localhost/api/interpret", {
+        method: "POST",
+        headers: { "x-rti-trace-id": "trace-msme-integration" },
+        body: JSON.stringify({
+          text: "What are the number of MSMEs shut in 2026 from 2025",
+          language: "en",
+        }),
+      }),
+    );
+    const interpreted = await interpretation.json();
+    expect(interpretation.status).toBe(200);
+    const need = interpreted.needs[0];
+    expect(need).toMatchObject({
+      geography: "Not specified",
+      period: "2025 versus 2026",
+      breakdown: "Year",
+      informationHolder: "Ministry of Micro, Small and Medium Enterprises",
+      informationHolderStatus: "unverified",
+    });
+
+    vi.stubEnv("OPENAI_API_KEY", "");
+    const draftResponse = await POST(request(need));
+    const payload = await draftResponse.json();
+    expect(draftResponse.status).toBe(200);
+    expect(payload.filingPackage).toMatchObject({
+      valid: true,
+      route: { id: GENERIC_RTI_DEMO_ROUTE_ID, guidedCoverage: false },
+    });
+    expect(payload.draft.text).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("uses the deterministic draft when no provider is configured", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
     const fetchMock = vi.fn();

@@ -187,4 +187,15 @@ describe("registered authority identity preservation", () => {
       }),
     ).toBe(false);
   });
+
+  it("accepts a natural Hindi label for an unregistered inferred authority", () => {
+    expect(
+      preservesPresentationField({
+        field: "informationHolder",
+        canonical: "Ministry of Micro, Small and Medium Enterprises",
+        presentation: "सूक्ष्म, लघु और मध्यम उद्यम मंत्रालय",
+        language: "hi",
+      }),
+    ).toBe(true);
+  });
 });

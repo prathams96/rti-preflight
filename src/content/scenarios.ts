@@ -405,10 +405,25 @@ function needForScenario(
   id: ScenarioId,
   suffix = "1",
 ): InformationNeed {
+  const years = [
+    ...new Set(
+      [...text.matchAll(/\b(?:19|20)\d{2}\b/g)].map((match) => match[0]),
+    ),
+  ].sort();
+  const measureMatch = text.match(
+    /\b(?:number|count|amount|value|percentage|status)\s+of\s+(.+?)(?=\s+(?:in|from|between|for|by|at|across)\b|[?.!,]|$)/iu,
+  );
+  const genericMeasure = measureMatch
+    ? `${measureMatch[0].replace(/\s+(?:in|from|between|for|by|at|across)\b.*$/iu, "").trim()}`
+    : "The public record or measure requested";
+  const genericPeriod =
+    years.length > 1
+      ? `${years[0]} versus ${years[years.length - 1]}`
+      : (years[0] ?? "Not specified");
   const common = {
     id: `${id}-${suffix}`,
     originalText: text,
-    breakdown: "Not yet specified",
+    breakdown: years.length > 1 ? "Year" : "No additional breakdown",
     resolutionPreference: DEFAULT_PREFERENCE,
     unresolvedClarifications: [] as string[],
     scenario: id,
@@ -528,12 +543,15 @@ function needForScenario(
       return {
         ...common,
         canonicalNeed: text.trim() || "An unspecified public-information need.",
-        measure: "The public record or measure requested",
-        geography: "Not yet specified",
-        period: "Not yet specified",
-        informationHolder: "To be confirmed",
+        measure: genericMeasure,
+        geography: "Not specified",
+        period: genericPeriod,
+        informationHolder: "Relevant public authority",
         unresolvedClarifications: [
-          "Which municipal corporation or city, and which financial year should be checked?",
+          "Which geography should be covered?",
+          ...(genericPeriod === "Not specified"
+            ? ["Which period or years should be covered?"]
+            : []),
         ],
       };
   }

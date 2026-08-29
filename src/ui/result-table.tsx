@@ -42,7 +42,9 @@ export function ResultTable({
                   className={column.format === "text" ? undefined : "numeric"}
                   key={column.key}
                 >
-                  {cellValue(row.values[column.key] ?? null)}
+                  <span className="result-cell-value">
+                    {cellValue(row.values[column.key] ?? null)}
+                  </span>
                 </td>
               ))}
             </tr>

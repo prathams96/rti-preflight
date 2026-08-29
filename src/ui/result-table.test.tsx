@@ -45,6 +45,7 @@ describe("schema-driven result table", () => {
     expect(markup).toContain("Stolen 2021 → 2023");
     expect(markup).toContain("Recovery 2021 → 2023");
     expect(markup.match(/>Change<\/th>/g)).toHaveLength(2);
+    expect(markup).toContain('class="result-cell-value"');
     expect(rowCount(markup)).toBe(16);
   });
 

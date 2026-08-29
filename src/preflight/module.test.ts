@@ -1,8 +1,43 @@
 import { describe, expect, it } from "vitest";
-import { createOfflinePreflightModule, RTIPreflightModule } from "./module";
+import {
+  createOfflinePreflightModule,
+  formatDecimalString,
+  RTIPreflightModule,
+} from "./module";
 import { snapshot } from "../evidence/snapshot";
 
 describe("PreflightModule public seam", () => {
+  it.each([
+    ["186.100000", "186.1"],
+    ["-7.100000", "-7.1"],
+    ["257.900000", "257.9"],
+    ["-0.200000", "-0.2"],
+    ["12.340000", "12.34"],
+    ["12.000000", "12"],
+    ["0.000000", "0"],
+    ["-0.000000", "0"],
+  ])("formats %s as %s without floating point", (input, expected) => {
+    expect(formatDecimalString(input)).toBe(expected);
+  });
+
+  it("records the execution time from the injected clock", async () => {
+    const preflight = new RTIPreflightModule(
+      undefined,
+      undefined,
+      () => "2026-08-29T12:34:56.000Z",
+    );
+    const need = (
+      await preflight.interpret({
+        text: "Between 2021 and 2023 which States reported property stolen up and recovery down?",
+        traceId: "trace-clock",
+      })
+    ).needs[0];
+    const result = await preflight.resolve({ need, snapshot });
+    expect(result.executionReceipt?.executedAt).toBe(
+      "2026-08-29T12:34:56.000Z",
+    );
+  });
+
   it("interprets multiple needs without losing the citizen wording", async () => {
     const interpretation = await createOfflinePreflightModule().interpret({
       text: "Find property stolen data and also check my EPF claim",
@@ -41,6 +76,32 @@ describe("PreflightModule public seam", () => {
       recovery2023: "23.2",
       recoveryDelta: "−15.2 pp",
     });
+    expect(
+      result.rows.find((row) => row.geography === "Karnataka"),
+    ).toMatchObject({
+      stolenDelta: "+186.1",
+      recoveryDelta: "−7.1 pp",
+    });
+    expect(
+      result.rows.find((row) => row.geography === "Maharashtra"),
+    ).toMatchObject({
+      stolenDelta: "+257.9",
+      recoveryDelta: "−0.2 pp",
+    });
+    expect(
+      result.rows
+        .flatMap((row) => [
+          ...row.columns.map((column) => column.value),
+          row.stolen2021,
+          row.stolen2023,
+          row.stolenDelta,
+          row.recovery2021,
+          row.recovery2023,
+          row.recoveryDelta,
+        ])
+        .filter((value): value is string => value !== undefined)
+        .some((value) => /\d\.\d{6}(?:\D|$)/.test(value)),
+    ).toBe(false);
     expect(gujarat?.lineage).toHaveLength(5);
     expect(result.evidenceStatus).toBe("Calculated from official data");
   });
