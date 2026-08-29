@@ -56,6 +56,10 @@ pw run-code 'async (page) => {
     await page.getByRole("button", { name: /Prepare an RTI/ }).first().click();
   }
   await page.getByRole("heading", { name: "Your RTI draft" }).waitFor();
+  const questionBDraftText = await page.getByRole("textbox", { name: "RTI request" }).inputValue();
+  if (!/MSME/i.test(questionBDraftText) || !(questionBDraftText.includes("2025") && questionBDraftText.includes("2026"))) throw new Error("Question-B draft omitted the requested MSME years");
+  const questionBPageText = await page.locator("body").innerText();
+  if (!questionBPageText.includes("Demo route") || !questionBPageText.includes("Continue to filing demo") || (await page.getByRole("button", { name: "Continue to filing demo" }).isDisabled())) throw new Error("Question-B draft did not expose the unverified demo route and filing CTA");
   await page.getByRole("button", { name: "Save draft" }).click();
   await page.waitForTimeout(250);
   await page.getByRole("button", { name: "RTI Tathya home" }).click();
@@ -108,8 +112,11 @@ pw run-code 'async (page) => {
     await page.getByRole("button", { name: /Prepare an RTI/ }).first().click();
   }
   await page.getByRole("heading", { name: "Your RTI draft" }).waitFor();
-  if ((await page.getByRole("button", { name: "Back to results" }).count()) !== 0) throw new Error("Old result remained the draft back destination");
-  if ((await page.locator("body").innerText()).includes("Karnataka")) throw new Error("Old result marker remained in the new draft");
+  const questionBDraftText = await page.getByRole("textbox", { name: "RTI request" }).inputValue();
+  if (!/MSME/i.test(questionBDraftText) || !(questionBDraftText.includes("2025") && questionBDraftText.includes("2026"))) throw new Error("Question-B draft omitted the requested MSME years");
+  const questionBPageText = await page.locator("body").innerText();
+  if (!questionBPageText.includes("Demo route") || !questionBPageText.includes("Continue to filing demo") || (await page.getByRole("button", { name: "Continue to filing demo" }).isDisabled())) throw new Error("Question-B draft did not expose the unverified demo route and filing CTA");
+  if ((await page.locator("body").innerText()).includes("Karnataka")) throw new Error("Old NCRB result remained in the new draft or its back destination");
   console.log("B: old result cleared; new draft has no stale Back to results destination");
 }'
 echo "home-navigation regression B passed"
