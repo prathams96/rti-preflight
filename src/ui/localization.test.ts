@@ -101,6 +101,10 @@ describe("Hindi journey localization", () => {
     expect(hindiResult.evidence[0].extract).toContain("आधिकारिक तालिका");
     expect(hindiResult.calculation?.filters[0]).toContain("चोरी की संपत्ति");
     expect(
+      hindiResult.rows[0].columns.map((column) => column.value).join(" "),
+    ).toContain("करोड़");
+    expect(hindiResult.rows[0].geography).toBe(result.rows[0].geography);
+    expect(
       hindiResult.resultTable?.columns.map((column) => column.label),
     ).toEqual([
       "राज्य/केंद्र शासित प्रदेश",
@@ -189,6 +193,43 @@ describe("Hindi journey localization", () => {
         "hi",
       ),
     ).toContain("प्रोटोटाइप स्नैपशॉट");
+  });
+
+  it("localizes verified no-answer and NCRB operation strings", () => {
+    expect(
+      localizeText(
+        "The sources checked by this prototype did not provide a reliable answer for this question.",
+        "hi",
+      ),
+    ).toBe(
+      "इस प्रोटोटाइप द्वारा जाँचे गए स्रोतों से इस सवाल का विश्वसनीय उत्तर नहीं मिला।",
+    );
+    expect(
+      localizeText(
+        "Compare value of property stolen AND percentage recovery of stolen property for each individual State/UT.",
+        "hi",
+      ),
+    ).toContain("हर राज्य/केंद्र शासित प्रदेश");
+  });
+
+  it("localizes generic NCRB currency units without changing names or numbers", async () => {
+    const need = interpretWithFixture(SCENARIO_PROMPTS[0].prompt)[0];
+    const result = await createOfflinePreflightModule().resolve({
+      need,
+      snapshot,
+      traceId: "localization-units-test",
+    });
+    const hindiResult = localizeResolution(result, "hi");
+    const values = hindiResult.resultTable?.rows.flatMap((row) =>
+      Object.values(row.values),
+    );
+    expect(values?.some((value) => String(value).includes("करोड़"))).toBe(true);
+    expect(values?.some((value) => String(value).includes("crore"))).toBe(
+      false,
+    );
+    expect(values?.some((value) => String(value).includes("Gujarat"))).toBe(
+      true,
+    );
   });
 
   it("localizes details, route metadata, and ledger copy while preserving names and acronyms", async () => {

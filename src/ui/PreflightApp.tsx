@@ -110,7 +110,8 @@ type SavedPreflight = {
   language: Language;
 };
 
-type IconName = "info" | "external" | "check" | "warning" | "pending";
+type IconName =
+  "info" | "external" | "insert" | "check" | "warning" | "pending";
 
 function Icon({ name }: { name: IconName }) {
   const paths = {
@@ -121,6 +122,7 @@ function Icon({ name }: { name: IconName }) {
       </>
     ),
     external: <path d="M13 5h6v6m-1-5-8 8M16 15v3H5V7h3" />,
+    insert: <path d="M5 12h12m-5-5 5 5-5 5" />,
     check: <path d="m5 12 4.2 4L19 6.5" />,
     warning: (
       <>
@@ -3122,25 +3124,22 @@ export default function PreflightApp() {
               </span>
             </summary>
             <div className="scenario-list">
-              {SCENARIO_PROMPTS.map((scenario) => (
-                <button
-                  key={scenario.id}
-                  className="scenario"
-                  aria-label={
-                    language === "hi" ? scenario.hiLabel : scenario.label
-                  }
-                  onClick={() =>
-                    updateAskText(
-                      language === "hi" ? scenario.hiPrompt : scenario.prompt,
-                    )
-                  }
-                >
-                  <span>
-                    {language === "hi" ? scenario.hiPrompt : scenario.prompt}
-                  </span>
-                  <Icon name="external" />
-                </button>
-              ))}
+              {SCENARIO_PROMPTS.map((scenario) => {
+                const scenarioPrompt =
+                  language === "hi" ? scenario.hiPrompt : scenario.prompt;
+                const isSelected = text.trim() === scenarioPrompt.trim();
+                return (
+                  <button
+                    key={scenario.id}
+                    className={isSelected ? "scenario selected" : "scenario"}
+                    aria-label={scenarioPrompt}
+                    onClick={() => updateAskText(scenarioPrompt)}
+                  >
+                    <span>{scenarioPrompt}</span>
+                    <Icon name={isSelected ? "check" : "insert"} />
+                  </button>
+                );
+              })}
             </div>
           </details>
           {savedPreflights.length > 0 && (
@@ -3510,10 +3509,15 @@ export default function PreflightApp() {
             {displayTable && displayResult.calculation && (
               <>
                 <div className="calculation-strip">
-                  <strong>{copy.calculation}</strong>
-                  <span>{displayResult?.calculation?.operation}</span>
-                  <span>
-                    {displayTable.rows.length} {copy.matching}
+                  <strong className="evidence-stamp">
+                    <span className="evidence-count">
+                      {displayTable.rows.length}
+                    </span>
+                    <span>{copy.matching}</span>
+                    <Icon name="check" />
+                  </strong>
+                  <span className="calculation-operation">
+                    {displayResult?.calculation?.operation}
                   </span>
                 </div>
                 <div className="table-wrap">
@@ -3968,11 +3972,12 @@ export default function PreflightApp() {
             </button>
           </div>
           <p className="stage-boundary">{copy.fileIntro}</p>
-          <div className="stepper" aria-label={copy.stepperAria}>
+          <ol className="stepper" aria-label={copy.stepperAria}>
             {["otp", "identity", "review", "payment"].map((step, index) => (
-              <span
+              <li
                 className={filingStep === step ? "step active" : "step"}
                 key={step}
+                aria-current={filingStep === step ? "step" : undefined}
               >
                 {index + 1}.{" "}
                 {step === "otp"
@@ -3982,9 +3987,9 @@ export default function PreflightApp() {
                     : step === "review"
                       ? copy.stepReview.replace("3. ", "")
                       : copy.stepPayment.replace("4. ", "")}
-              </span>
+              </li>
             ))}
-          </div>
+          </ol>
           <section className="active-plane filing-plane">
             {filingStep === "otp" && (
               <div>
