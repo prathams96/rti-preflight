@@ -18,6 +18,7 @@ import {
   NORTHERN_RAILWAY_HOLDER,
   NORTHERN_RAILWAY_ROUTE,
 } from "../filing";
+import { isFilingDemoReady } from "./filing-flow";
 
 type StorageMock = {
   getItem: (key: string) => string | null;
@@ -282,7 +283,7 @@ describe("Preflight persistence boundaries", () => {
     });
   });
 
-  it("restores structurally valid generic packages regardless of coverage metadata", async () => {
+  it("rejects generic packages that falsely claim guided coverage", async () => {
     const sessionStorage = createStorage();
     vi.stubGlobal("window", { localStorage: createStorage(), sessionStorage });
     const filing = createFilingModule();
@@ -325,11 +326,45 @@ describe("Preflight persistence boundaries", () => {
       }),
     );
 
-    expect(readSessionFilingState()).toMatchObject({
-      phase: "file",
-      package: { route: { id: "generic-rti-demo" } },
+    expect(readSessionFilingState()).toBeUndefined();
+    expect(sessionStorage.getItem("rti-preflight-filing-v2")).toBeNull();
+
+    const validGenericPackage = await filing.prepare({
+      need,
+      holder,
+      route,
     });
-    expect(sessionStorage.getItem("rti-preflight-filing-v2")).not.toBeNull();
+    sessionStorage.setItem(
+      "rti-preflight-filing-v2",
+      JSON.stringify({
+        version: 2,
+        state: {
+          phase: "file",
+          draftText: validGenericPackage.draft.text,
+          package: validGenericPackage,
+          need,
+          step: "otp",
+          otp: "",
+          profile: filing.demoProfile,
+          reviewed: false,
+          paymentConfirmed: false,
+          language: "en",
+        },
+      }),
+    );
+
+    const restored = readSessionFilingState();
+    expect(restored).toMatchObject({
+      phase: "file",
+      package: { route: { id: "generic-rti-demo", guidedCoverage: false } },
+    });
+    expect(
+      isFilingDemoReady({
+        need,
+        draftText: validGenericPackage.draft.text,
+        filingPackage: validGenericPackage,
+      }),
+    ).toBe(true);
   });
 
   it("discards malformed nested research and filing state", () => {

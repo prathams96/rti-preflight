@@ -77,6 +77,44 @@ describe("structured interpretation mapping", () => {
     });
   });
 
+  it("accepts Hindi presentation for an unregistered inferred authority", () => {
+    const result = modelNeedsToInterpretation({
+      originalText: "2025 और 2026 में बंद हुए MSME की संख्या क्या है?",
+      redactedText: "2025 और 2026 में बंद हुए MSME की संख्या क्या है?",
+      traceId: "trace-msme-hi",
+      language: "hi",
+      needs: [
+        {
+          canonicalNeed: "Number of MSMEs that shut or closed in 2025 and 2026",
+          measure: "Number of MSMEs that shut/closed",
+          geography: "Not specified",
+          period: "2025 versus 2026",
+          breakdown: "Year",
+          informationHolder: "Ministry of Micro, Small and Medium Enterprises",
+          resolutionPreference: "formal",
+          unresolvedClarifications: ["Which geography should be covered?"],
+          display: {
+            canonicalNeed: "2025 और 2026 में बंद हुए MSME की संख्या",
+            measure: "बंद हुए MSME की संख्या",
+            geography: "निर्दिष्ट नहीं",
+            period: "वर्ष 2025 और 2026",
+            breakdown: "वर्ष",
+            informationHolder: "सूक्ष्म, लघु और मध्यम उद्यम मंत्रालय",
+            unresolvedClarifications: ["कौन-सा क्षेत्र शामिल किया जाए?"],
+          },
+        },
+      ],
+    });
+
+    expect(result.needs[0]).toMatchObject({
+      informationHolder: "Ministry of Micro, Small and Medium Enterprises",
+      informationHolderStatus: "unverified",
+      presentation: {
+        informationHolder: "सूक्ष्म, लघु और मध्यम उद्यम मंत्रालय",
+      },
+    });
+  });
+
   it("normalizes placeholder authorities without hiding the need", () => {
     const result = modelNeedsToInterpretation({
       originalText: "Which public records are available?",

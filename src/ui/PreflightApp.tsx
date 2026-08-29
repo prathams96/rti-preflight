@@ -516,6 +516,16 @@ function isValidatedFilingPackage(
   const unverifiedConstraints = isObject(profile)
     ? profile.unverifiedConstraints
     : undefined;
+  const guidedRouteIsCurrent =
+    isObject(route) &&
+    route.id === NORTHERN_RAILWAY_ROUTE.id &&
+    route.officialUrl === NORTHERN_RAILWAY_ROUTE.officialUrl &&
+    isObject(profile) &&
+    profile.id === NORTHERN_RAILWAY_ROUTE.profile.id &&
+    profile.version === NORTHERN_RAILWAY_ROUTE.profile.version &&
+    profile.verifiedAt === NORTHERN_RAILWAY_ROUTE.profile.verifiedAt &&
+    isObject(confirmedNeed) &&
+    isNorthernRailwayGuidedNeed(confirmedNeed as ConfirmedFilingNeed);
   return (
     isObject(draft) &&
     isNonEmptyString(draft.text) &&
@@ -532,6 +542,7 @@ function isValidatedFilingPackage(
     isNonEmptyString(route.id) &&
     (route.officialUrl === undefined || isNonEmptyString(route.officialUrl)) &&
     typeof route.guidedCoverage === "boolean" &&
+    (!route.guidedCoverage || guidedRouteIsCurrent) &&
     isObject(authority) &&
     isNonEmptyString(authority.id) &&
     isNonEmptyString(authority.canonicalName) &&
@@ -2091,10 +2102,14 @@ export default function PreflightApp() {
     : undefined;
   const displayTable = displayResult?.resultTable;
   const displayProfile = localizeFilingProfile(profile, language);
+  const displayInformationHolder =
+    displayNeed?.informationHolder ?? need?.informationHolder ?? "";
   const displayAcknowledgement = acknowledgement
     ? {
         ...acknowledgement,
-        holder: localizeText(acknowledgement.holder, language),
+        holder:
+          displayInformationHolder ||
+          localizeText(acknowledgement.holder, language),
         submittedDraft: acknowledgement.submittedDraft,
       }
     : undefined;
@@ -2891,7 +2906,7 @@ export default function PreflightApp() {
       setPhase("confirm");
     }
   }
-  function reset() {
+  function clearActiveJourney(preserveSavedPreflights: boolean) {
     draftRequestGeneration.current += 1;
     resolveRequestGeneration.current += 1;
     interpretRequestGeneration.current += 1;
@@ -2919,15 +2934,22 @@ export default function PreflightApp() {
     setFilingError("");
     setAcknowledgement(undefined);
     setBriefFeedback("");
-    setSavedPreflights([]);
+    if (!preserveSavedPreflights) setSavedPreflights([]);
     setError("");
+    setDetailsOpen(false);
+    setRecoveryNotice(false);
     try {
       clearPrototypeStorage();
-      window.localStorage.removeItem(SAVED_PREFLIGHTS_KEY);
+      if (!preserveSavedPreflights)
+        window.localStorage.removeItem(SAVED_PREFLIGHTS_KEY);
     } catch {
       /* no-op */
     }
     setResumeState(undefined);
+  }
+
+  function reset() {
+    clearActiveJourney(false);
   }
 
   function returnFromDraft() {
@@ -2937,7 +2959,6 @@ export default function PreflightApp() {
 
   /** Navigate back to Ask while invalidating any in-flight draft or resolution request. */
   function returnToAsk() {
-    homeNavigationRef.current = true;
     draftRequestGeneration.current += 1;
     resolveRequestGeneration.current += 1;
     interpretRequestGeneration.current += 1;
@@ -2947,6 +2968,12 @@ export default function PreflightApp() {
     clearFilingStorage();
     setResumeState(undefined);
     setPhase("start");
+  }
+
+  /** Start a fresh journey from the logo without deleting saved checks. */
+  function goHome() {
+    homeNavigationRef.current = true;
+    clearActiveJourney(true);
   }
   const citationReview: CitationReviewState = challengeCandidateId
     ? { status: "awaiting-confirmation", evidenceId: challengeCandidateId }
@@ -3008,7 +3035,7 @@ export default function PreflightApp() {
         <button
           type="button"
           className="wordmark"
-          onClick={returnToAsk}
+          onClick={goHome}
           aria-label="RTI Tathya home"
         >
           <Image
@@ -3756,13 +3783,7 @@ export default function PreflightApp() {
             <dl className="draft-summary">
               <div>
                 <dt>{copy.to}</dt>
-                <dd>
-                  {localizeText(
-                    filingPackage?.holder.canonicalName ??
-                      need.informationHolder,
-                    language,
-                  )}
-                </dd>
+                <dd>{localizeText(displayInformationHolder, language)}</dd>
               </div>
               <div>
                 <dt>{copy.request}</dt>
@@ -4054,10 +4075,7 @@ export default function PreflightApp() {
                     <div>
                       <dt>{copy.to}</dt>
                       <dd>
-                        {localizeText(
-                          filingPackage.holder.canonicalName,
-                          language,
-                        )}
+                        {localizeText(displayInformationHolder, language)}
                       </dd>
                     </div>
                     <div>
