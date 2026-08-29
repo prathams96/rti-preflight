@@ -32,7 +32,11 @@ async function interpreted(text: string, traceId: string) {
 describe("release gates", () => {
   it("keeps the derived NCRB resolution byte-stable and fully lineaged", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
-    const preflight = new RTIPreflightModule();
+    const preflight = new RTIPreflightModule(
+      undefined,
+      undefined,
+      () => "2026-08-29T00:00:00.000Z",
+    );
     const need = await interpreted(
       "Between 2021 and 2023 which States reported property stolen up and recovery down?",
       "golden-ncrb",

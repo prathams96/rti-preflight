@@ -239,6 +239,10 @@ h3 {
   font-size: clamp(1.75rem, 3vw, 2.35rem);
   font-weight: 700;
   letter-spacing: -0.035em;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
 }
 
 .wordmark-logo {
@@ -1725,6 +1729,10 @@ tbody tr:last-child > * {
   white-space: nowrap;
 }
 
+.result-cell-value {
+  min-width: 0;
+}
+
 .caveat,
 .gap-block {
   margin-top: 1.25rem;
@@ -2137,6 +2145,10 @@ footer {
     padding: 1rem;
   }
 
+  .result-plane {
+    transform: none;
+  }
+
   .need-option {
     align-items: flex-start;
     flex-direction: column;
@@ -2194,10 +2206,20 @@ footer {
   td,
   tbody th {
     display: grid;
-    grid-template-columns: minmax(7rem, 9rem) 1fr;
+    grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
     gap: 0.5rem;
     padding: 0.35rem 0.5rem;
     border-bottom: 0;
+  }
+
+  .numeric {
+    white-space: normal;
+    text-align: left;
+  }
+
+  .result-cell-value {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   td::before {
@@ -2228,6 +2250,12 @@ footer {
 }
 
 @media (max-width: 420px) {
+  td,
+  tbody th {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+
   .topbar-identity {
     max-width: 11.5rem;
   }

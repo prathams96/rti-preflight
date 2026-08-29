@@ -282,7 +282,7 @@ describe("Preflight persistence boundaries", () => {
     });
   });
 
-  it("rejects stale generic packages that claim guided coverage", async () => {
+  it("restores structurally valid generic packages regardless of coverage metadata", async () => {
     const sessionStorage = createStorage();
     vi.stubGlobal("window", { localStorage: createStorage(), sessionStorage });
     const filing = createFilingModule();
@@ -325,8 +325,11 @@ describe("Preflight persistence boundaries", () => {
       }),
     );
 
-    expect(readSessionFilingState()).toBeUndefined();
-    expect(sessionStorage.getItem("rti-preflight-filing-v2")).toBeNull();
+    expect(readSessionFilingState()).toMatchObject({
+      phase: "file",
+      package: { route: { id: "generic-rti-demo" } },
+    });
+    expect(sessionStorage.getItem("rti-preflight-filing-v2")).not.toBeNull();
   });
 
   it("discards malformed nested research and filing state", () => {

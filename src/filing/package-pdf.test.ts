@@ -78,10 +78,8 @@ describe("Filing Package PDF export", () => {
     const pdf = await serializeFilingPackagePdf(input, "en");
     const text = new TextDecoder().decode(pdf);
 
-    expect(artifact.acknowledgement.registrationNumber).toBe(
-      "DEMO-RTI-2026-0042",
-    );
-    expect(planText).toContain("DEMO-RTI-2026-0042");
+    expect(artifact.acknowledgement.registrationNumber).toMatch(/^DEMO-RTI-/);
+    expect(planText).toContain(artifact.acknowledgement.registrationNumber);
     expect(planText).toContain("maintenance of lifts and escalators");
     expect(planText).toContain("contractor names and contract values");
     expect(planText).toContain("Northern Railway");

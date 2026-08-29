@@ -265,7 +265,6 @@ export function createFilingModule(
         input.package.draft.text,
       );
       if (
-        !input.package.route.guidedCoverage ||
         !input.package.valid ||
         !validateFilingPackage(input.package).valid ||
         !currentDraft.valid ||

@@ -516,15 +516,6 @@ function isValidatedFilingPackage(
   const unverifiedConstraints = isObject(profile)
     ? profile.unverifiedConstraints
     : undefined;
-  const guidedRouteIsCurrent =
-    isObject(route) &&
-    route.id === NORTHERN_RAILWAY_ROUTE.id &&
-    route.officialUrl === NORTHERN_RAILWAY_ROUTE.officialUrl &&
-    isObject(profile) &&
-    profile.id === NORTHERN_RAILWAY_ROUTE.profile.id &&
-    profile.version === NORTHERN_RAILWAY_ROUTE.profile.version &&
-    profile.verifiedAt === NORTHERN_RAILWAY_ROUTE.profile.verifiedAt &&
-    isNorthernRailwayGuidedNeed(confirmedNeed as ConfirmedFilingNeed);
   return (
     isObject(draft) &&
     isNonEmptyString(draft.text) &&
@@ -541,7 +532,6 @@ function isValidatedFilingPackage(
     isNonEmptyString(route.id) &&
     (route.officialUrl === undefined || isNonEmptyString(route.officialUrl)) &&
     typeof route.guidedCoverage === "boolean" &&
-    (!route.guidedCoverage || guidedRouteIsCurrent) &&
     isObject(authority) &&
     isNonEmptyString(authority.id) &&
     isNonEmptyString(authority.canonicalName) &&
@@ -659,8 +649,8 @@ export const COPY = {
     measure: "Information requested",
     geography: "Area",
     period: "Time period",
-    breakdown: "Breakdown needed",
-    holder: "Likely government authority",
+    breakdown: "Breakdown by",
+    holder: "Likely department to ask",
     preference: "What would work for you?",
     prefPublished: "Information from an official government source is enough",
     prefFormal: "I need a written reply from a government authority",
@@ -713,7 +703,6 @@ export const COPY = {
     prepare: "Prepare an RTI",
     prepareAnyway: "Prepare an RTI anyway",
     citizenOverride: "I still want to prepare an RTI",
-    clarifyHolder: "Confirm the likely authority first",
     footer:
       "Your research is anonymous. Nothing is filed unless you enter the separate filing demo.",
     language: "हिन्दी",
@@ -729,8 +718,10 @@ export const COPY = {
     saveDraft: "Save draft",
     savedDraft: "Saved RTI draft",
     returnResult: "Back to results",
-    guidedUnavailable:
-      "A complete filing demo is not available for this question yet. You can copy the draft and verify the authority’s own RTI channel before filing.",
+    routeChecked: "RTI channel checked",
+    demoRoute: "Demo route",
+    demoRouteDisclosure:
+      "The likely authority was inferred from your question. Verify the authority and official RTI portal before filing a real request.",
     divergenceTitle: "This edit may add a second question",
     divergenceBody:
       "Choose how to keep control of the draft. Nothing will be truncated or silently rewritten.",
@@ -758,7 +749,7 @@ export const COPY = {
     reviewPrompt:
       "Check the authority, request and applicant details before continuing.",
     confirmPackage: "I have checked these details",
-    paymentPrompt: "RTI application fee: ₹10",
+    paymentPrompt: "₹10 mock RTI fee",
     noRealPayment: "No real payment will be made.",
     confirmDemo: "Complete demo payment",
     acknowledgementStage: "Done",
@@ -783,9 +774,6 @@ export const COPY = {
     confirmChallenge: "Report problem and mark result partial",
     cancel: "Cancel",
     draftLabel: "RTI request",
-    routeNotVerified:
-      "Route information has not been checked in this prototype",
-    fallbackRoute: "Simulated fallback route",
     routeVerification:
       "This route information was last checked on this date; a government website may have changed.",
     unverified: "Unverified",
@@ -955,8 +943,8 @@ export const COPY = {
     measure: "माँगी गई जानकारी",
     geography: "क्षेत्र",
     period: "समय अवधि",
-    breakdown: "कौन-सा विभाजन चाहिए",
-    holder: "संभावित सरकारी प्राधिकरण",
+    breakdown: "विभाजन",
+    holder: "किस विभाग से पूछें",
     preference: "आपके लिए क्या ठीक रहेगा?",
     prefPublished: "आधिकारिक सरकारी स्रोत की जानकारी पर्याप्त है",
     prefFormal: "मुझे सरकारी प्राधिकरण से लिखित उत्तर चाहिए",
@@ -1008,7 +996,6 @@ export const COPY = {
     prepare: "RTI तैयार करें",
     prepareAnyway: "फिर भी RTI तैयार करें",
     citizenOverride: "मैं फिर भी RTI तैयार करना चाहता/चाहती हूँ",
-    clarifyHolder: "पहले संभावित प्राधिकरण की पुष्टि करें",
     footer:
       "आपका शोध गुमनाम है। अलग फाइलिंग डेमो में जाने तक कुछ दाखिल नहीं होता।",
     language: "English",
@@ -1024,8 +1011,10 @@ export const COPY = {
     saveDraft: "ड्राफ्ट सहेजें",
     savedDraft: "सहेजा गया RTI ड्राफ्ट",
     returnResult: "नतीजे पर लौटें",
-    guidedUnavailable:
-      "इस सवाल के लिए अभी पूरा फाइलिंग डेमो उपलब्ध नहीं है। ड्राफ्ट कॉपी करके फाइल करने से पहले प्राधिकरण का अपना RTI चैनल सत्यापित करें।",
+    routeChecked: "RTI चैनल जाँचा गया",
+    demoRoute: "डेमो मार्ग",
+    demoRouteDisclosure:
+      "आपके सवाल से संभावित प्राधिकरण का अनुमान लगाया गया है। असली अनुरोध भेजने से पहले प्राधिकरण और आधिकारिक RTI पोर्टल की जाँच करें।",
     divergenceTitle: "यह बदलाव दूसरी सूचना-ज़रूरत जोड़ सकता है",
     divergenceBody:
       "ड्राफ्ट पर नियंत्रण रखने का तरीका चुनें। कुछ भी छोटा या चुपचाप बदला नहीं जाएगा।",
@@ -1053,7 +1042,7 @@ export const COPY = {
     reviewPrompt:
       "आगे बढ़ने से पहले प्राधिकरण, अनुरोध और आवेदक के विवरण जाँचें।",
     confirmPackage: "मैंने इन विवरणों को जाँच लिया है",
-    paymentPrompt: "RTI आवेदन शुल्क: ₹10",
+    paymentPrompt: "₹10 का मॉक RTI शुल्क",
     noRealPayment: "कोई वास्तविक भुगतान नहीं होगा।",
     confirmDemo: "डेमो भुगतान पूरा करें",
     acknowledgementStage: "पूरा हुआ",
@@ -1078,8 +1067,6 @@ export const COPY = {
     confirmChallenge: "समस्या रिपोर्ट करके स्तर घटाएँ",
     cancel: "रद्द करें",
     draftLabel: "RTI अनुरोध",
-    routeNotVerified: "इस प्रोटोटाइप में मार्ग की जानकारी सत्यापित नहीं है",
-    fallbackRoute: "अनुकरण किया गया वैकल्पिक मार्ग",
     routeVerification:
       "इस तारीख को अंतिम बार जाँची गई मार्ग जानकारी के आधार पर सत्यापित; बाहरी स्वीकृति की गारंटी नहीं है।",
     unverified: "असत्यापित",
@@ -2092,6 +2079,7 @@ export default function PreflightApp() {
   const draftRequestGeneration = useRef(0);
   const resolveRequestGeneration = useRef(0);
   const interpretRequestGeneration = useRef(0);
+  const homeNavigationRef = useRef(false);
   const separatedDraftCounter = useRef(0);
   const [savedPreflightsLoaded, setSavedPreflightsLoaded] = useState(false);
   const [resumeState, setResumeState] = useState<SavedState | undefined>();
@@ -2183,6 +2171,7 @@ export default function PreflightApp() {
     const timer = window.setTimeout(() => {
       setSavedPreflights(readSavedPreflights());
       setSavedPreflightsLoaded(true);
+      if (homeNavigationRef.current) return;
       const hadSavedState = Boolean(window.localStorage.getItem(RESEARCH_KEY));
       const saved = readPersistedState();
       if (!saved) {
@@ -2231,6 +2220,7 @@ export default function PreflightApp() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      if (homeNavigationRef.current) return;
       const { state: saved, recoveryNeeded } = loadSessionFilingState();
       if (recoveryNeeded) setRecoveryNotice(true);
       if (!saved) return;
@@ -2447,10 +2437,6 @@ export default function PreflightApp() {
 
   function openDraft() {
     if (!need) return;
-    if (holderNeedsClarification) {
-      setPhase("confirm");
-      return;
-    }
     setDraftError("");
     setDivergenceChoice("");
     if (
@@ -2479,14 +2465,6 @@ export default function PreflightApp() {
       need.draftingIntent ?? hasExplicitDraftingIntent(need.originalText),
     );
     if (
-      holderNeedsClarification &&
-      shouldPreferDraftingRoute({ ...need, draftingIntent: explicitDrafting })
-    ) {
-      setError("");
-      setPhase("confirm");
-      return;
-    }
-    if (
       shouldPreferDraftingRoute({ ...need, draftingIntent: explicitDrafting })
     ) {
       openDraft();
@@ -2509,13 +2487,9 @@ export default function PreflightApp() {
   }
 
   function continueToFiling() {
-    if (!filingDemoReady) {
-      setDraftError(copy.guidedUnavailable);
-      return;
-    }
     const validation = draftValidation();
     if (!filingPackage || !validation) {
-      setDraftError(copy.guidedUnavailable);
+      setDraftError(copy.prepareFailure);
       return;
     }
     if (!validation.valid) {
@@ -2528,6 +2502,10 @@ export default function PreflightApp() {
     }
     if (need && detectDraftDivergence(need, draftText).diverged) {
       setDraftError(copy.revalidationError);
+      return;
+    }
+    if (!filingDemoReady) {
+      setDraftError(copy.demoSubmissionFailure);
       return;
     }
     const updatedPackage = {
@@ -2959,12 +2937,15 @@ export default function PreflightApp() {
 
   /** Navigate back to Ask while invalidating any in-flight draft or resolution request. */
   function returnToAsk() {
+    homeNavigationRef.current = true;
     draftRequestGeneration.current += 1;
     resolveRequestGeneration.current += 1;
     interpretRequestGeneration.current += 1;
     setIsInterpreting(false);
     setActiveAiTask(null);
     setAiReturnPhase(null);
+    clearFilingStorage();
+    setResumeState(undefined);
     setPhase("start");
   }
   const citationReview: CitationReviewState = challengeCandidateId
@@ -2996,12 +2977,6 @@ export default function PreflightApp() {
         need.draftingIntent ?? hasExplicitDraftingIntent(need.originalText),
     }),
   );
-  const holderNeedsClarification = Boolean(
-    need &&
-    need.informationHolderStatus !== "verified" &&
-    (need.informationHolder === "Unknown" ||
-      need.informationHolder === "To be confirmed"),
-  );
   const statusClass = useMemo(
     () => displayOutcome?.toLocaleLowerCase().replaceAll("_", "-") ?? "",
     [displayOutcome],
@@ -3030,16 +3005,21 @@ export default function PreflightApp() {
         </div>
       </header>
       <div className="brand-row">
-        <div className="wordmark">
+        <button
+          type="button"
+          className="wordmark"
+          onClick={returnToAsk}
+          aria-label="RTI Tathya home"
+        >
           <Image
             className="wordmark-logo"
             src="/rti-tathya-logo-transparent.png"
-            alt="RTI Tathya logo"
+            alt=""
             width={1018}
             height={814}
             sizes="(max-width: 420px) 3.2rem, (max-width: 720px) 3.6rem, 5rem"
           />
-        </div>
+        </button>
         <button
           className={`language-toggle language-toggle-${language}`}
           onClick={() => changeLanguage(language === "en" ? "hi" : "en")}
@@ -3319,12 +3299,13 @@ export default function PreflightApp() {
                 }
                 onClick={confirmNeed}
               >
-                {holderNeedsClarification && prefersDraftingRoute
-                  ? copy.clarifyHolder
-                  : prefersDraftingRoute
-                    ? copy.prepare
-                    : copy.search}
+                {prefersDraftingRoute ? copy.prepare : copy.search}
               </button>
+              {pendingClarifications.length > 0 && (
+                <button className="secondary-button" onClick={openDraft}>
+                  {copy.prepareAnyway}
+                </button>
+              )}
               <button className="secondary-button" onClick={reset}>
                 {copy.restart}
               </button>
@@ -3621,13 +3602,16 @@ export default function PreflightApp() {
                     (count, row) => count + row.lineage.length,
                     0,
                   ),
-                  new Date(
-                    result.executionReceipt.executedAt,
-                  ).toLocaleDateString(language === "hi" ? "hi-IN" : "en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  }),
+                  new Date(result.executionReceipt.executedAt).toLocaleString(
+                    language === "hi" ? "hi-IN" : "en-IN",
+                    {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    },
+                  ),
                 )}
               </p>
             )}
@@ -3682,11 +3666,6 @@ export default function PreflightApp() {
                 displayOutcome === "OUTSIDE_SNAPSHOT_COVERAGE") && (
                 <button className="action-button" onClick={openDraft}>
                   {copy.prepare}
-                </button>
-              )}
-              {holderNeedsClarification && (
-                <button className="action-button" onClick={editConfirmedNeed}>
-                  {copy.clarifyHolder}
                 </button>
               )}
               {displayOutcome === "SOURCE_RESOLVED" && (
@@ -3805,7 +3784,7 @@ export default function PreflightApp() {
                       )}
                     </ExternalLink>
                   ) : (
-                    copy.fallbackRoute
+                    copy.demoRoute
                   )}
                 </dd>
               </div>
@@ -3815,25 +3794,15 @@ export default function PreflightApp() {
                   <dd>
                     {filingPackage.route.officialUrl ? (
                       <>
+                        {copy.routeChecked}.{" "}
                         {filingPackage.route.profile.verifiedAt}.{" "}
                         {copy.routeVerification}
                       </>
                     ) : (
-                      <details className="unverified-disclosure">
-                        <summary>
-                          <Icon name="info" /> {copy.routeNotVerified}
-                        </summary>
-                        {filingPackage.route.profile.unverifiedConstraints && (
-                          <p>
-                            {filingPackage.route.profile.unverifiedConstraints
-                              .map((constraint) =>
-                                localizeText(constraint, language),
-                              )
-                              .join("; ")}
-                            .
-                          </p>
-                        )}
-                      </details>
+                      <p className="route-disclosure">
+                        <strong>{copy.demoRoute}.</strong>{" "}
+                        {copy.demoRouteDisclosure}
+                      </p>
                     )}
                   </dd>
                 </div>
@@ -3925,36 +3894,23 @@ export default function PreflightApp() {
                 </div>
               </div>
             )}
-            {filingPackage ? (
-              <>
-                <div className="result-actions">
-                  {filingPackage.route.guidedCoverage && (
-                    <button
-                      className="action-button"
-                      onClick={continueToFiling}
-                      disabled={!filingDemoReady}
-                    >
-                      {copy.continueFiling}
-                    </button>
-                  )}
-                  <button
-                    className="secondary-button"
-                    onClick={saveCurrentDraft}
-                    disabled={draftDiverged || draftIsInvalid}
-                  >
-                    {copy.saveDraft}
-                  </button>
-                </div>
-                {!filingPackage.route.guidedCoverage && (
-                  <p className="coverage-note status-partial">
-                    <Icon name="info" /> {copy.guidedUnavailable}
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="coverage-note status-partial">
-                <span aria-hidden="true">ⓘ</span> {copy.guidedUnavailable}
-              </p>
+            {filingPackage && (
+              <div className="result-actions">
+                <button
+                  className="action-button"
+                  onClick={continueToFiling}
+                  disabled={!filingDemoReady}
+                >
+                  {copy.continueFiling}
+                </button>
+                <button
+                  className="secondary-button"
+                  onClick={saveCurrentDraft}
+                  disabled={draftDiverged || draftIsInvalid}
+                >
+                  {copy.saveDraft}
+                </button>
+              </div>
             )}
           </section>
         </section>

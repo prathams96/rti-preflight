@@ -15,7 +15,10 @@ import {
   canonicalNeedFromAnalysisIntent,
   isExactScenarioPrompt,
 } from "../content/scenarios";
-import { resolveAuthorityName } from "./authority-registry";
+import {
+  normalizeInformationHolder,
+  resolveAuthorityName,
+} from "./authority-registry";
 import {
   matchesLanguageForFields,
   preservesPresentationField,
@@ -110,17 +113,43 @@ export const INFORMATION_NEED_SCHEMA = {
         type: "object",
         additionalProperties: false,
         properties: {
-          canonicalNeed: { type: "string" },
-          measure: { type: "string" },
-          geography: { type: "string" },
-          period: { type: "string" },
-          breakdown: { type: "string" },
-          informationHolder: { type: "string" },
+          canonicalNeed: {
+            type: "string",
+            description:
+              "Stable semantic statement of the citizen's information need. Preserve the requested subject and comparison without inventing facts.",
+          },
+          measure: {
+            type: "string",
+            description:
+              "Exact record, count, amount, status, or other measure requested.",
+          },
+          geography: {
+            type: "string",
+            description:
+              "Place or jurisdiction explicitly supplied or genuinely entailed by the request. Never invent a geography.",
+          },
+          period: {
+            type: "string",
+            description:
+              "Explicit years, financial years, dates, or ranges normalized into a citizen-readable period.",
+          },
+          breakdown: {
+            type: "string",
+            description:
+              "Requested or materially implied comparison dimension, such as Year, State, or category. Use No additional breakdown when none is requested.",
+          },
+          informationHolder: {
+            type: "string",
+            description:
+              "Most likely public authority, ministry, or department for routing. This is a hypothesis and may be unverified; do not fabricate a CPIO, office, portal, or jurisdiction.",
+          },
           resolutionPreference: {
             type: "string",
             enum: ["published", "formal", "unsure"],
           },
           unresolvedClarifications: {
+            description:
+              "At most two questions about genuinely missing details that materially affect the request; do not add generic boilerplate.",
             type: "array",
             maxItems: 2,
             items: { type: "string" },
@@ -319,6 +348,9 @@ export function modelNeedsToInterpretation(input: {
         ? undefined
         : normalizeAnalysisIntent(normalizedNeed.analysisIntent);
     const holder = resolveAuthorityName(normalizedNeed.informationHolder);
+    const informationHolder = normalizeInformationHolder(
+      holder?.name ?? normalizedNeed.informationHolder,
+    );
     if (modelNeed.display) {
       const presentationFields = [
         ["canonicalNeed", normalizedNeed.canonicalNeed],
@@ -326,7 +358,7 @@ export function modelNeedsToInterpretation(input: {
         ["geography", normalizedNeed.geography],
         ["period", normalizedNeed.period],
         ["breakdown", normalizedNeed.breakdown],
-        ["informationHolder", holder?.name ?? normalizedNeed.informationHolder],
+        ["informationHolder", informationHolder],
       ] as Array<[PresentationField, string]>;
       const mismatch = presentationFields.find(
         ([field, canonical]) =>
@@ -347,7 +379,7 @@ export function modelNeedsToInterpretation(input: {
       geography: normalizedNeed.geography,
       period: normalizedNeed.period,
       breakdown: normalizedNeed.breakdown,
-      informationHolder: holder?.name ?? normalizedNeed.informationHolder,
+      informationHolder,
       informationHolderStatus: holder ? "verified" : "unverified",
       resolutionPreference: modelNeed.resolutionPreference,
       unresolvedClarifications: modelNeed.unresolvedClarifications.slice(0, 2),
@@ -365,6 +397,9 @@ export function modelNeedsToInterpretation(input: {
             presentation: {
               language: input.language ?? "en",
               ...modelNeed.display,
+              informationHolder: normalizeInformationHolder(
+                modelNeed.display.informationHolder,
+              ),
             },
           }
         : {}),
@@ -406,7 +441,7 @@ export class OpenAIInterpretationAdapter implements InterpretationAdapter {
           input: [
             {
               role: "system",
-              content: `Interpret the citizen's request using only schema-constrained fields. Canonical fields must be stable English/canonical values for deterministic application logic. ${input.language === "hi" ? "All display fields and clarification wording must be natural Hindi. Every natural-language display field must contain at least three Devanagari characters; for numeric period fields, include a Hindi word such as वर्ष or के बीच. Keep display.informationHolder as the exact registered Roman authority name or alias (for example, NCRB, EPFO, or Northern Railway); do not translate it or add parenthetical text." : "All display fields and clarification wording must be natural English."} Do not infer the selected language from the citizen's text. Never provide facts, evidence, figures, or URLs. Every display field is checked against its corresponding canonical field: preserve every number from that canonical field exactly in the same display field; do not drop or invent numeric information. In particular, if the citizen's request contains years, repeat those years in both display.canonicalNeed and display.period when the canonical fields contain them. For tabular comparisons, populate analysisIntent with each requested measure, comparison direction, and the two requested periods; preserve AND versus OR and include ranking only when requested. Do not add a predicate merely because another measure exists in the table. For the seeded NCRB example, display.canonicalNeed and display.period must both contain 2021 and 2023. For the seeded Railway example, keep FY 2024–25 in display.period and do not add those numbers to display.canonicalNeed because the canonical field has no period numbers. For a request about stolen and recovered property across States/UTs, use National Crime Records Bureau as the information holder. For a request about lift or escalator maintenance at New Delhi Railway Station, use Northern Railway as the information holder. For an EPF claim, use Employees' Provident Fund Organisation. When an information holder is known, repeat that registered authority in display.informationHolder or use its registered abbreviation; do not use “Unspecified”.`,
+              content: `Interpret the citizen's request using only schema-constrained fields. Prefer useful semantic inference over placeholder text whenever the request reasonably supports it. Use “Not specified” or “To be confirmed” only when a field genuinely cannot be inferred. Canonical fields must be stable English/canonical values for deterministic application logic. Infer the exact requested record or measure, extract and normalize explicit years/FYs/ranges, and infer geography only when stated or genuinely entailed—never assume India or another geography. Treat informationHolder as a likely public-authority hypothesis; it may be unverified, but do not fabricate a CPIO, office, portal, or jurisdiction. Infer a meaningful requested or implied breakdown dimension; if none is requested, use “No additional breakdown”. Ask at most two unresolved clarifications, and only for missing details that materially affect the request. ${input.language === "hi" ? "All display fields and clarification wording must be natural Hindi. Every natural-language display field must contain at least three Devanagari characters; for numeric period fields, include a Hindi word such as वर्ष or के बीच. Keep display.informationHolder as the exact registered Roman authority name or alias (for example, NCRB, EPFO, or Northern Railway); do not translate it or add parenthetical text." : "All display fields and clarification wording must be natural English."} Do not infer the selected language from the citizen's text. Never provide facts, evidence, figures, or URLs. Every display field is checked against its corresponding canonical field: preserve every number from that canonical field exactly in the same display field; do not drop or invent numeric information. In particular, if the citizen's request contains years, repeat those years in both display.canonicalNeed and display.period when the canonical fields contain them. For tabular comparisons, populate analysisIntent with each requested measure, comparison direction, and the two requested periods; preserve AND versus OR and include ranking only when requested. Do not add a predicate merely because another measure exists in the table. For the seeded NCRB example, display.canonicalNeed and display.period must both contain 2021 and 2023. For the seeded Railway example, keep FY 2024–25 in display.period and do not add those numbers to display.canonicalNeed because the canonical field has no period numbers. For a request about stolen and recovered property across States/UTs, use National Crime Records Bureau as the information holder. For a request about lift or escalator maintenance at New Delhi Railway Station, use Northern Railway as the information holder. For an EPF claim, use Employees' Provident Fund Organisation. When an information holder is known, repeat that registered authority in display.informationHolder or use its registered abbreviation; do not use “Unspecified”.`,
             },
             { role: "user", content: redacted },
           ],

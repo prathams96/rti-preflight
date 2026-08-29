@@ -1,5 +1,9 @@
 import type { InformationNeed } from "../domain/types";
-import { detectDraftDivergence, validateDraft } from "../filing/validation";
+import {
+  detectDraftDivergence,
+  validateDraft,
+  validateFilingPackage,
+} from "../filing/validation";
 import type { ValidatedFilingPackage } from "../filing/types";
 
 export function isFilingDemoReady(input: {
@@ -14,7 +18,8 @@ export function isFilingDemoReady(input: {
     input.filingPackage.route.profile,
   );
   return (
-    input.filingPackage.route.guidedCoverage &&
+    input.filingPackage.valid &&
+    validateFilingPackage(input.filingPackage).valid &&
     validation.valid &&
     !detectDraftDivergence(input.need, input.draftText).diverged
   );

@@ -35,12 +35,68 @@ describe("structured interpretation mapping", () => {
     });
     expect(result.needs[0]).toMatchObject({
       canonicalNeed: "Published city records",
+      measure: "Record register",
+      geography: "The city",
+      period: "2024",
+      breakdown: "By record type",
       informationHolder: "City records office",
       informationHolderStatus: "unverified",
+      resolutionPreference: "published",
       scenario: "unsupported",
     });
     expect(result.needs[0].unresolvedClarifications).toHaveLength(2);
     expect(result.clarifications).toHaveLength(2);
+  });
+
+  it("keeps an inferred but unregistered authority visible and unverified", () => {
+    const result = modelNeedsToInterpretation({
+      originalText: "What are the number of MSMEs shut in 2026 from 2025?",
+      redactedText: "What are the number of MSMEs shut in 2026 from 2025?",
+      traceId: "trace-msme",
+      needs: [
+        {
+          canonicalNeed: "Number of MSMEs that shut or closed in 2025 and 2026",
+          measure: "Number of MSMEs that shut/closed",
+          geography: "Not specified",
+          period: "2025 versus 2026",
+          breakdown: "Year",
+          informationHolder: "Ministry of Micro, Small and Medium Enterprises",
+          resolutionPreference: "formal",
+          unresolvedClarifications: ["Which geography should be covered?"],
+        },
+      ],
+    });
+    expect(result.needs[0]).toMatchObject({
+      canonicalNeed: "Number of MSMEs that shut or closed in 2025 and 2026",
+      measure: "Number of MSMEs that shut/closed",
+      geography: "Not specified",
+      period: "2025 versus 2026",
+      breakdown: "Year",
+      informationHolder: "Ministry of Micro, Small and Medium Enterprises",
+      informationHolderStatus: "unverified",
+    });
+  });
+
+  it("normalizes placeholder authorities without hiding the need", () => {
+    const result = modelNeedsToInterpretation({
+      originalText: "Which public records are available?",
+      redactedText: "Which public records are available?",
+      traceId: "trace-placeholder-holder",
+      needs: [
+        {
+          canonicalNeed: "Available public records",
+          measure: "Public records",
+          geography: "Not specified",
+          period: "Not specified",
+          breakdown: "No additional breakdown",
+          informationHolder: "To be confirmed",
+          resolutionPreference: "formal",
+          unresolvedClarifications: [],
+        },
+      ],
+    });
+    expect(result.needs[0].informationHolder).toBe("Relevant public authority");
+    expect(result.needs[0].informationHolderStatus).toBe("unverified");
   });
 
   it("redacts identifiers before the server-side model request", async () => {
